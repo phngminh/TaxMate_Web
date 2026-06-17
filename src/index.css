@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    overflow-x: hidden;
+  }
+}
+
+@keyframes auth-slide-in-from-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes auth-slide-in-from-left {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.auth-page-enter-left {
+  animation: auth-slide-in-from-right 0.45s ease-out forwards;
+}
+
+.auth-page-enter-right {
+  animation: auth-slide-in-from-left 0.45s ease-out forwards;
+}
