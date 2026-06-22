@@ -4,6 +4,8 @@ import ProtectedRoute from './ProtectedRoute'
 import { toast } from 'react-toastify'
 import BusinessOwnerLoginPage from '../pages/auth/BusinessOwnerLoginPage'
 import BusinessOwnerRegisterPage from '../pages/auth/BusinessOwnerRegisterPage'
+import Home from '../pages/businessOwner/home'
+import OwnerLayout from '../components/owner/ownerLayout'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -15,22 +17,24 @@ export default function useRouteElements() {
     //================ Business Owner routes ================
     {
       path: path.BASE_BUSINESS_OWNER,
-      element: <ProtectedRoute allowedRoles={['business-owner']} />,
+      // element: <ProtectedRoute allowedRoles={['Owner']} />,
       children: [
-        { index: true, element: <Navigate to='rental-requests' replace /> },
         {
-          element: <></>,
+          element: <OwnerLayout />,
           children: [
-            { path: 'account', element: <></> },
+            { index: true, element: <Navigate to={path.BUSINESS_OWNER_HOME} replace /> },
+            { path: 'home', element: <Home /> },
+            { path: 'products', element: <Home /> },
+            { path: 'materials', element: <Home /> },
+            { path: 'orders', element: <Home /> }
           ]
-        },
-        { path: 'chat/:rentalId', element: <></> },
+        }
       ]
     },
     //================ Admin routes ================
     {
       path: path.BASE_ADMIN,
-      element: <ProtectedRoute allowedRoles={['admin']} />,
+      element: <ProtectedRoute allowedRoles={['Admin']} />,
       children: [
         { index: true, element: <Navigate to='dashboard' replace /> },
         {
