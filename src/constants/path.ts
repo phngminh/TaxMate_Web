@@ -4,11 +4,17 @@ const path = {
   callback: '/callback',
 
   //============ Business Owner ============
-  BUSINESS_OWNER_LOGIN: '/business-owner/login',
-  BUSINESS_OWNER_REGISTER: '/business-owner/register',
+  BUSINESS_OWNER_LOGIN: '/login',
+  BUSINESS_OWNER_REGISTER: '/register',
   BASE_BUSINESS_OWNER: '/business-owner',
-  BUSINESS_OWNER_DASHBOARD: '/business-owner/dashboard',
+  BUSINESS_OWNER_HOME: '/business-owner/home',
   BUSINESS_OWNER_PROFILE: '/business-owner/profile',
+  BUSINESS_OWNER_PRODUCTS: '/business-owner/products',
+  BUSINESS_OWNER_MATERIALS: '/business-owner/materials',
+  BUSINESS_OWNER_ORDERS: '/business-owner/orders',
+  BUSINESS_OWNER_CUSTOMERS: '/business-owner/customers',
+  BUSINESS_OWNER_EXPENSES: '/business-owner/expenses',
+  BUSINESS_OWNER_REPORTS: '/business-owner/reports',
 
   //============= Admin ============
   BASE_ADMIN: '/admin',

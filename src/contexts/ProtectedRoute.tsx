@@ -4,14 +4,14 @@ import { useAuth } from './AuthContext'
 
 interface ProtectedRouteProps {
   children?: React.ReactNode
-  allowedRoles?: ('admin' | 'business-owner')[]
+  allowedRoles?: ('Admin' | 'Owner')[]
   redirectTo?: string
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
-  children, 
-  allowedRoles = [], 
-  redirectTo = '/' 
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+  children,
+  allowedRoles = [],
+  redirectTo = '/'
 }) => {
   const { user, isAuthenticated, isLoading } = useAuth()
   const location = useLocation()
@@ -19,7 +19,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (isLoading) {
     return (
       <div className='min-h-screen flex items-center justify-center'>
-        <div className='animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600'></div>
+        <div className='h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-taxmate-red' />
       </div>
     )
   }
