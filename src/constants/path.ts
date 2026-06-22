@@ -7,7 +7,7 @@ const path = {
   BUSINESS_OWNER_LOGIN: '/login',
   BUSINESS_OWNER_REGISTER: '/register',
   BASE_BUSINESS_OWNER: '/business-owner',
-  BUSINESS_OWNER_DASHBOARD: '/business-owner/dashboard',
+  BUSINESS_OWNER_HOME: '/business-owner/home',
   BUSINESS_OWNER_PROFILE: '/business-owner/profile',
 
   //============= Admin ============

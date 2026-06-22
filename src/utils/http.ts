@@ -5,7 +5,7 @@ class Http {
 
   constructor() {
     this.instance = axios.create({
-      baseURL: 'https://localhost:7028',
+      baseURL: 'http://localhost:5086',
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json'
