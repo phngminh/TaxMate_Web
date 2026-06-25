@@ -6,11 +6,12 @@ import BusinessOwnerLoginPage from '../pages/auth/BusinessOwnerLoginPage'
 import BusinessOwnerRegisterPage from '../pages/auth/BusinessOwnerRegisterPage'
 import Home from '../pages/businessOwner/home'
 import OwnerLayout from '../components/owner/ownerLayout'
+import LandingPage from '../pages/landingPage/LandingPage'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
   const routeElements = useRoutes([
-    { path: path.home, element: <></> },
+    { path: path.home, element: <LandingPage /> },
     { path: path.callback, element: <></> },
     { path: path.BUSINESS_OWNER_LOGIN, element: <BusinessOwnerLoginPage /> },
     { path: path.BUSINESS_OWNER_REGISTER, element: <BusinessOwnerRegisterPage /> },

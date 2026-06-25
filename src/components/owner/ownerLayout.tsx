@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import OwnerHeader from '../owner/ownerHeader'
-import FloatingAIAssistant from '../owner/AIAssistant'
+import FloatingAIAssistant from '../owner/aiAssistant'
 
 export default function OwnerLayout() {
   return (
