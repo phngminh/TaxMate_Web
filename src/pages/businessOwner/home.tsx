@@ -1,5 +1,4 @@
-import imgLogo from './../../assets/logo3.png'
-import imgRobot from './../../assets/AI.png'
+import storeImage from '../../assets/store.png'
 import {
   LineChart,
   Line,
@@ -11,6 +10,26 @@ import {
   Pie,
   Cell,
 } from 'recharts'
+import { useEffect, useState } from 'react'
+import { useAuth } from '../../contexts/AuthContext'
+import { createBusinessProfile, hasBusinessProfile } from '../../apis/profile.api'
+import { toast } from 'react-toastify'
+import { UtensilsCrossed, Handshake } from 'lucide-react'
+
+const categories = [
+  {
+    id: '11111111-1111-1111-1111-111111111111',
+    name: 'Ăn uống (F&B)',
+    icon: UtensilsCrossed,
+    color: 'text-green-500'
+  },
+  {
+    id: '22222222-2222-2222-2222-222222222222',
+    name: 'Dịch vụ',
+    icon: Handshake,
+    color: 'text-purple-500'
+  }
+]
 
 const revenueData = [
   { date: '26/05', revenue: 5000, trend: 4800 },
@@ -82,47 +101,6 @@ function ArrowRightIcon() {
   )
 }
 
-function StatCard({
-  color,
-  icon,
-  label,
-  value,
-  sub,
-  extra,
-  miniChart,
-}: {
-  color: string;
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  sub?: React.ReactNode;
-  extra?: React.ReactNode;
-  miniChart?: React.ReactNode;
-}) {
-  return (
-    <div className='bg-white border border-[#eef0f2] rounded-[12px] shadow-[0px_1px_1px_rgba(0,0,0,0.05)] p-5 flex flex-col gap-3 flex-1 min-w-0'>
-      <div className='flex items-center gap-3'>
-        <div
-          className='size-10 rounded-[8px] flex items-center justify-center shrink-0'
-          style={{ backgroundColor: color }}
-        >
-          {icon}
-        </div>
-        <div className='flex flex-col gap-0.5 min-w-0'>
-          <div className='flex items-center gap-1 text-[#6b7280] text-[13px] font-medium'>
-            <ClockIcon />
-            <span>{label}</span>
-          </div>
-          <div className='text-[#1a1a1a] text-[22px] font-bold leading-tight'>{value}</div>
-        </div>
-        {miniChart && <div className='ml-auto shrink-0'>{miniChart}</div>}
-      </div>
-      {sub && <div className='flex items-center gap-1 text-[13px]'>{sub}</div>}
-      {extra && <div className='text-[11px] text-[#9ca3af] leading-tight border-t border-[#f9fafb] pt-2'>{extra}</div>}
-    </div>
-  )
-}
-
 function MiniLineChart({ color }: { color: string }) {
   const data = [
     { v: 3 }, { v: 5 }, { v: 2 }, { v: 6 }, { v: 4 }, { v: 7 }, { v: 5 },
@@ -135,27 +113,70 @@ function MiniLineChart({ color }: { color: string }) {
         </LineChart>
       </ResponsiveContainer>
     </div>
-  );
-}
-
-function NavItem({ label, active }: { label: string; active?: boolean }) {
-  return (
-    <div
-      className={`px-4 h-full flex items-center rounded-full text-[14px] font-bold relative shrink-0 ${
-        active
-          ? "bg-[rgba(253,42,42,0.4)] text-[#910101]"
-          : "text-[#1d1d1d] opacity-90"
-      }`}
-    >
-      {label}
-      {active && (
-        <div className="absolute bottom-[2px] left-[25px] w-[56px] h-[2px] bg-[#910101] rounded-full" />
-      )}
-    </div>
-  );
+  )
 }
 
 export default function App() {
+  const [showBusinessModal, setShowBusinessProfileModal] = useState(false)
+  const { user } = useAuth()
+  const [businessName, setBusinessName] = useState('')
+  const [address, setAddress] = useState('')
+  const [provinceCode, setProvinceCode] = useState('')
+  const [wardCode, setWardCode] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const checkBusinessProfile = async () => {
+    if (!user) return
+
+    try {
+      const res = await hasBusinessProfile(user.id)
+      if (!res) {
+        setShowBusinessProfileModal(true)
+      }
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  useEffect(() => {
+      checkBusinessProfile()
+  }, [])
+
+  const handleCreateBusiness = async () => {
+    if (!businessName.trim()) {
+      toast.error('Please enter business name')
+      return
+    }
+
+    if (!categoryId) {
+      toast.error('Please choose a business category')
+      return
+    }
+
+    try {
+      setLoading(true)
+
+      await createBusinessProfile({
+        ownerId: user!.id,
+        businessName,
+        provinceCode,
+        wardCode,
+        address,
+        mainCategoryId: categoryId,
+        preferElectronicInvoice: false
+      })
+
+      toast.success('Business profile created successfully')
+
+      setShowBusinessProfileModal(false)
+    } catch (error) {
+      toast.error('Failed to create business profile')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className='bg-[#f8f9fa] pt-4 pb-6 min-h-[calc(100vh-51px)]'>
       <div className='px-6'>
@@ -423,6 +444,118 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {showBusinessModal && (
+        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4'>
+          <div className='w-full max-w-[680px] overflow-hidden rounded-lg bg-white shadow-2xl'>
+            <div className='max-h-[90vh] overflow-y-auto'>
+              <div className='mx-auto w-full max-w-[520px] px-8 py-6'>
+                <div className='flex justify-center'>
+                  <img
+                    src={storeImage}
+                    alt='Store'
+                    className='w-44'
+                  />
+                </div>
+
+                <div className='mt-2 text-center'>
+                  <h2 className='text-3xl font-bold leading-tight'>
+                    Chào mừng đến với
+                  </h2>
+                  <p className='text-3xl font-bold text-blue-500'>
+                    TaxMate
+                  </p>
+                  <p className='mt-3 text-gray-500'>
+                    Hãy thiết lập thông tin cửa hàng của bạn để bắt đầu sử dụng.
+                  </p>
+                </div>
+
+                <div className='mt-8 space-y-5'>
+                  <div>
+                    <label className='mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
+                      Tên cửa hàng <span className='text-taxmate-red'>*</span>
+                    </label>
+
+                    <input
+                      type='text'
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      placeholder='Nhập tên cửa hàng'
+                      className='h-12 w-full rounded-lg border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
+                      Địa chỉ cửa hàng
+                    </label>
+
+                    <input
+                      type='text'
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder='Nhập địa chỉ cửa hàng'
+                      className='h-12 w-full rounded-lg border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='mb-3 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
+                      Loại cửa hàng <span className='text-taxmate-red'>*</span>
+                    </label>
+
+                    <div className='space-y-3 mb-2'>
+                      {categories.map((category) => {
+                        const selected = categoryId === category.id
+                        const Icon = category.icon
+                        return (
+                          <button
+                            key={category.id}
+                            type="button"
+                            onClick={() => setCategoryId(category.id)}
+                            className={`flex h-12 w-full items-center justify-between rounded-xl border px-5 py-6 transition-all ${
+                              selected
+                                ? 'border-taxmate-red bg-taxmate-red/10'
+                                : 'border-gray-300 hover:border-taxmate-red'
+                            }`}
+                          >
+                            <div className='flex items-center gap-4'>
+                              <Icon className={`h-6 w-6 ${category.color}`} />
+
+                              <span>{category.name}</span>
+                            </div>
+
+                            <div
+                              className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition ${
+                                selected
+                                  ? 'border-taxmate-red'
+                                  : 'border-gray-400'
+                              }`}
+                            >
+                              {selected && (
+                                <div className='h-3 w-3 rounded-full bg-taxmate-red' />
+                              )}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <button
+                    type='button'
+                    disabled={loading}
+                    onClick={handleCreateBusiness}
+                    className='h-14 w-full rounded-xl bg-red-600 py-3 text-lg font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60'
+                  >
+                    {loading ? 'Đang tạo...' : 'Xác nhận'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

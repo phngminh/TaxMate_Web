@@ -18,10 +18,6 @@ function NavItem({ label, isActive }: {
         }`}
     >
       {label}
-
-      {isActive && (
-        <div className='absolute bottom-[-0.5px] left-1/2 -translate-x-1/2 w-[60%] h-[2px] bg-[#910101] rounded-full' />
-      )}
     </div>
   )
 }

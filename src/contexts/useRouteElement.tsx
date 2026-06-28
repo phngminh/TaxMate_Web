@@ -5,6 +5,7 @@ import { toast } from 'react-toastify'
 import BusinessOwnerLoginPage from '../pages/auth/BusinessOwnerLoginPage'
 import BusinessOwnerRegisterPage from '../pages/auth/BusinessOwnerRegisterPage'
 import Home from '../pages/businessOwner/home'
+import AllProduct from '../pages/businessOwner/product/allProduct'
 import OwnerLayout from '../components/owner/ownerLayout'
 import LandingPage from '../pages/landingPage/LandingPage'
 
@@ -25,7 +26,7 @@ export default function useRouteElements() {
           children: [
             { index: true, element: <Navigate to={path.BUSINESS_OWNER_HOME} replace /> },
             { path: 'home', element: <Home /> },
-            { path: 'products', element: <Home /> },
+            { path: 'products', element: <AllProduct /> },
             { path: 'materials', element: <Home /> },
             { path: 'orders', element: <Home /> }
           ]
