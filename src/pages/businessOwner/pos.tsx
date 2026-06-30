@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Search, Plus, Printer, Menu, X, Check, Utensils } from 'lucide-react'
+import { Search, Plus, Menu, X, Check, Utensils, Printer } from 'lucide-react'
 import type { Product } from '../../types/product.type'
 
 const PRODUCTS: Product[] = [
@@ -197,7 +197,7 @@ export default function POS() {
   }
 
   return (
-    <div className='flex bg-[#004795] p-3 gap-3 min-h-[calc(100vh-51px)] w-full text-slate-800'>
+    <div className='flex bg-[#004795] p-3 gap-3 h-screen w-full text-slate-800 overflow-hidden'>
       <div className='w-7/12 flex flex-col bg-white rounded-md overflow-hidden shadow-md h-full'>
         <div className='bg-[#004795] flex items-center justify-between px-3 pt-2'>
           <div className='bg-white text-[#004795] font-bold px-5 py-2.5 rounded-t-md text-sm border-b-2 border-white'>
@@ -243,7 +243,7 @@ export default function POS() {
           </button>
         </div>
 
-        <div className='p-4 flex-grow overflow-y-auto max-h-[650px] grid grid-cols-4 gap-4'>
+        <div className='p-4 flex-grow overflow-y-auto min-h-0 grid grid-cols-4 gap-4 content-start'>
           {filteredProducts.map((product) => (
             <div
               key={product.id}
@@ -269,7 +269,7 @@ export default function POS() {
         </div>
       </div>
 
-      <div className='w-5/12 flex flex-col bg-white rounded-md overflow-hidden shadow-md'>
+      <div className='w-5/12 flex flex-col bg-white rounded-md overflow-hidden shadow-md h-full'>
         <div className='bg-[#004795] flex items-center justify-between px-3 pt-2'>
           <div className='flex items-center gap-1 overflow-x-auto max-w-[60%] scrollbar-none'>
             {orders.map((order) => {
@@ -301,7 +301,6 @@ export default function POS() {
           </div>
           <div className='flex items-center gap-3 text-white pb-2'>
             <span className='text-xs font-semibold'>Xin chào, Minh Nguyễn</span>
-            <Printer className='size-4 cursor-pointer hover:opacity-80' />
             <Menu className='size-4 cursor-pointer hover:opacity-80' />
           </div>
         </div>
@@ -322,7 +321,7 @@ export default function POS() {
           </button>
         </div>
 
-        <div className='flex-grow p-4 overflow-y-auto max-h-[350px] space-y-4'>
+        <div className='flex-grow p-4 overflow-y-auto min-h-0 space-y-4'>
           {activeOrder.items.map((item, index) => (
             <div key={item.id} className='flex items-center justify-between text-xs py-1'>
               <div className='w-1/2 font-semibold text-slate-700'>
