@@ -28,7 +28,6 @@ export default function useRouteElements() {
           children: [
             { index: true, element: <Navigate to={path.BUSINESS_OWNER_HOME} replace /> },
             { path: path.BUSINESS_OWNER_HOME, element: <Home /> },
-            { path: path.BUSINESS_OWNER_POS, element: <POS /> },
             { path: path.BUSINESS_OWNER_PRODUCTS, element: <Product /> },
             { path: path.BUSINESS_OWNER_INGREDIENTS, element: <Ingredient /> },
             { path: path.BUSINESS_OWNER_ORDERS, element: <Order /> },
@@ -36,7 +35,8 @@ export default function useRouteElements() {
             { path: path.BUSINESS_OWNER_EXPENSES, element: <Home /> },
             { path: path.BUSINESS_OWNER_REPORTS, element: <Home /> }
           ]
-        }
+        },
+        { path: path.BUSINESS_OWNER_POS, element: <POS /> },
       ]
     },
     //================ Admin routes ================
