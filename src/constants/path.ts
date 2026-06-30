@@ -8,6 +8,7 @@ const path = {
   BUSINESS_OWNER_REGISTER: '/register',
   BASE_BUSINESS_OWNER: '/business-owner',
   BUSINESS_OWNER_HOME: '/business-owner/home',
+  BUSINESS_OWNER_POS: '/business-owner/pos',
   BUSINESS_OWNER_PROFILE: '/business-owner/profile',
   BUSINESS_OWNER_PRODUCTS: '/business-owner/products',
   BUSINESS_OWNER_INGREDIENTS: '/business-owner/ingredients',

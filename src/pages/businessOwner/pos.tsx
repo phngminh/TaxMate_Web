@@ -13,7 +13,7 @@ const MAIN_CATEGORIES = ['Ăn uống', 'Dịch vụ']
 const PRODUCT_UNITS = [ 'Cái', 'Chiếc', 'Đĩa', 'Bát', 'Ly', 'Lon', 'Chai' ]
 const SERVICE_UNITS = [ 'Giờ', 'Buổi', 'Ngày', 'Tuần', 'Tháng', 'Lần' ]
 
-export default function Product() {
+export default function POS() {
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMainCategory, setSelectedMainCategory] = useState('all')

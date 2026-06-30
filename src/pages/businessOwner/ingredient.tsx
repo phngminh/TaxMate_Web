@@ -1,9 +1,16 @@
-import { useState, useMemo, useRef, useEffect, type ChangeEvent } from 'react'
-import { Search, Plus, Scan, Trash2, Edit2, Package, BookOpen, RotateCcw, ImagePlus, FlaskConical, ShoppingBag } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { Search, Plus, Scan, Trash2, Edit2, Package, BookOpen, RotateCcw, FlaskConical, ShoppingBag, Eye, X } from 'lucide-react'
 import type { Ingredient } from '../../types/ingredient.type'
-import type { ProductIngredient } from '../../types/productIngredient.type'
 import { getAllIngredients } from '../../apis/ingredient.api'
 import { getProductIngredients } from '../../apis/productIngredient.api'
+import type { ProductIngredient } from '../../types/productIngredient.type'
+
+interface Recipe {
+  productId: string
+  productName: string
+  price: number
+  ingredients: ProductIngredient[]
+}
 
 const INGREDIENTS: Ingredient[] = [
   {
@@ -62,48 +69,47 @@ const INGREDIENTS: Ingredient[] = [
   },
 ]
 
-const PRODUCT_INGREDIENTS: ProductIngredient[] = [
+const RECIPES: Recipe[] = [
   {
     productId: 'SP000001',
-    ingredientId: 'ING000001',
-    ingredientName: 'Bột mì',
-    unit: 'kg',
-    quantity: 0.5,
-  },
-  {
-    productId: 'SP000001',
-    ingredientId: 'ING000002',
-    ingredientName: 'Phô mai Mozzarella',
-    unit: 'kg',
-    quantity: 0.2,
-  },
-  {
-    productId: 'SP000001',
-    ingredientId: 'ING000003',
-    ingredientName: 'Cà chua',
-    unit: 'kg',
-    quantity: 0.15,
+    productName: 'Pizza Hải Sản',
+    price: 85000,
+    ingredients: [
+      { productId: 'SP000001', ingredientId: 'ING000001', ingredientName: 'Bột mì', unit: 'kg', quantity: 0.5 },
+      { productId: 'SP000001', ingredientId: 'ING000002', ingredientName: 'Phô mai Mozzarella', unit: 'kg', quantity: 0.2 },
+      { productId: 'SP000001', ingredientId: 'ING000003', ingredientName: 'Cà chua', unit: 'kg', quantity: 0.15 },
+    ],
   },
   {
     productId: 'SP000002',
-    ingredientId: 'ING000004',
-    ingredientName: 'Thịt bò',
-    unit: 'kg',
-    quantity: 0.18,
-  },
-  {
-    productId: 'SP000002',
-    ingredientId: 'ING000006',
-    ingredientName: 'Hành tây',
-    unit: 'kg',
-    quantity: 0.05,
+    productName: 'Hamburger Bò Nướng',
+    price: 55000,
+    ingredients: [
+      { productId: 'SP000002', ingredientId: 'ING000004', ingredientName: 'Thịt bò', unit: 'kg', quantity: 0.18 },
+      { productId: 'SP000002', ingredientId: 'ING000001', ingredientName: 'Bột mì', unit: 'kg', quantity: 0.08 },
+      { productId: 'SP000002', ingredientId: 'ING000006', ingredientName: 'Hành tây', unit: 'kg', quantity: 0.05 },
+    ],
   },
   {
     productId: 'SP000003',
-    ingredientId: 'ING000003',
-    ingredientName: 'Cà chua',
-    unit: 'kg',
-    quantity: 0.1,
+    productName: 'Salad Gà Nướng',
+    price: 45000,
+    ingredients: [
+      { productId: 'SP000003', ingredientId: 'ING000005', ingredientName: 'Rau diếp', unit: 'kg', quantity: 0.12 },
+      { productId: 'SP000003', ingredientId: 'ING000003', ingredientName: 'Cà chua', unit: 'kg', quantity: 0.1 },
+      { productId: 'SP000003', ingredientId: 'ING000006', ingredientName: 'Hành tây', unit: 'kg', quantity: 0.04 },
+    ],
+  },
+  {
+    productId: 'SP000004',
+    productName: 'Mì Ý Sốt Bò Bằm',
+    price: 65000,
+    ingredients: [
+      { productId: 'SP000004', ingredientId: 'ING000001', ingredientName: 'Bột mì', unit: 'kg', quantity: 0.25 },
+      { productId: 'SP000004', ingredientId: 'ING000004', ingredientName: 'Thịt bò', unit: 'kg', quantity: 0.15 },
+      { productId: 'SP000004', ingredientId: 'ING000003', ingredientName: 'Cà chua', unit: 'kg', quantity: 0.2 },
+      { productId: 'SP000004', ingredientId: 'ING000006', ingredientName: 'Hành tây', unit: 'kg', quantity: 0.06 },
+    ],
   },
 ]
 
@@ -112,9 +118,9 @@ const fakeFetchIngredients = async (): Promise<Ingredient[]> => {
   return new Promise((resolve) => setTimeout(() => resolve(INGREDIENTS), 400))
 }
 
-const fakeFetchProductIngredients = async (): Promise<ProductIngredient[]> => {
+const fakeFetchRecipes = async (): Promise<Recipe[]> => {
   void getProductIngredients
-  return new Promise((resolve) => setTimeout(() => resolve(PRODUCT_INGREDIENTS), 400))
+  return new Promise((resolve) => setTimeout(() => resolve(RECIPES), 400))
 }
 
 const formatDate = (iso: string) =>
@@ -129,8 +135,9 @@ export default function Ingredient() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
   const [loadingIngredients, setLoadingIngredients] = useState(false)
 
-  const [productIngredients, setProductIngredients] = useState<ProductIngredient[]>([])
+  const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loadingRecipes, setLoadingRecipes] = useState(false)
+  const [viewingRecipe, setViewingRecipe] = useState<Recipe | null>(null)
 
   const [isAddIngredientOpen, setIsAddIngredientOpen] = useState(false)
   const [isEditIngredientOpen, setIsEditIngredientOpen] = useState(false)
@@ -138,30 +145,24 @@ export default function Ingredient() {
 
   const [isAddProductIngredientOpen, setIsAddProductIngredientOpen] = useState(false)
   const [isEditProductIngredientOpen, setIsEditProductIngredientOpen] = useState(false)
-  const [editingProductIngredient, setEditingProductIngredient] = useState<ProductIngredient | null>(null)
+  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
 
   const [formName, setFormName] = useState('')
   const [formUnit, setFormUnit] = useState('')
   const [formPrice, setFormPrice] = useState('')
 
+  const [recipeProductId, setRecipeProductId] = useState('')
+  const [recipeRows, setRecipeRows] = useState<{ ingredientId: string; quantity: string }[]>([
+    { ingredientId: '', quantity: '' },
+  ])
+
   const addNewDropdownRef = useRef<HTMLDivElement>(null)
   const [addNewDropdownOpen, setAddNewDropdownOpen] = useState(false)
 
-  const isIngredient = isAddIngredientOpen || isEditIngredientOpen
-  const isProductIngredient = isAddProductIngredientOpen || isEditProductIngredientOpen
-  const isModalOpen = isIngredient || isProductIngredient
-
-  const isEditing = isEditIngredientOpen || isEditProductIngredientOpen
-
-  const modalTitle = isEditing
-  ? isIngredient
-    ? 'Chỉnh sửa nguyên liệu'
-    : 'Chỉnh sửa công thức'
-  : isIngredient
-    ? 'Thêm nguyên liệu mới'
-    : 'Thêm công thức mới'
-
-  const itemLabel = isIngredient ? 'nguyên liệu' : 'công thức'
+  const isIngredientModalOpen = isAddIngredientOpen || isEditIngredientOpen
+  const isProductIngredientModalOpen = isAddProductIngredientOpen || isEditProductIngredientOpen
+  const isIngredientEditing = isEditIngredientOpen
+  const isRecipeEditing = isEditProductIngredientOpen
 
   useEffect(() => {
     if (activeTab === 'ingredient') {
@@ -172,8 +173,8 @@ export default function Ingredient() {
       })
     } else {
       setLoadingRecipes(true)
-      fakeFetchProductIngredients().then((data) => {
-        setProductIngredients(data)
+      fakeFetchRecipes().then((data) => {
+        setRecipes(data)
         setLoadingRecipes(false)
       })
     }
@@ -199,13 +200,12 @@ export default function Ingredient() {
 
   const filteredRecipes = useMemo(() => {
     const q = searchQuery.toLowerCase()
-    return productIngredients.filter(
-      (pi) =>
-        pi.ingredientName.toLowerCase().includes(q) ||
-        pi.productId.toLowerCase().includes(q) ||
-        pi.ingredientId.toLowerCase().includes(q),
+    return recipes.filter(
+      (r) =>
+        r.productName.toLowerCase().includes(q) ||
+        r.productId.toLowerCase().includes(q),
     )
-  }, [productIngredients, searchQuery])
+  }, [recipes, searchQuery])
 
   const closeModal = () => {
     setIsAddIngredientOpen(false)
@@ -213,10 +213,12 @@ export default function Ingredient() {
     setEditingIngredient(null)
     setIsAddProductIngredientOpen(false)
     setIsEditProductIngredientOpen(false)
-    setEditingProductIngredient(null)
+    setEditingRecipe(null)
     setFormName('')
     setFormUnit('')
     setFormPrice('')
+    setRecipeProductId('')
+    setRecipeRows([{ ingredientId: '', quantity: '' }])
   }
 
   const handleOpenAddIngredient = () => {
@@ -224,15 +226,19 @@ export default function Ingredient() {
     setFormUnit('')
     setFormPrice('')
     setIsAddIngredientOpen(true)
-    setAddNewDropdownOpen(false)
   }
 
   const handleOpenAddProductIngredient = () => {
-    setFormName('')
-    setFormUnit('')
-    setFormPrice('')
+    setRecipeProductId('')
+    setRecipeRows([{ ingredientId: '', quantity: '' }])
     setIsAddProductIngredientOpen(true)
-    setAddNewDropdownOpen(false)
+  }
+
+  const handleOpenEditRecipe = (recipe: Recipe, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingRecipe(recipe)
+    setRecipeRows(recipe.ingredients.map((ing) => ({ ingredientId: ing.ingredientId, quantity: ing.quantity?.toString() ?? '' })))
+    setIsEditProductIngredientOpen(true)
   }
 
   const handleOpenEditIngredient = (ingredient: Ingredient, e: React.MouseEvent) => {
@@ -240,16 +246,8 @@ export default function Ingredient() {
     setEditingIngredient(ingredient)
     setFormName(ingredient.name)
     setFormUnit(ingredient.unit ?? '')
-    setFormPrice(ingredient.estimatedPrice?.toString() ?? '')
+    setFormPrice(ingredient.estimatedPrice?.toLocaleString('vi-VN') ?? '')
     setIsEditIngredientOpen(true)
-  }
-
-  const handleOpenEditProductIngredient = (ingredient: ProductIngredient, e: React.MouseEvent) => {
-    e.stopPropagation()
-    setEditingProductIngredient(ingredient)
-    setFormName(ingredient.ingredientName)
-    setFormPrice(ingredient.quantity?.toString() ?? '')
-    setIsEditProductIngredientOpen(true)
   }
 
   const handleAddIngredient = (e: React.FormEvent) => {
@@ -277,31 +275,16 @@ export default function Ingredient() {
     // TODO: Implement
   }
 
-  const handleDeleteProductIngredient = (id: string, e: React.MouseEvent) => {
-    e.preventDefault()
-    // TODO: Implement
+  const handleRecipeRowChange = (idx: number, field: 'ingredientId' | 'quantity', value: string) => {
+    setRecipeRows((prev) => prev.map((row, i) => (i === idx ? { ...row, [field]: value } : row)))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleAddRecipeRow = () => {
+    setRecipeRows((prev) => [...prev, { ingredientId: '', quantity: '' }])
+  }
 
-    if (isIngredient) {
-      if (isEditIngredientOpen) {
-        handleEditIngredient(e)
-      } else {
-        handleAddIngredient(e)
-      }
-      return
-    }
-
-    if (isProductIngredient) {
-      if (isEditProductIngredientOpen) {
-        handleEditProductIngredient(e)
-      } else {
-        handleAddProductIngredient(e)
-      }
-      return
-    }
+  const handleRemoveRecipeRow = (idx: number) => {
+    setRecipeRows((prev) => prev.filter((_, i) => i !== idx))
   }
 
   return (
@@ -363,7 +346,6 @@ export default function Ingredient() {
               <Package size={17} className={activeTab === 'ingredient' ? 'text-[#4c51bf]' : 'text-gray-400'} />
               Nguyên liệu
             </button>
-
             <button
               onClick={() => setActiveTab('recipe')}
               className={`flex items-center gap-3 px-4 py-3 rounded-[10px] text-[13.5px] font-semibold transition-all ${
@@ -471,35 +453,42 @@ export default function Ingredient() {
             loadingRecipes ? (
               <LoadingSkeleton />
             ) : filteredRecipes.length > 0 ? (
-              <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-[700px]'>
+              <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-[600px]'>
                 <table className='w-full text-left border-collapse'>
                   <thead>
                     <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
                       <th className='py-4 px-6 font-semibold tracking-wide'>Mã sản phẩm</th>
-                      <th className='py-4 px-6 font-semibold tracking-wide'>Mã nguyên liệu</th>
-                      <th className='py-4 px-6 font-semibold tracking-wide'>Tên nguyên liệu</th>
-                      <th className='py-4 px-6 font-semibold tracking-wide text-center'>Đơn vị tính</th>
-                      <th className='py-4 px-6 font-semibold tracking-wide text-right'>Số lượng</th>
-                      <th className='py-4 px-6 font-semibold tracking-wide text-center w-28'>Thao tác</th>
+                      <th className='py-4 px-6 font-semibold tracking-wide'>Tên sản phẩm</th>
+                      <th className='py-4 px-6 font-semibold tracking-wide text-center'>Số nguyên liệu</th>
+                      <th className='py-4 px-6 font-semibold tracking-wide text-right'>Giá bán</th>
+                      <th className='py-4 px-6 font-semibold tracking-wide text-center w-32'>Thao tác</th>
                     </tr>
                   </thead>
                   <tbody className='divide-y divide-gray-100'>
-                    {filteredRecipes.map((pi, idx) => (
-                      <tr key={`${pi.productId}-${pi.ingredientId}-${idx}`} className='hover:bg-[#fcfdfe] transition-colors group'>
-                        <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>{pi.productId}</td>
-                        <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>{pi.ingredientId}</td>
-                        <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{pi.ingredientName}</td>
+                    {filteredRecipes.map((recipe) => (
+                      <tr key={recipe.productId} className='hover:bg-[#fcfdfe] transition-colors group'>
+                        <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>{recipe.productId}</td>
+                        <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{recipe.productName}</td>
                         <td className='py-4 px-6 text-center'>
-                          <span className='inline-block bg-[#f3f4f6] text-gray-600 text-[12.5px] px-3.5 py-1 rounded-full font-bold border border-gray-200/40'>
-                            {pi.unit ?? '—'}
+                          <span className='inline-flex items-center gap-1.5 bg-[#eef2ff] text-[#4c51bf] text-[12.5px] px-3 py-1 rounded-full font-bold border border-[#c7d2fe]/60'>
+                            <FlaskConical size={11} />
+                            {recipe.ingredients.length} nguyên liệu
                           </span>
                         </td>
                         <td className='py-4 px-6 text-right text-[14px] text-gray-900 font-bold'>
-                          {pi.quantity}
+                          {recipe.price.toLocaleString('vi-VN')} đ
                         </td>
                         <td className='py-4 px-6 text-center'>
                           <div className='flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity'>
                             <button
+                              onClick={() => setViewingRecipe(recipe)}
+                              className='p-1.5 text-gray-400 hover:text-[#4c51bf] hover:bg-[#eef2ff] rounded-md transition-colors'
+                              title='Xem công thức'
+                            >
+                              <Eye size={15} />
+                            </button>
+                            <button
+                              onClick={(e) => handleOpenEditRecipe(recipe, e)}
                               className='p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors'
                               title='Sửa'
                             >
@@ -530,20 +519,23 @@ export default function Ingredient() {
         </div>
       </div>
 
-      {isModalOpen && (
+      {isIngredientModalOpen && (
         <div className='fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
           <div className='bg-white rounded-[16px] shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200'>
             <div className='flex items-center justify-between px-8 py-4 bg-[#fef2f2] border-b border-red-100'>
               <h3 className='text-[16px] font-bold text-gray-900 flex items-center gap-2'>
                 <ShoppingBag className='text-[#D32F2F] size-5' />
-                {modalTitle}
+                {isIngredientEditing ? 'Chỉnh sửa nguyên liệu' : 'Thêm nguyên liệu mới'}
               </h3>
+              <button onClick={closeModal} className='p-1 text-gray-400 hover:text-gray-700 transition-colors'>
+                <X size={18} />
+              </button>
             </div>
 
-            <form onSubmit={handleSubmit} className='p-6 flex flex-col gap-4'>
+            <form onSubmit={isIngredientEditing ? handleEditIngredient : handleAddIngredient} className='p-6 flex flex-col gap-4'>
               <div className='flex flex-col gap-1.5'>
                 <label className='text-[13px] font-bold text-gray-600'>
-                  Tên {itemLabel} <span className='text-red-500'>*</span>
+                  Tên nguyên liệu <span className='text-red-500'>*</span>
                 </label>
                 <input
                   type='text'
@@ -593,10 +585,219 @@ export default function Ingredient() {
                   type='submit'
                   className='px-5 py-2 bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-sm'
                 >
-                  {isEditing ? 'Lưu thay đổi' : 'Tạo mới'}
+                  {isIngredientEditing ? 'Lưu thay đổi' : 'Tạo mới'}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {isProductIngredientModalOpen && (
+        <div className='fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
+          <div className='bg-white rounded-[16px] shadow-2xl max-w-xl w-full overflow-hidden animate-in zoom-in-95 duration-200'>
+            <div className='flex items-center justify-between px-8 py-4 bg-[#fef2f2] border-b border-red-100'>
+              <h3 className='text-[16px] font-bold text-gray-900 flex items-center gap-2'>
+                <ShoppingBag className='text-[#D32F2F] size-5' />
+                {isRecipeEditing ? 'Chỉnh sửa công thức' : 'Thêm công thức mới'}
+              </h3>
+              <button onClick={closeModal} className='p-1 text-gray-400 hover:text-gray-700 transition-colors'>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={isRecipeEditing ? handleEditProductIngredient : handleAddProductIngredient} className='p-6 flex flex-col gap-4'>
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-[13px] font-bold text-gray-600'>
+                  Sản phẩm <span className='text-red-500'>*</span>
+                </label>
+                {isRecipeEditing ? (
+                  <input
+                    type='text'
+                    readOnly
+                    value={editingRecipe?.productName ?? ''}
+                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] font-medium text-gray-500 bg-gray-50 outline-none cursor-not-allowed'
+                  />
+                ) : (
+                  <select
+                    required
+                    value={recipeProductId}
+                    onChange={(e) => setRecipeProductId(e.target.value)}
+                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-none focus:border-[#D32F2F] transition-all font-medium text-gray-800 bg-white'
+                  >
+                    <option value=''>-- Chọn sản phẩm --</option>
+                    {RECIPES.map((r) => (
+                      <option key={r.productId} value={r.productId}>
+                        {r.productName}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              <div className='flex flex-col gap-2'>
+                <div className='flex items-center justify-between'>
+                  <label className='text-[13px] font-bold text-gray-600 flex items-center gap-1.5'>
+                    <FlaskConical size={13} className='text-[#6366f1]' /> Nguyên liệu
+                  </label>
+                  <button
+                    type='button'
+                    onClick={handleAddRecipeRow}
+                    className='flex items-center gap-1 text-[12px] font-bold text-[#D32F2F] hover:text-[#B71C1C] transition-colors'
+                  >
+                    <Plus size={13} /> Thêm dòng
+                  </button>
+                </div>
+
+                <div className='flex flex-col gap-2 max-h-56 overflow-y-auto pr-1'>
+                  {recipeRows.map((row, idx) => {
+                    const selected = INGREDIENTS.find((ing) => ing.id === row.ingredientId)
+                    return (
+                      <div key={idx} className='flex items-center gap-2'>
+                        {isRecipeEditing ? (
+                          <input
+                            type='text'
+                            readOnly
+                            value={selected?.name ?? row.ingredientId}
+                            className='flex-1 border border-gray-200 rounded-[8px] px-3 py-2 text-[13px] font-medium text-gray-500 bg-gray-50 outline-none cursor-not-allowed'
+                          />
+                        ) : (
+                          <select
+                            required
+                            value={row.ingredientId}
+                            onChange={(e) => handleRecipeRowChange(idx, 'ingredientId', e.target.value)}
+                            className='flex-1 border border-gray-200 rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#D32F2F] transition-all font-medium text-gray-800 bg-white'
+                          >
+                            <option value=''>-- Chọn nguyên liệu --</option>
+                            {INGREDIENTS.filter((ing) => !ing.isDeleted).map((ing) => (
+                              <option key={ing.id} value={ing.id}>
+                                {ing.name} ({ing.unit})
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        <input
+                          type='number'
+                          required
+                          min='0'
+                          step='any'
+                          placeholder='SL'
+                          value={row.quantity}
+                          onChange={(e) => handleRecipeRowChange(idx, 'quantity', e.target.value)}
+                          className='w-24 border border-gray-200 rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#D32F2F] transition-all font-medium text-gray-800 text-right'
+                        />
+                        <button
+                          type='button'
+                          onClick={() => handleRemoveRecipeRow(idx)}
+                          disabled={recipeRows.length === 1}
+                          className='p-1.5 text-gray-300 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors disabled:cursor-not-allowed disabled:hover:text-gray-300 disabled:hover:bg-transparent'
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className='flex items-center justify-end gap-3 mt-2 pt-4 border-t border-gray-100'>
+                <button
+                  type='button'
+                  onClick={closeModal}
+                  className='px-8 py-2 border-2 border-[#D32F2F] text-[#D32F2F] text-[13px] font-bold rounded-[8px] hover:bg-gray-50 transition-colors'
+                >
+                  Hủy
+                </button>
+                <button
+                  type='submit'
+                  className='px-5 py-2 bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-sm'
+                >
+                  {isRecipeEditing ? 'Lưu thay đổi' : 'Tạo mới'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {viewingRecipe && (
+        <div
+          className='fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'
+          onClick={() => setViewingRecipe(null)}
+        >
+          <div
+            className='bg-white rounded-[16px] shadow-2xl w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-200'
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className='flex items-start justify-between px-7 py-5 bg-gradient-to-r from-[#eef2ff] to-white border-b border-[#e0e7ff]'>
+              <div>
+                <h3 className='text-[17px] font-bold text-gray-900'>{viewingRecipe.productName}</h3>
+                <p className='text-[13px] text-gray-500 mt-0.5'>
+                  Giá bán: <span className='font-bold text-[#D32F2F]'>{viewingRecipe.price.toLocaleString('vi-VN')} đ</span>
+                </p>
+              </div>
+              <button
+                onClick={() => setViewingRecipe(null)}
+                className='p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mt-0.5'
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className='px-7 py-5'>
+              <div className='flex items-center justify-between mb-4'>
+                <span className='text-[13px] font-bold text-gray-600 flex items-center gap-2'>
+                  <FlaskConical size={14} className='text-[#6366f1]' />
+                  Danh sách nguyên liệu
+                </span>
+                <span className='text-[12px] font-semibold text-[#6366f1] bg-[#eef2ff] px-2.5 py-0.5 rounded-full border border-[#c7d2fe]/60'>
+                  {viewingRecipe.ingredients.length} nguyên liệu
+                </span>
+              </div>
+
+              <div className='rounded-[10px] border border-gray-100 overflow-hidden'>
+                <table className='w-full text-left border-collapse'>
+                  <thead>
+                    <tr className='bg-[#f8fafc] text-gray-500 text-[12px] font-bold border-b border-gray-100'>
+                      <th className='py-3 px-4 tracking-wide'>Nguyên liệu</th>
+                      <th className='py-3 px-4 tracking-wide text-center'>Đơn vị</th>
+                      <th className='py-3 px-4 tracking-wide text-right'>Số lượng</th>
+                    </tr>
+                  </thead>
+                  <tbody className='divide-y divide-gray-50'>
+                    {viewingRecipe.ingredients.map((ing, idx) => (
+                      <tr key={ing.ingredientId} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'}`}>
+                        <td className='py-3 px-4'>
+                          <div className='flex items-center gap-2.5'>
+                            <div>
+                              <p className='text-[13.5px] font-bold text-gray-800'>{ing.ingredientName}</p>
+                              <p className='text-[11px] text-gray-400'>{ing.ingredientId}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className='py-3 px-4 text-center'>
+                          <span className='inline-block bg-[#f3f4f6] text-gray-600 text-[12px] px-3 py-0.5 rounded-full font-bold border border-gray-200/40'>
+                            {ing.unit ?? '—'}
+                          </span>
+                        </td>
+                        <td className='py-3 px-4 text-right font-bold text-[14px] text-gray-900'>
+                          {ing.quantity}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className='px-7 py-4 mb-3 border-t border-gray-100 flex justify-end'>
+              <button
+                onClick={() => setViewingRecipe(null)}
+                className='px-6 py-2 bg-taxmate-red hover:bg-taxmate-red-hover text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-sm'
+              >
+                Đóng
+              </button>
+            </div>
           </div>
         </div>
       )}

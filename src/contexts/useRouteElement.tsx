@@ -8,6 +8,8 @@ import Product from '../pages/businessOwner/product'
 import OwnerLayout from '../components/owner/ownerLayout'
 import LandingPage from '../pages/landingPage/LandingPage'
 import Ingredient from '../pages/businessOwner/ingredient'
+import Order from '../pages/businessOwner/order'
+import POS from '../pages/businessOwner/pos'
 
 export default function useRouteElements() {
   const navigate = useNavigate()
@@ -25,14 +27,14 @@ export default function useRouteElements() {
           element: <OwnerLayout />,
           children: [
             { index: true, element: <Navigate to={path.BUSINESS_OWNER_HOME} replace /> },
-            { path: 'home', element: <Home /> },
-            { path: 'home', element: <Home /> },
-            { path: 'products', element: <Product /> },
-            { path: 'ingredients', element: <Ingredient /> },
-            { path: 'orders', element: <Home /> },
-            { path: 'customers', element: <Home /> },
-            { path: 'expenses', element: <Home /> },
-            { path: 'reports', element: <Home /> }
+            { path: path.BUSINESS_OWNER_HOME, element: <Home /> },
+            { path: path.BUSINESS_OWNER_POS, element: <POS /> },
+            { path: path.BUSINESS_OWNER_PRODUCTS, element: <Product /> },
+            { path: path.BUSINESS_OWNER_INGREDIENTS, element: <Ingredient /> },
+            { path: path.BUSINESS_OWNER_ORDERS, element: <Order /> },
+            { path: path.BUSINESS_OWNER_CUSTOMERS, element: <Home /> },
+            { path: path.BUSINESS_OWNER_EXPENSES, element: <Home /> },
+            { path: path.BUSINESS_OWNER_REPORTS, element: <Home /> }
           ]
         }
       ]
