@@ -62,7 +62,7 @@ export default function OwnerHeader() {
             )}
           </NavLink>
 
-          <NavLink to={path.BUSINESS_OWNER_MATERIALS}>
+          <NavLink to={path.BUSINESS_OWNER_INGREDIENTS}>
             {({ isActive }) => (
               <NavItem label='Nguyên liệu' isActive={isActive} />
             )}

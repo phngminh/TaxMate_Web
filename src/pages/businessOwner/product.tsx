@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, type ChangeEvent } from 'react'
 import { Search, Plus, ChevronDown, Scan, X, Trash2, Edit2, ShoppingBag, RotateCcw, ImagePlus } from 'lucide-react'
-import type { Product } from '../../../types/product.type'
+import type { Product } from '../../types/product.type'
 
 const INITIAL_PRODUCTS: Product[] = [
   { id: 'SP000001', name: 'Pizza', category: 'Fast food', mainCategory: 'Ăn uống', unit: 'Cái', price: 55000, status: 'active', description: 'Pizza hải sản với phô mai Mozzarella' },
@@ -13,7 +13,7 @@ const MAIN_CATEGORIES = ['Ăn uống', 'Dịch vụ']
 const PRODUCT_UNITS = [ 'Cái', 'Chiếc', 'Đĩa', 'Bát', 'Ly', 'Lon', 'Chai' ]
 const SERVICE_UNITS = [ 'Giờ', 'Buổi', 'Ngày', 'Tuần', 'Tháng', 'Lần' ]
 
-export default function AllProduct() {
+export default function Product() {
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMainCategory, setSelectedMainCategory] = useState('all')
@@ -566,20 +566,20 @@ export default function AllProduct() {
                   placeholder='0'
                   value={formPrice}
                   onChange={(e) => {
-  const clean = e.target.value.replace(/\D/g, '')
+                    const clean = e.target.value.replace(/\D/g, '')
 
-  console.log({
-    raw: e.target.value,
-    clean,
-    parsed: parseInt(clean)
-  })
+                    console.log({
+                      raw: e.target.value,
+                      clean,
+                      parsed: parseInt(clean)
+                    })
 
-  if (clean === '') {
-    setFormPrice('')
-  } else {
-    setFormPrice(parseInt(clean).toLocaleString('vi-VN'))
-  }
-}}
+                    if (clean === '') {
+                      setFormPrice('')
+                    } else {
+                      setFormPrice(parseInt(clean).toLocaleString('vi-VN'))
+                    }
+                  }}
                   className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-none focus:border-[#D32F2F] transition-all font-medium text-gray-800 text-right mb-5'
                 />
               </div>
