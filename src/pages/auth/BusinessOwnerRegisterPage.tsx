@@ -280,7 +280,7 @@ export default function BusinessOwnerRegisterPage() {
             </div>
 
             <h2 className='mt-2 text-center text-2xl font-bold text-taxmate-red'>
-              Xác thực email
+              Bạn cần xác thực email
             </h2>
 
             <p className='mt-4 text-center text-gray-600'>

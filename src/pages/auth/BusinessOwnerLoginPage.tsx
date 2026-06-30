@@ -235,7 +235,6 @@ export default function BusinessOwnerLoginPage() {
         {showVerifyModal && (
           <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60'>
             <div className='relative w-full max-w-md rounded-2xl bg-white p-8 shadow-xl'>
-
               <button
                 onClick={() => setShowVerifyModal(false)}
                 className='absolute right-4 top-4 text-gray-400 hover:text-gray-600'
@@ -252,7 +251,7 @@ export default function BusinessOwnerLoginPage() {
               </div>
 
               <h2 className='mt-2 text-center text-2xl font-bold text-taxmate-red'>
-                Xác thực email
+                Bạn cần xác thực email
               </h2>
 
               <p className='mt-4 text-center text-gray-600'>
@@ -266,7 +265,6 @@ export default function BusinessOwnerLoginPage() {
               >
                 Tôi đã hiểu
               </button>
-
             </div>
           </div>
         )

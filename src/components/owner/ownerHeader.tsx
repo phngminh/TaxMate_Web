@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import imgLogo from '../../assets/logo3.png'
 import path from '../../constants/path'
-import { Bell, CircleUserRound, PersonStandingIcon, User } from 'lucide-react'
+import { Bell, User } from 'lucide-react'
 
 function NavItem({ label, isActive }: {
   label: string
@@ -18,10 +18,6 @@ function NavItem({ label, isActive }: {
         }`}
     >
       {label}
-
-      {isActive && (
-        <div className='absolute bottom-[-0.5px] left-1/2 -translate-x-1/2 w-[60%] h-[2px] bg-[#910101] rounded-full' />
-      )}
     </div>
   )
 }
@@ -66,7 +62,7 @@ export default function OwnerHeader() {
             )}
           </NavLink>
 
-          <NavLink to={path.BUSINESS_OWNER_MATERIALS}>
+          <NavLink to={path.BUSINESS_OWNER_INGREDIENTS}>
             {({ isActive }) => (
               <NavItem label='Nguyên liệu' isActive={isActive} />
             )}
@@ -99,9 +95,9 @@ export default function OwnerHeader() {
       </div>
 
       <div className='flex items-center gap-3'>
-        <div className='bg-white rounded-full px-4 h-[29px] flex items-center text-[#e00000] text-[14px] font-bold whitespace-nowrap'>
+        <NavLink to={path.BUSINESS_OWNER_POS} className='bg-white rounded-full px-4 h-[29px] flex items-center text-[#e00000] text-[14px] font-bold whitespace-nowrap'>
           + &nbsp;Bán hàng
-        </div>
+        </NavLink>
 
         <div className='bg-white h-[28px] w-[28px] rounded-[15px] border border-[#ff8e8e] flex items-center justify-center'>
           <Bell size={18} strokeWidth={2.2} color='#e00000' />
