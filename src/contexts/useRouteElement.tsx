@@ -31,7 +31,6 @@ export default function useRouteElements() {
             { path: path.BUSINESS_OWNER_PRODUCTS, element: <Product /> },
             { path: path.BUSINESS_OWNER_INGREDIENTS, element: <Ingredient /> },
             { path: path.BUSINESS_OWNER_ORDERS, element: <Order /> },
-            { path: path.BUSINESS_OWNER_CUSTOMERS, element: <Home /> },
             { path: path.BUSINESS_OWNER_EXPENSES, element: <Home /> },
             { path: path.BUSINESS_OWNER_REPORTS, element: <Home /> }
           ]

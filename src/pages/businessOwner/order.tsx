@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Eye, Search, FileDown, Box, X, Scan } from 'lucide-react'
+import { Eye, Search, FileDown, Box, X, Scan, RotateCcw } from 'lucide-react'
 import type { OrderDetail } from '../../types/order.type'
 
 const ORDERS: OrderDetail[] = [
@@ -108,10 +108,16 @@ export default function Order() {
   const [selectedOrder, setSelectedOrder] = useState<OrderDetail | null>(null)
   
   const [searchQuery, setSearchQuery] = useState('')
-  const [customerFilter, setCustomerFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
   const [paymentFilter, setPaymentFilter] = useState('all')
   const [timeFilter, setTimeFilter] = useState('Tháng này')
+
+  const handleResetFilters = () => {
+    setSearchQuery('')
+    setStatusFilter('all')
+    setPaymentFilter('all')
+    setTimeFilter('Tháng này')
+  }
 
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
@@ -159,18 +165,6 @@ export default function Order() {
 
       <div className='flex flex-grow w-full overflow-hidden'>
         <div className='w-72 bg-white border-r border-[#ffe5e5] p-6 flex flex-col gap-6 shrink-0 overflow-y-auto'>
-        <div className='flex flex-col gap-2'>
-          <span className='text-[13px] font-bold text-gray-500'>Khách hàng</span>
-          <select
-            value={customerFilter}
-            onChange={(e) => setCustomerFilter(e.target.value)}
-            className='w-full border border-gray-300 hover:border-gray-400 rounded-[10px] px-3 py-2 bg-white text-[13.5px] text-gray-700 outline-none focus:border-[#D32F2F] transition-all shadow-sm'
-          >
-            <option value='all'>Chọn khách hàng</option>
-            <option value='Khách A'>Khách A</option>
-          </select>
-        </div>
-
         <div className='flex flex-col gap-3'>
           <span className='text-[13px] font-bold text-gray-500'>Trạng thái</span>
           <div className='flex flex-col gap-3.5'>
@@ -274,6 +268,15 @@ export default function Order() {
             ))}
           </div>
         </div>
+
+        {(searchQuery || statusFilter !== 'all' || paymentFilter !== 'all' || timeFilter !== 'Tháng này') && (
+          <button
+            onClick={handleResetFilters}
+            className='mt-auto flex items-center justify-center gap-2 border border-dashed border-[#D32F2F] hover:bg-[#fef2f2] text-[#D32F2F] text-[13px] font-bold py-2.5 rounded-[8px] transition-colors'
+          >
+            <RotateCcw size={14} /> Xoá bộ lọc
+          </button>
+        )}
       </div>
 
       <div className='flex-grow p-8 flex flex-col gap-4 overflow-y-auto'>
