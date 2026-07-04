@@ -206,14 +206,15 @@ export default function BusinessOwnerLoginPage() {
               </div>
             </div>
 
-            <div className='w-full'>
+            <div className='w-full flex justify-center'>
               <GoogleLogin
                 theme='outline'
                 size='large'
                 shape='rectangular'
                 text='continue_with'
+                width='400'
                 onSuccess={handleGoogleSuccess}
-                onError={() => { toast.error('Đăng nhập Google thất bại') }}
+                onError={() => toast.error('Đăng nhập Google thất bại')}
               />
             </div>
 

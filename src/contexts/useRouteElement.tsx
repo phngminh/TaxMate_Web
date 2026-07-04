@@ -21,7 +21,7 @@ export default function useRouteElements() {
     //================ Business Owner routes ================
     {
       path: path.BASE_BUSINESS_OWNER,
-      // element: <ProtectedRoute allowedRoles={['Owner']} />,
+      element: <ProtectedRoute allowedRoles={['Owner']} />,
       children: [
         {
           element: <OwnerLayout />,

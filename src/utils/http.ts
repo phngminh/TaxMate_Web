@@ -5,7 +5,7 @@ class Http {
 
   constructor() {
     this.instance = axios.create({
-      baseURL: 'http://localhost:5086',
+      baseURL: 'http://localhost:5086/api',
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json'
@@ -40,7 +40,6 @@ class Http {
   private handleResponseError(error: any) {
     if (error?.response?.status === 401) {
       localStorage.removeItem('token')
-      window.location.href = '/login'
     }
 
     return Promise.reject(error)
