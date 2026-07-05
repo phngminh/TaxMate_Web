@@ -10,15 +10,12 @@ import LandingPage from '../pages/landingPage/LandingPage'
 import Ingredient from '../pages/businessOwner/ingredient'
 import Order from '../pages/businessOwner/order'
 import POS from '../pages/businessOwner/pos'
-import AdminLayout from '../components/admin/AdminLayout'
-import PlaceholderPage from '../components/admin/PlaceholderPage'
+import AdminLayout from '../components/admin/adminLayout'
 import Dashboard from '../pages/admin/dashboard'
-import UserList from '../pages/admin/userList'
-import UserDetail from '../pages/admin/userDetail'
-import BusinessProfiles from '../pages/admin/businessProfiles'
-import SubscriptionManagement from '../pages/admin/subscriptionManagement'
-import LegalDocuments from '../pages/admin/legalDocuments'
-import UploadLegalDocuments from '../pages/admin/uploadLegalDocuments'
+import UserList from '../pages/admin/user/user'
+import UserDetail from '../pages/admin/user/userDetail'
+import Subscription from '../pages/admin/user/subscription'
+import LegalDocuments from '../pages/admin/document/document'
 
 export default function useRouteElements() {
   const routeElements = useRoutes([
@@ -54,28 +51,12 @@ export default function useRouteElements() {
         {
           element: <AdminLayout />,
           children: [
-            { index: true, element: <Navigate to='dashboard' replace /> },
-            { path: 'dashboard', element: <Dashboard /> },
-            { path: 'users/list', element: <UserList /> },
-            { path: 'users/:id', element: <UserDetail /> },
-            { path: 'users/businesses', element: <BusinessProfiles /> },
-            { path: 'users/subscriptions', element: <SubscriptionManagement /> },
-            { path: 'users/categories', element: <PlaceholderPage title='Business Categories' /> },
-            { path: 'users/compliance', element: <PlaceholderPage title='Compliance Status' /> },
-            { path: 'legal/documents', element: <LegalDocuments /> },
-            { path: 'legal/update', element: <UploadLegalDocuments /> },
-            { path: 'legal/metadata', element: <PlaceholderPage title='Metadata Configuration' /> },
-            { path: 'legal/quality', element: <PlaceholderPage title='Retrieval Quality Monitoring' /> },
-            { path: 'templates/upload', element: <PlaceholderPage title='Upload Tax Declaration Template' /> },
-            { path: 'templates/versions', element: <PlaceholderPage title='Template Versions' /> },
-            { path: 'templates/manage', element: <PlaceholderPage title='Template Management' /> },
-            { path: 'compliance/thresholds', element: <PlaceholderPage title='Revenue Threshold Management' /> },
-            { path: 'compliance/settings', element: <PlaceholderPage title='Compliance Settings' /> },
-            { path: 'invoices/monitoring', element: <PlaceholderPage title='Invoice Monitoring' /> },
-            { path: 'invoices/status', element: <PlaceholderPage title='Invoice Status Management' /> },
-            { path: 'notifications/system', element: <PlaceholderPage title='System Notifications' /> },
-            { path: 'notifications/compliance', element: <PlaceholderPage title='Compliance Notifications' /> },
-            { path: 'notifications/revenue', element: <PlaceholderPage title='Revenue Monitoring Alerts' /> },
+            { index: true, element: <Navigate to={path.ADMIN_DASHBOARD} replace /> },
+            { path: path.ADMIN_DASHBOARD, element: <Dashboard /> },
+            { path: path.ADMIN_USERS_LIST, element: <UserList /> },
+            { path: path.ADMIN_USERS_DETAIL, element: <UserDetail /> },
+            { path: path.ADMIN_USERS_SUBSCRIPTIONS, element: <Subscription /> },
+            { path: path.ADMIN_LEGAL_DOCUMENTS, element: <LegalDocuments /> },
           ]
         }
       ]
