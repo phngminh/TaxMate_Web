@@ -74,12 +74,6 @@ export default function OwnerHeader() {
             )}
           </NavLink>
 
-          <NavLink to={path.BUSINESS_OWNER_CUSTOMERS}>
-            {({ isActive }) => (
-              <NavItem label='Khách hàng' isActive={isActive} />
-            )}
-          </NavLink>
-
           <NavLink to={path.BUSINESS_OWNER_EXPENSES}>
             {({ isActive }) => (
               <NavItem label='Thu chi' isActive={isActive} />

@@ -279,44 +279,6 @@ export default function Product() {
 
       <div className='flex flex-grow w-full'>
         <div className='w-72 bg-white border-r border-[#ffe5e5] p-6 flex flex-col gap-6 shrink-0'>
-          <div className='flex flex-col gap-2 relative' ref={typeDropdownRef}>
-            <span className='text-[13px] font-bold text-gray-500'>Loại mặt hàng</span>
-            <button
-              onClick={() => setTypeDropdownOpen(!typeDropdownOpen)}
-              className='w-full border border-gray-300 hover:border-gray-400 rounded-[10px] px-3.5 py-2.5 bg-white text-[13.5px] text-gray-700 flex items-center justify-between shadow-sm transition-all focus:border-[#D32F2F]'
-            >
-              <span>
-                {selectedMainCategory === 'all' ? 'Chọn loại mặt hàng' : selectedMainCategory}
-              </span>
-              <ChevronDown size={16} className={`text-gray-400 transition-transform ${typeDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {typeDropdownOpen && (
-              <div className='absolute left-0 right-0 top-[74px] bg-white border border-gray-100 rounded-[10px] shadow-lg py-1 z-40 max-h-60 overflow-y-auto animate-in fade-in duration-100'>
-                <button
-                  onClick={() => {
-                    setSelectedMainCategory('all')
-                    setTypeDropdownOpen(false)
-                  }}
-                  className={`w-full text-left px-4 py-2 text-[13px] hover:bg-[#fef2f2] hover:text-[#D32F2F] transition-colors ${selectedMainCategory === 'all' ? 'text-[#D32F2F] font-semibold bg-[#fef2f2]/50' : 'text-gray-700'}`}
-                >
-                  Tất cả loại mặt hàng
-                </button>
-                {MAIN_CATEGORIES.map((mc) => (
-                  <button
-                    key={mc}
-                    onClick={() => {
-                      setSelectedMainCategory(mc)
-                      setTypeDropdownOpen(false)
-                    }}
-                    className={`w-full text-left px-4 py-2 text-[13px] hover:bg-[#fef2f2] hover:text-[#D32F2F] transition-colors ${selectedMainCategory === mc ? 'text-[#D32F2F] font-semibold bg-[#fef2f2]/50' : 'text-gray-700'}`}
-                  >
-                    {mc}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
           <div className='flex flex-col gap-2 relative' ref={categoryDropdownRef}>
             <div className='flex justify-between items-center'>
               <span className='text-[13px] font-bold text-gray-500'>Danh mục sản phẩm</span>
@@ -417,7 +379,6 @@ export default function Product() {
                     <th className='py-4 px-6 font-semibold tracking-wide'>Mã sản phẩm</th>
                     <th className='py-4 px-6 font-semibold tracking-wide'>Tên sản phẩm</th>
                     <th className='py-4 px-6 font-semibold tracking-wide'>Danh mục</th>
-                    <th className='py-4 px-6 font-semibold tracking-wide'>Loại mặt hàng</th>
                     <th className='py-4 px-6 font-semibold tracking-wide text-center'>Đơn vị tính</th>
                     <th className='py-4 px-6 font-semibold tracking-wide text-right'>Giá bán</th>
                     <th className='py-4 px-6 font-semibold tracking-wide text-center w-28'>Thao tác</th>
@@ -438,9 +399,6 @@ export default function Product() {
                       <td className='py-4 px-6 text-[13.5px] text-gray-600 font-medium'>
                         {product.category}
                       </td>
-                      <td className='py-4 px-6 text-[13.5px] text-gray-600 font-medium'>
-                        {product.productCategory}
-                      </td>
                       <td className='py-4 px-6 text-center'>
                         <span className='inline-block bg-[#f3f4f6] text-gray-600 text-[12.5px] px-3.5 py-1 rounded-full font-bold border border-gray-200/40'>
                           {product.unit}
@@ -450,17 +408,17 @@ export default function Product() {
                         {product.currentPrice?.toLocaleString('vi-VN')}
                       </td>
                       <td className='py-4 px-6 text-center'>
-                        <div className='flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity'>
+                        <div className='flex items-center justify-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
                           <button
                             onClick={(e) => handleOpenEditModal(product, e)}
-                            className='p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors'
+                            className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
                             title='Sửa'
                           >
                             <Edit2 size={15} />
                           </button>
                           <button
                             onClick={(e) => handleDeleteProduct(product.id, e)}
-                            className='p-1.5 text-gray-400 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
+                            className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
                             title='Xoá'
                           >
                             <Trash2 size={15} />

@@ -7,6 +7,7 @@ import path from '../../constants/path'
 import { toast } from 'react-toastify'
 import { register } from '../../apis/auth.api'
 import { Eye, EyeOff, X } from 'lucide-react'
+import type { RegisterRequest } from '../../types/auth.type'
 
 export default function BusinessOwnerRegisterPage() {
   const navigate = useNavigate()
@@ -17,37 +18,65 @@ export default function BusinessOwnerRegisterPage() {
       : location.state?.direction === 'right'
         ? 'auth-page-enter-right'
         : ''
-
-  const [fullName, setFullName] = useState('')
-  const [taxCode, setTaxCode] = useState('')
-  const [phone, setPhone] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const [form, setForm] = useState<RegisterRequest>({
+    fullName: '',
+    taxCode: '',
+    phone: '',
+    email: '',
+    password: ''
+  })
   const [agreedToPolicy, setAgreedToPolicy] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showVerifyModal, setShowVerifyModal] = useState(false)
 
+  const handleChange = <K extends keyof RegisterRequest>(key: K, value: RegisterRequest[K]) => {
+    setForm(prev => ({
+      ...prev,
+      [key]: value
+    }))
+  }
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
-    if (!fullName.trim()) {
-      toast.error('Vui lòng nhập họ tên')
+    if (!form.fullName.trim()) {
+      toast.error('Vui lòng nhập đầy đủ họ tên')
       return
     }
-
-    if (!taxCode.trim()) {
+    
+    if (!form.taxCode.trim()) {
       toast.error('Vui lòng nhập mã số thuế')
       return
     }
 
-    if (!email.trim()) {
+    if (!/^\d{12}$/.test(form.taxCode)) {
+      toast.error('Số CCCD/mã số thuế phải gồm đúng 12 chữ số')
+      return
+    }
+
+    if (!form.phone.trim()) {
+      toast.error('Vui lòng nhập số điện thoại')
+      return
+    }
+
+    if (!/^0\d{9}$/.test(form.phone)) {
+      toast.error('Số điện thoại phải gồm 10 chữ số và bắt đầu bằng số 0.')
+      return
+    }
+
+    if (!form.email.trim()) {
       toast.error('Vui lòng nhập email')
       return
     }
 
-    if (!password.trim()) {
+    if (!form.password.trim()) {
       toast.error('Vui lòng nhập mật khẩu')
+      return
+    }
+
+    if (form.password.length < 8) {
+      toast.error('Mật khẩu phải có ít nhất 8 ký tự')
       return
     }
 
@@ -58,8 +87,8 @@ export default function BusinessOwnerRegisterPage() {
 
     try {
       setIsSubmitting(true)
-      const auth = await register({ fullName, taxCode, phone, email, password })
-
+      
+      const auth = await register(form)
       if (auth.requiresEmailVerification) {
         setShowVerifyModal(true)
       }
@@ -99,8 +128,8 @@ export default function BusinessOwnerRegisterPage() {
                 name='fullName'
                 autoComplete='name'
                 placeholder='Nhập họ và tên'
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
+                value={form.fullName}
+                onChange={(e) => handleChange('fullName', e.target.value)}
                 className={fieldClassName}
                 required
               />
@@ -115,8 +144,8 @@ export default function BusinessOwnerRegisterPage() {
                 type='text'
                 name='taxCode'
                 placeholder='Nhập mã số thuế'
-                value={taxCode}
-                onChange={(event) => setTaxCode(event.target.value)}
+                value={form.taxCode}
+                onChange={(e) => handleChange('taxCode', e.target.value)}
                 className={fieldClassName}
                 required
               />
@@ -124,7 +153,7 @@ export default function BusinessOwnerRegisterPage() {
 
             <div className='relative'>
               <label htmlFor='phone' className={labelClassName}>
-                Số điện thoại
+                Số điện thoại <span className='text-taxmate-red'>*</span>
               </label>
               <input
                 id='phone'
@@ -132,8 +161,8 @@ export default function BusinessOwnerRegisterPage() {
                 name='phone'
                 autoComplete='tel'
                 placeholder='Nhập số điện thoại'
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
+                value={form.phone}
+                onChange={(e) => handleChange('phone', e.target.value)}
                 className={fieldClassName}
               />
             </div>
@@ -148,8 +177,8 @@ export default function BusinessOwnerRegisterPage() {
                 name='email'
                 autoComplete='email'
                 placeholder='Nhập địa chỉ email'
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                value={form.email}
+                onChange={(e) => handleChange('email', e.target.value)}
                 className={fieldClassName}
                 required
               />
@@ -166,8 +195,8 @@ export default function BusinessOwnerRegisterPage() {
                 name='password'
                 autoComplete='new-password'
                 placeholder='Nhập mật khẩu'
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
+                value={form.password}
+                onChange={(e) => handleChange('password', e.target.value)}
                 className={`${fieldClassName} pr-12`}
                 required
               />
@@ -260,10 +289,9 @@ export default function BusinessOwnerRegisterPage() {
         </div>
       </div>
 
-      { showVerifyModal && (
+      {showVerifyModal && (
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60'>
           <div className='relative w-full max-w-md rounded-2xl bg-white p-8 shadow-xl'>
-
             <button
               onClick={() => setShowVerifyModal(false)}
               className='absolute right-4 top-4 text-gray-400 hover:text-gray-600'
@@ -279,21 +307,25 @@ export default function BusinessOwnerRegisterPage() {
               />
             </div>
 
-            <h2 className='mt-2 text-center text-2xl font-bold text-taxmate-red'>
-              Bạn cần xác thực email
+            <h2 className='mt-2 text-center text-2xl font-bold text-green-500'>
+              Đăng ký thành công!
             </h2>
 
             <p className='mt-4 text-center text-gray-600'>
-              Đăng ký thành công! Vui lòng kiểm tra email bạn đã cung cấp để xác thực tài khoản và bắt đầu sử dụng TaxMate.
+              Bạn cần xác thực email. Vui lòng kiểm tra email bạn đã cung cấp để xác thực tài khoản và bắt đầu sử dụng TaxMate.
             </p>
 
             <button
-              onClick={() => setShowVerifyModal(false)}
+              onClick={() => {
+                setShowVerifyModal(false)
+                navigate(path.BUSINESS_OWNER_LOGIN, {
+                  state: { direction: 'right' }
+                })
+              }}
               className='mt-6 h-12 w-full rounded-lg bg-taxmate-red font-semibold text-white hover:bg-taxmate-red-hover'
             >
               Tôi đã hiểu
             </button>
-
           </div>
         </div>
       )}

@@ -417,7 +417,7 @@ export default function Ingredient() {
                         <td className='py-4 px-6 text-[13px] text-gray-500'>{formatDate(item.createdAt)}</td>
                         <td className='py-4 px-6 text-[13px] text-gray-500'>{formatDate(item.updatedAt)}</td>
                         <td className='py-4 px-6 text-center'>
-                          <div className='flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity'>
+                          <div className='flex items-center justify-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
                             <button
                               onClick={(e) => handleOpenEditIngredient(item, e)}
                               className='p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors'
@@ -479,7 +479,7 @@ export default function Ingredient() {
                           {recipe.price.toLocaleString('vi-VN')} đ
                         </td>
                         <td className='py-4 px-6 text-center'>
-                          <div className='flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity'>
+                          <div className='flex items-center justify-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
                             <button
                               onClick={() => setViewingRecipe(recipe)}
                               className='p-1.5 text-gray-400 hover:text-[#4c51bf] hover:bg-[#eef2ff] rounded-md transition-colors'
@@ -489,13 +489,13 @@ export default function Ingredient() {
                             </button>
                             <button
                               onClick={(e) => handleOpenEditRecipe(recipe, e)}
-                              className='p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors'
+                              className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
                               title='Sửa'
                             >
                               <Edit2 size={15} />
                             </button>
                             <button
-                              className='p-1.5 text-gray-400 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
+                              className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
                               title='Xoá'
                             >
                               <Trash2 size={15} />

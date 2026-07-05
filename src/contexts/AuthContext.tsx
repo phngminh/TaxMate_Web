@@ -43,8 +43,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const savedToken =
-        localStorage.getItem('token')
+      const savedToken = localStorage.getItem('token')
 
       if (!savedToken) {
         setIsLoading(false)

@@ -31,7 +31,7 @@ export default function LandingPage() {
             </span>
           </Link>
 
-          <nav className='hidden md:flex items-center gap-8 ml-14'>
+          <nav className='hidden md:flex items-center gap-8 ml-20'>
             <a href='#features' className='text-slate-600 hover:text-slate-900 font-medium transition-colors duration-200'>
               Giới thiệu
             </a>

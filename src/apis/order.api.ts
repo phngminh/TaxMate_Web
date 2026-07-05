@@ -17,7 +17,7 @@ export const getOrders = async (
   page = 1,
   pageSize = 20
 ) => {
-  const response = await http.get<ApiResponse<PagedResult<Order>>>(`/api/Order/business/${businessId}`, {
+  const response = await http.get<ApiResponse<PagedResult<Order>>>(`/Order/business/${businessId}`, {
     params: {
       page,
       pageSize
@@ -27,7 +27,7 @@ export const getOrders = async (
 }
 
 export const addOrderItem = async (orderId: string, body: AddOrderItemRequest) => {
-  const response = await http.post<ApiResponse<string>>(`/api/Order/${orderId}/items`, body)
+  const response = await http.post<ApiResponse<string>>(`/Order/${orderId}/items`, body)
   return response.data
 }
 
@@ -36,17 +36,17 @@ export const updateOrderItem = async (
   itemId: string,
   body: UpdateOrderItemRequest
 ) => {
-  const response = await http.put<ApiResponse<string>>(`/api/Order/${orderId}/items/${itemId}`, body)
+  const response = await http.put<ApiResponse<string>>(`/Order/${orderId}/items/${itemId}`, body)
   return response.data
 }
 
 export const removeOrderItem = async (orderId: string, itemId: string) => {
-  const response = await http.delete<ApiResponse<string>>(`/api/Order/${orderId}/items/${itemId}`)
+  const response = await http.delete<ApiResponse<string>>(`/Order/${orderId}/items/${itemId}`)
   return response.data
 }
 
 
 export const cancelOrder = async (orderId: string) => {
-  const response = await http.post<ApiResponse<string>>(`/api/Order/${orderId}/cancel`)
+  const response = await http.post<ApiResponse<string>>(`/Order/${orderId}/cancel`)
   return response.data
 }
