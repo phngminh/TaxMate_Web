@@ -19,6 +19,19 @@ const path = {
   //============= Admin ============
   BASE_ADMIN: '/admin',
   ADMIN_DASHBOARD: '/admin/dashboard',
-  ADMIN_ACCOUNTS: '/admin/accounts',
+  ADMIN_USERS_LIST: '/admin/users/list',
+  ADMIN_USERS_DETAIL: '/admin/users/:id',
+  ADMIN_USERS_BUSINESSES: '/admin/users/businesses',
+  ADMIN_USERS_SUBSCRIPTIONS: '/admin/users/subscriptions',
+  ADMIN_LEGAL_DOCUMENTS: '/admin/legal/documents',
 }
+
+export function getHomePathForRole(role: string | undefined): string {
+  if ((role ?? '').toLowerCase() === 'admin') {
+    return path.ADMIN_DASHBOARD
+  }
+
+  return path.BUSINESS_OWNER_HOME
+}
+
 export default path

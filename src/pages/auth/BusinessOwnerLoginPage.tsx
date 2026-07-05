@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import logo from '../../assets/logo1.png'
 import email from '../../assets/email.jpeg'
 import heroBg from '../../assets/bg.jpg'
-import path from '../../constants/path'
+import path, { getHomePathForRole } from '../../constants/path'
 import { login, loginWithGoogle } from '../../apis/auth.api'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
@@ -54,7 +54,7 @@ export default function BusinessOwnerLoginPage() {
 
       authLogin(auth)
       toast.success('Đăng nhập thành công')
-      navigate(path.BUSINESS_OWNER_HOME, { state: { direction: 'right' } })
+      navigate(getHomePathForRole(auth.user.role), { state: { direction: 'right' } })
     } catch (error: any) {
       const message = error?.response?.data?.message || 'Sai tài khoản hoặc mật khẩu'
       toast.error(message)
@@ -81,7 +81,7 @@ export default function BusinessOwnerLoginPage() {
       }
 
       toast.success('Đăng nhập thành công')
-      navigate(path.BUSINESS_OWNER_HOME, { state: { direction: 'right' }})
+      navigate(getHomePathForRole(auth.user.role), { state: { direction: 'right' } })
     } catch (error: any) {
       toast.error( error?.response?.data?.message || 'Đăng nhập Google thất bại')
     } finally {

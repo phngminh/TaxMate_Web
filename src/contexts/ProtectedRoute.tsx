@@ -1,6 +1,7 @@
 import React from 'react'
 import { Navigate, useLocation, Outlet } from 'react-router-dom'
 import { useAuth } from './AuthContext'
+import { getHomePathForRole } from '../constants/path'
 
 interface ProtectedRouteProps {
   children?: React.ReactNode
@@ -29,7 +30,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (allowedRoles.length > 0 && user && !allowedRoles.map(r => r.toLowerCase()).includes((user.role || '').toLowerCase())) {
-    return <Navigate to='/' replace />
+    return <Navigate to={getHomePathForRole(user.role)} replace />
   }
 
   return children ? <>{children}</> : <Outlet />

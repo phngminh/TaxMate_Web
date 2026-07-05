@@ -1,4 +1,4 @@
-import { useRoutes, Navigate, useNavigate } from 'react-router-dom'
+import { useRoutes, Navigate } from 'react-router-dom'
 import path from '../constants/path'
 import ProtectedRoute from './ProtectedRoute'
 import BusinessOwnerLoginPage from '../pages/auth/BusinessOwnerLoginPage'
@@ -10,9 +10,14 @@ import LandingPage from '../pages/landingPage/LandingPage'
 import Ingredient from '../pages/businessOwner/ingredient'
 import Order from '../pages/businessOwner/order'
 import POS from '../pages/businessOwner/pos'
+import AdminLayout from '../components/admin/adminLayout'
+import Dashboard from '../pages/admin/dashboard'
+import UserList from '../pages/admin/user/user'
+import UserDetail from '../pages/admin/user/userDetail'
+import Subscription from '../pages/admin/user/subscription'
+import LegalDocuments from '../pages/admin/document/document'
 
 export default function useRouteElements() {
-  const navigate = useNavigate()
   const routeElements = useRoutes([
     { path: path.home, element: <LandingPage /> },
     { path: path.callback, element: <></> },
@@ -43,12 +48,15 @@ export default function useRouteElements() {
       path: path.BASE_ADMIN,
       element: <ProtectedRoute allowedRoles={['Admin']} />,
       children: [
-        { index: true, element: <Navigate to='dashboard' replace /> },
         {
-          element: <></>,
+          element: <AdminLayout />,
           children: [
-            { path: 'dashboard', element: <></> },
-            { path: 'accounts', element: <></> },
+            { index: true, element: <Navigate to={path.ADMIN_DASHBOARD} replace /> },
+            { path: path.ADMIN_DASHBOARD, element: <Dashboard /> },
+            { path: path.ADMIN_USERS_LIST, element: <UserList /> },
+            { path: path.ADMIN_USERS_DETAIL, element: <UserDetail /> },
+            { path: path.ADMIN_USERS_SUBSCRIPTIONS, element: <Subscription /> },
+            { path: path.ADMIN_LEGAL_DOCUMENTS, element: <LegalDocuments /> },
           ]
         }
       ]
