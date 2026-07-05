@@ -10,12 +10,13 @@ import LandingPage from '../pages/landingPage/LandingPage'
 import Ingredient from '../pages/businessOwner/ingredient'
 import Order from '../pages/businessOwner/order'
 import POS from '../pages/businessOwner/pos'
-import AdminLayout from '../components/admin/adminLayout'
+import AdminLayout from '../components/admin/AdminLayout'
 import Dashboard from '../pages/admin/dashboard'
 import UserList from '../pages/admin/user/user'
 import UserDetail from '../pages/admin/user/userDetail'
 import Subscription from '../pages/admin/user/subscription'
 import LegalDocuments from '../pages/admin/document/document'
+import { BusinessProvider } from './BusinessContext'
 
 export default function useRouteElements() {
   const routeElements = useRoutes([
@@ -29,7 +30,11 @@ export default function useRouteElements() {
       element: <ProtectedRoute allowedRoles={['Owner']} />,
       children: [
         {
-          element: <OwnerLayout />,
+          element: (
+            <BusinessProvider>
+              <OwnerLayout />
+            </BusinessProvider>
+          ),
           children: [
             { index: true, element: <Navigate to={path.BUSINESS_OWNER_HOME} replace /> },
             { path: path.BUSINESS_OWNER_HOME, element: <Home /> },
@@ -40,7 +45,13 @@ export default function useRouteElements() {
             { path: path.BUSINESS_OWNER_REPORTS, element: <Home /> }
           ]
         },
-        { path: path.BUSINESS_OWNER_POS, element: <POS /> },
+        { 
+          path: path.BUSINESS_OWNER_POS, 
+          element: 
+            <BusinessProvider>
+              <POS />
+            </BusinessProvider>
+        },
       ]
     },
     //================ Admin routes ================
