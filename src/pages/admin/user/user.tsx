@@ -122,9 +122,9 @@ export default function UserList() {
 
         {/* Filters */}
         <div className='flex flex-col sm:flex-row gap-3'>
-          <div className='flex-1 max-w-5xl flex items-center bg-white border border-gray-300 rounded-lg px-5 py-2.5 shadow-sm focus-within:border-sidebar-primary focus-within:ring-1 focus-within:ring-[#D32F2F]/20 transition-all'>
+          <div className='flex-1 max-w-5xl flex items-center bg-white border border-gray-300 rounded-lg px-5 py-2.5 shadow-xs focus-within:border-sidebar-primary focus-within:ring-1 focus-within:ring-[#D32F2F]/20 transition-all'>
             <Search
-              className={`mr-3 size-5 shrink-0 stroke-[2] transition-colors ${
+              className={`mr-3 size-5 shrink-0 stroke-2 transition-colors ${
                 searchTerm ? 'text-sidebar-primary' : 'text-gray-400'
               }`}
             />
@@ -133,7 +133,7 @@ export default function UserList() {
               placeholder='Tìm kiếm theo tên, email, số điện thoại hoặc mã số thuế...'
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className='flex-grow bg-transparent outline-none text-[14px] text-gray-800 placeholder-gray-400 font-medium'
+              className='grow bg-transparent outline-hidden text-[14px] text-gray-800 placeholder-gray-400 font-medium'
             />
           </div>
 
@@ -141,7 +141,7 @@ export default function UserList() {
             <select
               value={filterRole}
               onChange={(e) => setFilterRole(e.target.value)}
-              className='px-3 py-2 bg-card border border-border rounded-md text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all'
+              className='px-3 py-2 bg-card border border-border rounded-md text-sm text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary transition-all'
             >
               <option value='all'>Tất cả vai trò</option>
               <option value='owner'>Người dùng</option>
@@ -151,7 +151,7 @@ export default function UserList() {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className='px-3 py-2 bg-card border border-border rounded-md text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all'
+              className='px-3 py-2 bg-card border border-border rounded-md text-sm text-foreground focus:outline-hidden focus:ring-1 focus:ring-primary transition-all'
             >
               <option value='all'>Tất cả trạng thái</option>
               <option value='active'>Đang hoạt động</option>
@@ -216,7 +216,7 @@ export default function UserList() {
                   >
                     <td className='px-4 py-3'>
                       <div className='flex items-center gap-3'>
-                        <div className='w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0'>
+                        <div className='w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0'>
                           <UserIcon className='w-4 h-4 text-muted-foreground' />
                         </div>
                         <div className='min-w-0'>

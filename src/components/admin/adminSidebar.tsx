@@ -66,8 +66,8 @@ export default function ComprehensiveSidebar() {
   ]
 
   return (
-    <div className='w-64 bg-sidebar h-full flex flex-col flex-shrink-0'>
-      <div className='p-2 flex-shrink-0'>
+    <div className='w-64 bg-sidebar h-full flex flex-col shrink-0'>
+      <div className='p-2 shrink-0'>
         <div className='flex items-center px-5'>
           <img src={logo} alt='TaxMate' className='h-16 w-auto' />
           <span className='mt-3 ml-3 font-bold text-2xl text-gray-200'>TaxMate</span>
@@ -94,11 +94,11 @@ export default function ComprehensiveSidebar() {
                     }`}
                   >
                     <div className='flex items-center gap-3'>
-                      <item.icon className='w-4 h-4 flex-shrink-0' />
+                      <item.icon className='w-4 h-4 shrink-0' />
                       <span className='text-left'>{item.label}</span>
                     </div>
                     <ChevronRight
-                      className={`w-4 h-4 flex-shrink-0 transition-transform duration-200 ${
+                      className={`w-4 h-4 shrink-0 transition-transform duration-200 ${
                         isExpanded ? 'rotate-90' : ''
                       }`}
                     />

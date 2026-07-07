@@ -101,7 +101,7 @@ export default function BusinessOwnerLoginPage() {
           />
           <div
             aria-hidden='true'
-            className='pointer-events-none absolute inset-0 bg-gradient-to-br from-taxmate-red/90 via-taxmate-red/95 to-taxmate-red-dark/80'
+            className='pointer-events-none absolute inset-0 bg-linear-to-br from-taxmate-red/90 via-taxmate-red/95 to-taxmate-red-dark/80'
           />
 
           <div className='relative z-10 flex flex-1 flex-col p-8 lg:p-10'>
@@ -146,7 +146,7 @@ export default function BusinessOwnerLoginPage() {
                   placeholder='Số điện thoại/Email'
                   value={identifier}
                   onChange={(event) => setIdentifier(event.target.value)}
-                  className='h-12 w-full rounded-lg border border-gray-300 bg-white py-3 pl-11 pr-4 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+                  className='h-12 w-full rounded-lg border border-gray-300 bg-white py-3 pl-11 pr-4 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
                 />
               </div>
 
@@ -162,7 +162,7 @@ export default function BusinessOwnerLoginPage() {
                     placeholder='Mật khẩu'
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className='h-12 w-full rounded-lg border border-gray-300 bg-white py-3 pl-11 pr-11 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+                    className='h-12 w-full rounded-lg border border-gray-300 bg-white py-3 pl-11 pr-11 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
                   />
                   <button
                     type='button'

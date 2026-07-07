@@ -401,7 +401,7 @@ function OcrBadge({ status }: { status: LegalDocument['ocr_status'] }) {
   const { label, className } = configs[status]
   return (
     <span
-      className={`inline-flex items-center px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wide ${className}`}
+      className={`inline-flex items-center px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wide ${className}`}
     >
       {label}
     </span>
@@ -431,7 +431,7 @@ function KeywordTypeBadge({ type }: { type: DocumentKeyword['keyword_type'] }) {
   const { label, cls } = configs[type]
   return (
     <span
-      className={`inline-flex px-2 py-0.5 rounded text-sm font-medium ${cls}`}
+      className={`inline-flex px-2 py-0.5 rounded-sm text-sm font-medium ${cls}`}
     >
       {label}
     </span>
@@ -547,11 +547,11 @@ function DocumentDrawer({ doc, onClose }: {
   return (
     <>
       <div
-        className='fixed inset-0 bg-black/50 backdrop-blur-sm z-40 transition-opacity'
+        className='fixed inset-0 bg-black/50 backdrop-blur-xs z-40 transition-opacity'
         onClick={onClose}
       />
       <div className='fixed right-0 top-0 h-full w-[680px] bg-white border-l border-[#e5e7eb] z-50 flex flex-col shadow-2xl'>
-        <div className='flex items-start justify-between px-6 py-5 border-b border-[#e5e7eb] bg-white flex-shrink-0'>
+        <div className='flex items-start justify-between px-6 py-5 border-b border-[#e5e7eb] bg-white shrink-0'>
           <div className='flex-1 min-w-0 pr-4'>
             <h2 className='text-base font-semibold text-[#1a1a1a] leading-snug mt-2'>
               {doc.document_name}
@@ -562,13 +562,13 @@ function DocumentDrawer({ doc, onClose }: {
           </div>
           <button
             onClick={onClose}
-            className='p-1.5 rounded-md text-[#9ca3af] hover:text-[#1a1a1a] hover:bg-[#f9fafb] transition-colors mt-1 flex-shrink-0'
+            className='p-1.5 rounded-md text-[#9ca3af] hover:text-[#1a1a1a] hover:bg-[#f9fafb] transition-colors mt-1 shrink-0'
           >
             <X className='w-4 h-4' />
           </button>
         </div>
 
-        <div className='flex border-b border-[#e5e7eb] px-6 flex-shrink-0'>
+        <div className='flex border-b border-[#e5e7eb] px-6 shrink-0'>
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -633,7 +633,7 @@ function DocumentDrawer({ doc, onClose }: {
                     key={label}
                     className='flex items-start justify-between px-4 py-3 border-b border-[#e5e7eb] last:border-0 gap-4'
                   >
-                    <span className='text-sm text-[#9ca3af] flex-shrink-0 pt-0.5 w-36'>
+                    <span className='text-sm text-[#9ca3af] shrink-0 pt-0.5 w-36'>
                       {label}
                     </span>
                     <span
@@ -646,7 +646,7 @@ function DocumentDrawer({ doc, onClose }: {
               </div>
 
               <div className='flex items-center gap-2 p-3 bg-[#f9fafb] border border-[#e5e7eb] rounded-lg'>
-                <Download className='w-4 h-4 text-[#9ca3af] flex-shrink-0' />
+                <Download className='w-4 h-4 text-[#9ca3af] shrink-0' />
                 <span className='text-sm text-[#9ca3af] flex-1 truncate'>
                   {doc.source_file_name}
                 </span>
@@ -942,7 +942,7 @@ function DocumentDrawer({ doc, onClose }: {
 
               <div className='bg-[#faf5ff] border border-[#e9d5ff] rounded-lg p-4'>
                 <div className='flex items-start gap-3'>
-                  <Zap className='w-4 h-4 text-[#5d2ec0] mt-0.5 flex-shrink-0' />
+                  <Zap className='w-4 h-4 text-[#5d2ec0] mt-0.5 shrink-0' />
                   <div>
                     <p className='text-sm font-medium text-[#1a1a1a] mb-1'>
                       Embedding Model Details
@@ -1118,7 +1118,7 @@ export default function LegalDocumentManagement() {
             }) => (
               <div
                 key={label}
-                className='bg-white border border-[#f3f4f6] rounded-xl p-[21px] shadow-sm flex items-start justify-between'
+                className='bg-white border border-[#f3f4f6] rounded-xl p-[21px] shadow-xs flex items-start justify-between'
               >
                 <div>
                   <p className='text-base font-medium text-[#6b7280] mb-2'>
@@ -1167,14 +1167,14 @@ export default function LegalDocumentManagement() {
               placeholder='Tìm kiếm theo tên tài liệu, mã hiệu...'
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className='w-full pl-[39px] pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-[#9ca3af] placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-green-400'
+              className='w-full pl-[39px] pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-[#9ca3af] placeholder:text-gray-400 focus:outline-hidden focus:ring-1 focus:ring-green-400'
             />
           </div>
 
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className='px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-[#4b5563] focus:outline-none focus:ring-1 focus:ring-green-400'
+            className='px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-[#4b5563] focus:outline-hidden focus:ring-1 focus:ring-green-400'
           >
             <option value='all'>Loại tài liệu</option>
             {docTypes
@@ -1186,7 +1186,7 @@ export default function LegalDocumentManagement() {
               ))}
           </select>
 
-          <select className='px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-[#4b5563] focus:outline-none focus:ring-1 focus:ring-green-400'>
+          <select className='px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-[#4b5563] focus:outline-hidden focus:ring-1 focus:ring-green-400'>
             <option>Trạng thái</option>
             <option>Hoạt động</option>
             <option>Không hoạt động</option>
@@ -1210,7 +1210,7 @@ export default function LegalDocumentManagement() {
         </div>
 
         {/* Document Table */}
-        <div className='bg-white border border-[#f3f4f6] rounded-xl shadow-sm overflow-hidden'>
+        <div className='bg-white border border-[#f3f4f6] rounded-xl shadow-xs overflow-hidden'>
           <div className='overflow-x-auto'>
             <table className='w-full'>
               <thead>
@@ -1261,7 +1261,7 @@ export default function LegalDocumentManagement() {
                       <td className='px-6 py-5'>
                         <div className='flex items-center gap-3'>
                           <div
-                            className='w-10 h-10 rounded-lg bg-red-500 flex items-center justify-center flex-shrink-0'
+                            className='w-10 h-10 rounded-lg bg-red-500 flex items-center justify-center shrink-0'
                           >
                             <FileText className='w-5 h-5 text-white' />
                           </div>
@@ -1352,13 +1352,13 @@ export default function LegalDocumentManagement() {
           {/* Table Footer */}
           <div className='px-6 py-4 border-t border-[#f9fafb] flex items-center justify-between'>
             <div className='flex items-center gap-2'>
-              <button className='px-3 py-2 bg-[#5d2ec0] text-white text-sm font-medium rounded hover:bg-[#4c25a0] transition-colors'>
+              <button className='px-3 py-2 bg-[#5d2ec0] text-white text-sm font-medium rounded-sm hover:bg-[#4c25a0] transition-colors'>
                 1
               </button>
-              <button className='px-3 py-2 text-sm font-medium text-[#6b7280] hover:bg-[#f9fafb] rounded transition-colors'>
+              <button className='px-3 py-2 text-sm font-medium text-[#6b7280] hover:bg-[#f9fafb] rounded-sm transition-colors'>
                 2
               </button>
-              <button className='px-3 py-2 text-sm font-medium text-[#6b7280] hover:bg-[#f9fafb] rounded transition-colors'>
+              <button className='px-3 py-2 text-sm font-medium text-[#6b7280] hover:bg-[#f9fafb] rounded-sm transition-colors'>
                 3
               </button>
             </div>

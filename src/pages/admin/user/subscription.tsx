@@ -183,7 +183,7 @@ function TimeFilter({
       <select
         value={month}
         onChange={(e) => onMonthChange(Number(e.target.value))}
-        className='text-sm border border-[#e5e7eb] rounded-lg px-3 py-1.5 text-[#374151] bg-white focus:outline-none focus:ring-2 focus:ring-[#5d2ec0]/30 cursor-pointer'
+        className='text-sm border border-[#e5e7eb] rounded-lg px-3 py-1.5 text-[#374151] bg-white focus:outline-hidden focus:ring-2 focus:ring-[#5d2ec0]/30 cursor-pointer'
       >
         {MONTHS.map((label, idx) => (
           <option key={idx} value={idx + 1}>
@@ -194,7 +194,7 @@ function TimeFilter({
       <select
         value={year}
         onChange={(e) => onYearChange(Number(e.target.value))}
-        className='text-sm border border-[#e5e7eb] rounded-lg px-3 py-1.5 text-[#374151] bg-white focus:outline-none focus:ring-2 focus:ring-[#5d2ec0]/30 cursor-pointer'
+        className='text-sm border border-[#e5e7eb] rounded-lg px-3 py-1.5 text-[#374151] bg-white focus:outline-hidden focus:ring-2 focus:ring-[#5d2ec0]/30 cursor-pointer'
       >
         {YEARS.map((y) => (
           <option key={y} value={y}>
@@ -229,7 +229,7 @@ export default function SubscriptionManagement() {
               Tạo và quản lý các gói đăng ký cho khách hàng
             </p>
           </div>
-          <button className='flex items-center gap-2 px-4 py-2 bg-[#5d2ec0] text-white rounded-lg text-sm font-medium hover:bg-[#4c25a0] transition-colors shadow-sm'>
+          <button className='flex items-center gap-2 px-4 py-2 bg-[#5d2ec0] text-white rounded-lg text-sm font-medium hover:bg-[#4c25a0] transition-colors shadow-xs'>
             <Plus className='w-4 h-4' />
             Tạo gói mới
           </button>
@@ -240,7 +240,7 @@ export default function SubscriptionManagement() {
             {plans.map((plan) => (
               <div
                 key={plan.id}
-                className='bg-card border border-border rounded-xl p-6 shadow-sm'
+                className='bg-card border border-border rounded-xl p-6 shadow-xs'
               >
                 <div className='flex items-start justify-between mb-4'>
                   <div className='flex-1'>
@@ -252,10 +252,10 @@ export default function SubscriptionManagement() {
                     </p>
                   </div>
                   <div className='flex items-center gap-1'>
-                    <button className='p-1.5 hover:bg-[#f9fafb] rounded transition-colors'>
+                    <button className='p-1.5 hover:bg-[#f9fafb] rounded-sm transition-colors'>
                       <Edit3 className='w-4 h-4 text-[#6b7280]' />
                     </button>
-                    <button className='p-1.5 hover:bg-[#fef2f2] rounded transition-colors'>
+                    <button className='p-1.5 hover:bg-[#fef2f2] rounded-sm transition-colors'>
                       <Trash2 className='w-4 h-4 text-[#ef4444]' />
                     </button>
                   </div>
@@ -289,11 +289,11 @@ export default function SubscriptionManagement() {
                       className='flex items-start gap-2'
                     >
                       {feature.included ? (
-                        <div className='w-4 h-4 rounded-full bg-[#ecfdf5] flex items-center justify-center flex-shrink-0 mt-0.5'>
+                        <div className='w-4 h-4 rounded-full bg-[#ecfdf5] flex items-center justify-center shrink-0 mt-0.5'>
                           <Check className='w-3 h-3 text-[#10b981]' />
                         </div>
                       ) : (
-                        <div className='w-4 h-4 rounded-full bg-[#fef2f2] flex items-center justify-center flex-shrink-0 mt-0.5'>
+                        <div className='w-4 h-4 rounded-full bg-[#fef2f2] flex items-center justify-center shrink-0 mt-0.5'>
                           <X className='w-3 h-3 text-[#ef4444]' />
                         </div>
                       )}
@@ -323,7 +323,7 @@ export default function SubscriptionManagement() {
         </div>
 
         {/* Tổng quan thống kê */}
-        <div className='bg-card border border-border rounded-xl shadow-sm overflow-hidden'>
+        <div className='bg-card border border-border rounded-xl shadow-xs overflow-hidden'>
           <div className='px-6 py-4 border-b border-border flex items-center justify-between'>
             <h3 className='text-base font-bold text-[#0a0a0a]'>
               Tổng quan thống kê
@@ -337,7 +337,7 @@ export default function SubscriptionManagement() {
             />
           </div>
           <div className='grid grid-cols-3 gap-6'>
-            <div className='bg-card border border-border rounded-xl p-6 shadow-sm'>
+            <div className='bg-card border border-border rounded-xl p-6 shadow-xs'>
               <div className='flex items-center justify-between mb-4'>
                 <div className='w-10 h-10 rounded-lg bg-[#eff6ff] flex items-center justify-center'>
                   <LayoutGrid className='w-5 h-5 text-[#3b82f6]' />
@@ -354,7 +354,7 @@ export default function SubscriptionManagement() {
               </p>
             </div>
 
-            <div className='bg-card border border-border rounded-xl p-6 shadow-sm'>
+            <div className='bg-card border border-border rounded-xl p-6 shadow-xs'>
               <div className='flex items-center justify-between mb-4'>
                 <div className='w-10 h-10 rounded-lg bg-[#ecfdf5] flex items-center justify-center'>
                   <Users className='w-5 h-5 text-[#10b981]' />
@@ -371,7 +371,7 @@ export default function SubscriptionManagement() {
               </p>
             </div>
 
-            <div className='bg-card border border-border rounded-xl p-6 shadow-sm'>
+            <div className='bg-card border border-border rounded-xl p-6 shadow-xs'>
               <div className='flex items-center justify-between mb-4'>
                 <div className='w-10 h-10 rounded-lg bg-[#faf5ff] flex items-center justify-center'>
                   <DollarSign className='w-5 h-5 text-[#5d2ec0]' />
@@ -391,7 +391,7 @@ export default function SubscriptionManagement() {
         </div>
 
         {/* Bảng chi tiết gói */}
-        <div className='bg-card border border-border rounded-xl shadow-sm overflow-hidden'>
+        <div className='bg-card border border-border rounded-xl shadow-xs overflow-hidden'>
           <div className='px-6 py-4 border-b border-border flex items-center justify-between'>
             <h3 className='text-base font-bold text-[#0a0a0a]'>
               Chi tiết tất cả gói đăng ký
@@ -482,10 +482,10 @@ export default function SubscriptionManagement() {
                     </td>
                     <td className='px-4 py-4'>
                       <div className='flex items-center justify-end gap-2'>
-                        <button className='p-1.5 hover:bg-[#f3f4f6] rounded transition-colors'>
+                        <button className='p-1.5 hover:bg-[#f3f4f6] rounded-sm transition-colors'>
                           <Edit3 className='w-4 h-4 text-[#6b7280]' />
                         </button>
-                        <button className='p-1.5 hover:bg-[#fef2f2] rounded transition-colors'>
+                        <button className='p-1.5 hover:bg-[#fef2f2] rounded-sm transition-colors'>
                           <Trash2 className='w-4 h-4 text-[#ef4444]' />
                         </button>
                       </div>

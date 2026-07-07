@@ -19,7 +19,7 @@ export default function FloatingAIAssistant({ onClick }: FloatingAIAssistantProp
             : 'bottom-4 right-4 h-[600px] w-[380px] rounded-2xl border border-gray-200'
         }`}
       >
-        <div className={`flex items-center justify-between bg-white px-4 py-3 shadow-sm ${!isExpanded ? 'rounded-t-2xl' : ''}`}>
+        <div className={`flex items-center justify-between bg-white px-4 py-3 shadow-xs ${!isExpanded ? 'rounded-t-2xl' : ''}`}>
           <div className='flex items-center gap-3'>
             <div className='relative flex size-10 overflow-hidden rounded-full border border-purple-100 bg-white'>
               <img src={imgRobot} alt='AI assistant' className='size-full object-cover' />
@@ -66,12 +66,12 @@ export default function FloatingAIAssistant({ onClick }: FloatingAIAssistantProp
               <img src={imgRobot} alt='AI' className='size-full object-cover' />
             </div>
             <div className='max-w-[80%] space-y-2'>
-              <div className='rounded-2xl rounded-tl-sm bg-white px-4 py-2.5 text-sm text-gray-700 shadow-sm'>
+              <div className='rounded-2xl rounded-tl-sm bg-white px-4 py-2.5 text-sm text-gray-700 shadow-xs'>
                 Nghĩa vụ thuế là trách nhiệm của cá nhân hoặc tổ chức phải thực hiện theo quy định của pháp luật về thuế.
                 <div className='mt-1 text-right text-[10px] text-gray-400'>09:41</div>
               </div>
 
-              <div className='rounded-2xl bg-white px-4 py-3 text-sm text-gray-700 shadow-sm'>
+              <div className='rounded-2xl bg-white px-4 py-3 text-sm text-gray-700 shadow-xs'>
                 <div className='mb-2 font-semibold text-gray-800'>Các nghĩa vụ thuế chính gồm:</div>
                 <ul className='space-y-2'>
                   <li className='flex gap-2'><span className='text-[#6b4cfa]'>✔</span> Đăng ký thuế</li>
@@ -97,7 +97,7 @@ export default function FloatingAIAssistant({ onClick }: FloatingAIAssistantProp
               <img src={imgRobot} alt='AI' className='size-full object-cover' />
             </div>
             <div className='max-w-[80%] space-y-2'>
-              <div className='rounded-2xl rounded-tl-sm bg-white px-4 py-3 text-sm text-gray-700 shadow-sm'>
+              <div className='rounded-2xl rounded-tl-sm bg-white px-4 py-3 text-sm text-gray-700 shadow-xs'>
                 Thuế TNDN tạm tính được nộp theo quý, chậm nhất là ngày cuối...
                 <div className='mt-3 rounded-xl bg-purple-50 p-3'>
                   <div className='mb-1 text-xs font-semibold text-gray-800'>Ví dụ:</div>
@@ -132,7 +132,7 @@ export default function FloatingAIAssistant({ onClick }: FloatingAIAssistantProp
               <input 
                 type='text'
                 placeholder='Nhập tin nhắn của bạn...'
-                className='w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm transition-colors focus:border-[#6b4cfa] focus:outline-none focus:ring-1 focus:ring-[#6b4cfa]'
+                className='w-full rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm transition-colors focus:border-[#6b4cfa] focus:outline-hidden focus:ring-1 focus:ring-[#6b4cfa]'
               />
             </div>
             <button className='flex size-9 items-center justify-center rounded-full bg-[#6b4cfa] text-white transition-colors hover:bg-[#5a3de0]'>
@@ -152,7 +152,7 @@ export default function FloatingAIAssistant({ onClick }: FloatingAIAssistantProp
           setIsOpen(true)
           if (onClick) onClick()
         }}
-        className='group overflow-hidden rounded-[32px] border border-[#ffa7a4] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-lg'
+        className='group overflow-hidden rounded-[32px] border border-[#ffa7a4] bg-white shadow-xs transition-all duration-300 hover:-translate-y-1 hover:shadow-lg'
       >
         <div
           className='flex items-center'

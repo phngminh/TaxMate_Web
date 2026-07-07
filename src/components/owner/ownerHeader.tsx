@@ -64,7 +64,7 @@ export default function OwnerHeader() {
   }
 
   return (
-    <div className='h-[51px] bg-gradient-to-r from-[#d00c0c] to-[#4c51bf] shadow-[0px_1px_1px_rgba(0,0,0,0.05)] flex items-center justify-between px-4'>
+    <div className='h-[51px] bg-linear-to-r from-[#d00c0c] to-[#4c51bf] shadow-[0px_1px_1px_rgba(0,0,0,0.05)] flex items-center justify-between px-4'>
       <div className='flex items-center gap-6'>
         <div className='bg-white h-[33px] rounded-[16px] flex items-center px-3 shrink-0'>
           <div
@@ -162,7 +162,7 @@ export default function OwnerHeader() {
               <div className='bg-[#9b0000] px-5 py-6 text-white h-[140px] flex flex-col justify-center'>
                 <h2 className='text-[22px] font-bold leading-tight mb-1'>{currentBusiness?.businessName}</h2>
                 <p className='text-[14px] text-white/90 mb-3'>{currentBusiness?.mainCategoryName}</p>
-                <div className='bg-white inline-flex items-center px-2.5 py-1 rounded-md self-start shadow-sm'>
+                <div className='bg-white inline-flex items-center px-2.5 py-1 rounded-md self-start shadow-xs'>
                   <span className='text-[#1d1d1d] text-[12px] font-semibold mr-1.5'>Gói Hộ Kinh Doanh</span>
                   <div className='bg-yellow-400 text-white rounded-full w-[16px] h-[16px] flex items-center justify-center text-[10px] leading-none'>★</div>
                 </div>
@@ -174,7 +174,7 @@ export default function OwnerHeader() {
                     key={label}
                     className='w-full flex items-center gap-4 px-5 py-3.5 hover:bg-[#fef2f2] group transition-colors cursor-pointer border-b border-transparent hover:border-gray-50'
                   >
-                    <Icon size={20} strokeWidth={2} className='text-[#c0392b] flex-shrink-0' />
+                    <Icon size={20} strokeWidth={2} className='text-[#c0392b] shrink-0' />
                     <span className='flex-1 text-left text-[15px] text-[#1d1d1d] font-medium group-hover:text-[#9b0000]'>{label}</span>
                   </button>
                 ))}
@@ -185,7 +185,7 @@ export default function OwnerHeader() {
                   className='w-full flex items-center gap-4 px-5 py-4 hover:bg-[#fef2f2] group transition-colors cursor-pointer'
                   onClick={handleLogout}
                 >
-                  <LogOut size={20} strokeWidth={2} className='text-gray-500 group-hover:text-[#c0392b] flex-shrink-0' />
+                  <LogOut size={20} strokeWidth={2} className='text-gray-500 group-hover:text-[#c0392b] shrink-0' />
                   <span className='flex-1 text-left text-[15px] text-[#1d1d1d] font-medium group-hover:text-[#9b0000]'>Đăng xuất</span>
                 </button>
               </div>
@@ -194,7 +194,7 @@ export default function OwnerHeader() {
             <div className='w-[80px] bg-white flex flex-col items-center py-5 gap-6 shrink-0'>
               <div className='flex w-[50px] flex-col items-stretch gap-1.5 cursor-pointer'>
                 <div className='flex justify-center'>
-                  <div className='w-[50px] h-[50px] rounded-full bg-[#ffd6d8] flex items-center justify-center shadow-sm'>
+                  <div className='w-[50px] h-[50px] rounded-full bg-[#ffd6d8] flex items-center justify-center shadow-xs'>
                     <Store size={22} color='#9b0000' />
                   </div>
                 </div>

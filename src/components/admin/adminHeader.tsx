@@ -41,7 +41,7 @@ export default function TopNav() {
   const displayEmail = user?.email ?? 'admin@taxmate.vn'
 
   return (
-    <div className='sticky top-0 z-50 w-full bg-[#00789C] border-b border-[#086781] flex-shrink-0'>
+    <div className='sticky top-0 z-50 w-full bg-[#00789C] border-b border-[#086781] shrink-0'>
       <div className='flex h-16 items-center px-6'>
         <div className='ml-auto flex items-center gap-4'>
           <button className='relative p-2 rounded-lg hover:bg-white/10 transition-colors'>

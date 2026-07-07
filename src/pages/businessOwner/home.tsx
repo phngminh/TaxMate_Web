@@ -481,7 +481,7 @@ export default function App() {
                       value={businessName}
                       onChange={(e) => setBusinessName(e.target.value)}
                       placeholder='Nhập tên cửa hàng'
-                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
                     />
                   </div>
 
@@ -495,7 +495,7 @@ export default function App() {
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder='Nhập địa chỉ cửa hàng'
-                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
                     />
                   </div>
 
@@ -509,7 +509,7 @@ export default function App() {
                       value={provinceCode}
                       onChange={(e) => setProvinceCode(e.target.value)}
                       placeholder='Ví dụ: 79'
-                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
                     />
                   </div>
 
@@ -523,7 +523,7 @@ export default function App() {
                       value={wardCode}
                       onChange={(e) => setWardCode(e.target.value)}
                       placeholder='Ví dụ: 26734'
-                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
                     />
                   </div>
 

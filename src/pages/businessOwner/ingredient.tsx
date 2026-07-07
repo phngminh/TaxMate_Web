@@ -290,14 +290,14 @@ export default function Ingredient() {
   return (
     <div className='flex flex-col bg-[#f8f9fa] min-h-[calc(100vh-51px)] w-full'>
       <div className='flex items-center justify-between px-8 py-4 gap-4 bg-white border-b border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.02)]'>
-        <div className='ml-96 flex-1 max-w-4xl flex items-center bg-white border border-gray-300 rounded-lg px-5 py-2.5 shadow-sm focus-within:border-[#D32F2F] focus-within:ring-1 focus-within:ring-[#D32F2F]/20 transition-all'>
-          <Scan className='text-[#D32F2F] mr-3 size-5 shrink-0 stroke-[2]' />
+        <div className='ml-96 flex-1 max-w-4xl flex items-center bg-white border border-gray-300 rounded-lg px-5 py-2.5 shadow-xs focus-within:border-[#D32F2F] focus-within:ring-1 focus-within:ring-[#D32F2F]/20 transition-all'>
+          <Scan className='text-[#D32F2F] mr-3 size-5 shrink-0 stroke-2' />
           <input
             type='text'
             placeholder='Tìm kiếm thông minh..'
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className='flex-grow bg-transparent outline-none text-[14px] text-gray-800 placeholder-gray-400 font-medium'
+            className='grow bg-transparent outline-hidden text-[14px] text-gray-800 placeholder-gray-400 font-medium'
           />
           <Search className='text-gray-400 size-5 shrink-0 hover:text-gray-600 transition-colors cursor-pointer' />
         </div>
@@ -331,7 +331,7 @@ export default function Ingredient() {
         </div>
       </div>
 
-      <div className='flex flex-grow w-full'>
+      <div className='flex grow w-full'>
         <div className='w-72 bg-white border-r border-[#ffe5e5] p-6 flex flex-col gap-4 shrink-0'>
           <span className='text-[13px] font-bold text-gray-500 uppercase tracking-wide'>Danh mục</span>
           <div className='flex flex-col gap-1'>
@@ -369,7 +369,7 @@ export default function Ingredient() {
           )}
         </div>
 
-        <div className='flex-grow p-8 overflow-x-auto'>
+        <div className='grow p-8 overflow-x-auto'>
           {activeTab === 'ingredient' && (
             loadingIngredients ? (
               <LoadingSkeleton />
@@ -520,7 +520,7 @@ export default function Ingredient() {
       </div>
 
       {isIngredientModalOpen && (
-        <div className='fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
+        <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
           <div className='bg-white rounded-[16px] shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200'>
             <div className='flex items-center justify-between px-8 py-4 bg-[#fef2f2] border-b border-red-100'>
               <h3 className='text-[16px] font-bold text-gray-900 flex items-center gap-2'>
@@ -543,7 +543,7 @@ export default function Ingredient() {
                   placeholder='Ví dụ: Bột mì, Phô mai...'
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-none focus:border-[#D32F2F] transition-all font-medium text-gray-800'
+                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
                 />
               </div>
 
@@ -555,7 +555,7 @@ export default function Ingredient() {
                     placeholder='Ví dụ: kg, lít...'
                     value={formUnit}
                     onChange={(e) => setFormUnit(e.target.value)}
-                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-none focus:border-[#D32F2F] transition-all font-medium text-gray-800'
+                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
                   />
                 </div>
                 <div className='flex flex-col gap-1.5'>
@@ -568,7 +568,7 @@ export default function Ingredient() {
                       const clean = e.target.value.replace(/\D/g, '')
                       setFormPrice(clean === '' ? '' : parseInt(clean).toLocaleString('vi-VN'))
                     }}
-                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-none focus:border-[#D32F2F] transition-all font-medium text-gray-800 text-right'
+                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 text-right'
                   />
                 </div>
               </div>
@@ -583,7 +583,7 @@ export default function Ingredient() {
                 </button>
                 <button
                   type='submit'
-                  className='px-5 py-2 bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-sm'
+                  className='px-5 py-2 bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs'
                 >
                   {isIngredientEditing ? 'Lưu thay đổi' : 'Tạo mới'}
                 </button>
@@ -594,7 +594,7 @@ export default function Ingredient() {
       )}
 
       {isProductIngredientModalOpen && (
-        <div className='fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
+        <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
           <div className='bg-white rounded-[16px] shadow-2xl max-w-xl w-full overflow-hidden animate-in zoom-in-95 duration-200'>
             <div className='flex items-center justify-between px-8 py-4 bg-[#fef2f2] border-b border-red-100'>
               <h3 className='text-[16px] font-bold text-gray-900 flex items-center gap-2'>
@@ -616,14 +616,14 @@ export default function Ingredient() {
                     type='text'
                     readOnly
                     value={editingRecipe?.productName ?? ''}
-                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] font-medium text-gray-500 bg-gray-50 outline-none cursor-not-allowed'
+                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] font-medium text-gray-500 bg-gray-50 outline-hidden cursor-not-allowed'
                   />
                 ) : (
                   <select
                     required
                     value={recipeProductId}
                     onChange={(e) => setRecipeProductId(e.target.value)}
-                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-none focus:border-[#D32F2F] transition-all font-medium text-gray-800 bg-white'
+                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 bg-white'
                   >
                     <option value=''>-- Chọn sản phẩm --</option>
                     {RECIPES.map((r) => (
@@ -659,14 +659,14 @@ export default function Ingredient() {
                             type='text'
                             readOnly
                             value={selected?.name ?? row.ingredientId}
-                            className='flex-1 border border-gray-200 rounded-[8px] px-3 py-2 text-[13px] font-medium text-gray-500 bg-gray-50 outline-none cursor-not-allowed'
+                            className='flex-1 border border-gray-200 rounded-[8px] px-3 py-2 text-[13px] font-medium text-gray-500 bg-gray-50 outline-hidden cursor-not-allowed'
                           />
                         ) : (
                           <select
                             required
                             value={row.ingredientId}
                             onChange={(e) => handleRecipeRowChange(idx, 'ingredientId', e.target.value)}
-                            className='flex-1 border border-gray-200 rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#D32F2F] transition-all font-medium text-gray-800 bg-white'
+                            className='flex-1 border border-gray-200 rounded-[8px] px-3 py-2 text-[13px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 bg-white'
                           >
                             <option value=''>-- Chọn nguyên liệu --</option>
                             {INGREDIENTS.filter((ing) => !ing.isDeleted).map((ing) => (
@@ -684,7 +684,7 @@ export default function Ingredient() {
                           placeholder='SL'
                           value={row.quantity}
                           onChange={(e) => handleRecipeRowChange(idx, 'quantity', e.target.value)}
-                          className='w-24 border border-gray-200 rounded-[8px] px-3 py-2 text-[13px] outline-none focus:border-[#D32F2F] transition-all font-medium text-gray-800 text-right'
+                          className='w-24 border border-gray-200 rounded-[8px] px-3 py-2 text-[13px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 text-right'
                         />
                         <button
                           type='button'
@@ -710,7 +710,7 @@ export default function Ingredient() {
                 </button>
                 <button
                   type='submit'
-                  className='px-5 py-2 bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-sm'
+                  className='px-5 py-2 bg-[#D32F2F] hover:bg-[#B71C1C] text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs'
                 >
                   {isRecipeEditing ? 'Lưu thay đổi' : 'Tạo mới'}
                 </button>
@@ -722,14 +722,14 @@ export default function Ingredient() {
 
       {viewingRecipe && (
         <div
-          className='fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'
+          className='fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'
           onClick={() => setViewingRecipe(null)}
         >
           <div
             className='bg-white rounded-[16px] shadow-2xl w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-200'
             onClick={(e) => e.stopPropagation()}
           >
-            <div className='flex items-start justify-between px-7 py-5 bg-gradient-to-r from-[#eef2ff] to-white border-b border-[#e0e7ff]'>
+            <div className='flex items-start justify-between px-7 py-5 bg-linear-to-r from-[#eef2ff] to-white border-b border-[#e0e7ff]'>
               <div>
                 <h3 className='text-[17px] font-bold text-gray-900'>{viewingRecipe.productName}</h3>
                 <p className='text-[13px] text-gray-500 mt-0.5'>
@@ -793,7 +793,7 @@ export default function Ingredient() {
             <div className='px-7 py-4 mb-3 border-t border-gray-100 flex justify-end'>
               <button
                 onClick={() => setViewingRecipe(null)}
-                className='px-6 py-2 bg-taxmate-red hover:bg-taxmate-red-hover text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-sm'
+                className='px-6 py-2 bg-taxmate-red hover:bg-taxmate-red-hover text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs'
               >
                 Đóng
               </button>
@@ -833,7 +833,7 @@ function EmptyState({
       <p className='text-gray-400 text-[13px] mb-4 text-center max-w-xs'>{subtitle}</p>
       <button
         onClick={onReset}
-        className='px-4 py-2 bg-[#D32F2F] text-white text-[13px] font-bold rounded-[8px] hover:bg-[#B71C1C] transition-colors shadow-sm'
+        className='px-4 py-2 bg-[#D32F2F] text-white text-[13px] font-bold rounded-[8px] hover:bg-[#B71C1C] transition-colors shadow-xs'
       >
         Đặt lại bộ lọc
       </button>
