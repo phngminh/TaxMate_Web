@@ -98,7 +98,7 @@ export default function BusinessOwnerRegisterPage() {
   }
 
   const fieldClassName =
-    'h-14 w-full rounded-lg border border-gray-300 bg-white px-4 pb-2 pt-6 text-sm text-gray-900 outline-none transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+    'h-14 w-full rounded-lg border border-gray-300 bg-white px-4 pb-2 pt-6 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
 
   const labelClassName =
     'pointer-events-none absolute left-4 top-2 text-[10px] font-medium uppercase tracking-wide text-gray-400'
@@ -220,7 +220,7 @@ export default function BusinessOwnerRegisterPage() {
                 type='checkbox'
                 checked={agreedToPolicy}
                 onChange={(event) => setAgreedToPolicy(event.target.checked)}
-                className='mt-0.5 h-4 w-4 shrink-0 rounded border-gray-300 text-taxmate-red focus:ring-taxmate-red/20'
+                className='mt-0.5 h-4 w-4 shrink-0 rounded-sm border-gray-300 text-taxmate-red focus:ring-taxmate-red/20'
                 required
               />
               <span className='text-sm text-gray-600'>
@@ -268,7 +268,7 @@ export default function BusinessOwnerRegisterPage() {
         />
         <div
           aria-hidden='true'
-          className='pointer-events-none absolute inset-0 bg-gradient-to-br from-taxmate-red/90 via-taxmate-red/95 to-taxmate-red-dark/80'
+          className='pointer-events-none absolute inset-0 bg-linear-to-br from-taxmate-red/90 via-taxmate-red/95 to-taxmate-red-dark/80'
         />
 
         <div className='relative z-10 flex flex-1 flex-col p-8 lg:p-10'>

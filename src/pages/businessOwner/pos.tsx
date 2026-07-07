@@ -211,11 +211,11 @@ export default function POS() {
                 placeholder='Tìm sản phẩm'
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className='bg-white border-0 text-slate-800 text-xs pl-9 pr-4 py-2 w-64 rounded-md shadow-inner outline-none focus:ring-1 focus:ring-[#004795]/20'
+                className='bg-white border-0 text-slate-800 text-xs pl-9 pr-4 py-2 w-64 rounded-md shadow-inner outline-hidden focus:ring-1 focus:ring-[#004795]/20'
               />
             </div>
-            <button className='bg-[#005fb8] hover:bg-[#006bd1] text-white p-2 rounded-md transition-colors shadow-sm'>
-              <Plus className='size-4 stroke-[3]' />
+            <button className='bg-[#005fb8] hover:bg-[#006bd1] text-white p-2 rounded-md transition-colors shadow-xs'>
+              <Plus className='size-4 stroke-3' />
             </button>
           </div>
         </div>
@@ -243,15 +243,15 @@ export default function POS() {
           </button>
         </div>
 
-        <div className='p-4 flex-grow overflow-y-auto min-h-0 grid grid-cols-4 gap-4 content-start'>
+        <div className='p-4 grow overflow-y-auto min-h-0 grid grid-cols-4 gap-4 content-start'>
           {filteredProducts.map((product) => (
             <div
               key={product.id}
               onClick={() => handleAddProductToCart(product)}
-              className='border border-slate-100 rounded-md overflow-hidden cursor-pointer shadow-sm hover:shadow-md hover:border-slate-200 transition-all flex flex-col items-center p-3 text-center'
+              className='border border-slate-100 rounded-md overflow-hidden cursor-pointer shadow-xs hover:shadow-md hover:border-slate-200 transition-all flex flex-col items-center p-3 text-center'
             >
               <div className='bg-[#ffebeb] w-full aspect-square rounded-md flex items-center justify-center mb-3'>
-                <Utensils className='text-[#d32f2f] size-8 stroke-[1.5]' />
+                <Utensils className='text-taxmate-red size-8 stroke-[1.5]' />
               </div>
               <div className='text-xs font-medium text-slate-700 mb-1 line-clamp-2 min-h-[32px] flex items-center justify-center'>
                 {product.name}
@@ -296,7 +296,7 @@ export default function POS() {
               onClick={handleAddOrder}
               className='bg-[#005fb8] hover:bg-[#006bd1] text-white p-1.5 rounded-md transition-colors'
             >
-              <Plus className='size-3.5 stroke-[3]' />
+              <Plus className='size-3.5 stroke-3' />
             </button>
           </div>
           <div className='flex items-center gap-3 text-white pb-2'>
@@ -306,14 +306,14 @@ export default function POS() {
         </div>
 
         <div className='p-4 border-b border-slate-100 flex gap-2'>
-          <div className='relative flex-grow flex items-center'>
+          <div className='relative grow flex items-center'>
             <Search className='absolute left-3 text-slate-400 size-4' />
             <input
               type='text'
               placeholder='Nhập tên khách hàng'
               value={activeOrder.customerName}
               onChange={(e) => handleCustomerNameChange(e.target.value)}
-              className='bg-slate-50 border border-slate-200 text-slate-800 text-xs pl-9 pr-4 py-2 w-full rounded-md outline-none focus:bg-white focus:ring-1 focus:ring-[#004795]/20'
+              className='bg-slate-50 border border-slate-200 text-slate-800 text-xs pl-9 pr-4 py-2 w-full rounded-md outline-hidden focus:bg-white focus:ring-1 focus:ring-[#004795]/20'
             />
           </div>
           <button className='bg-slate-50 hover:bg-slate-100 border border-slate-200 p-2 rounded-md text-slate-500 transition-colors'>
@@ -321,17 +321,17 @@ export default function POS() {
           </button>
         </div>
 
-        <div className='flex-grow p-4 overflow-y-auto min-h-0 space-y-4'>
+        <div className='grow p-4 overflow-y-auto min-h-0 space-y-4'>
           {activeOrder.items.map((item, index) => (
             <div key={item.id} className='flex items-center justify-between text-xs py-1'>
               <div className='w-1/2 font-semibold text-slate-700'>
                 {index + 1}. {item.name}
               </div>
               <div className='flex items-center gap-4'>
-                <div className='flex items-center border border-[#d32f2f] rounded-md overflow-hidden bg-white'>
+                <div className='flex items-center border border-taxmate-red rounded-md overflow-hidden bg-white'>
                   <button
                     onClick={() => handleUpdateQuantity(item.id, -1)}
-                    className='px-2 py-1 text-[#d32f2f] font-bold hover:bg-[#ffebeb] transition-colors text-sm'
+                    className='px-2 py-1 text-taxmate-red font-bold hover:bg-[#ffebeb] transition-colors text-sm'
                   >
                     -
                   </button>
@@ -340,7 +340,7 @@ export default function POS() {
                   </span>
                   <button
                     onClick={() => handleUpdateQuantity(item.id, 1)}
-                    className='px-2 py-1 text-[#d32f2f] font-bold hover:bg-[#ffebeb] transition-colors text-sm'
+                    className='px-2 py-1 text-taxmate-red font-bold hover:bg-[#ffebeb] transition-colors text-sm'
                   >
                     +
                   </button>
@@ -404,7 +404,7 @@ export default function POS() {
               type='text'
               value={activeOrder.discountValue === 0 ? '0' : activeOrder.discountValue.toLocaleString()}
               onChange={(e) => handleDiscountValueChange(e.target.value)}
-              className='bg-white border border-slate-200 text-slate-800 text-xs text-right px-3 py-1.5 w-44 rounded-md outline-none focus:ring-1 focus:ring-[#004795]/20 font-bold'
+              className='bg-white border border-slate-200 text-slate-800 text-xs text-right px-3 py-1.5 w-44 rounded-md outline-hidden focus:ring-1 focus:ring-[#004795]/20 font-bold'
             />
           </div>
 
@@ -445,11 +445,11 @@ export default function POS() {
           </div>
 
           <div className='grid grid-cols-2 gap-4 pt-1'>
-            <button className='flex items-center justify-center gap-2 border border-[#b90a0a] text-[#b90a0a] hover:bg-[#ffebeb] font-bold py-2 px-4 rounded-md text-xs transition-colors shadow-sm'>
+            <button className='flex items-center justify-center gap-2 border border-[#b90a0a] text-[#b90a0a] hover:bg-[#ffebeb] font-bold py-2 px-4 rounded-md text-xs transition-colors shadow-xs'>
               <Printer className='size-4' /> In hóa đơn
             </button>
-            <button className='flex items-center justify-center gap-2 bg-[#b90a0a] hover:bg-[#a00909] text-white font-bold py-2 px-4 rounded-md text-xs transition-colors shadow-sm'>
-              <Check className='size-4 stroke-[3]' /> Xác nhận
+            <button className='flex items-center justify-center gap-2 bg-[#b90a0a] hover:bg-[#a00909] text-white font-bold py-2 px-4 rounded-md text-xs transition-colors shadow-xs'>
+              <Check className='size-4 stroke-3' /> Xác nhận
             </button>
           </div>
         </div>

@@ -236,14 +236,14 @@ export default function Product() {
   return (
     <div className='flex flex-col bg-[#f8f9fa] min-h-[calc(100vh-51px)] w-full'>
       <div className='flex items-center justify-between px-8 py-4 gap-4 bg-white border-b border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.02)]'>
-        <div className='ml-96 flex-1 max-w-4xl flex items-center bg-white border border-gray-300 rounded-lg px-5 py-2.5 shadow-sm focus-within:border-[#D32F2F] focus-within:ring-1 focus-within:ring-[#D32F2F]/20 transition-all'>
-          <Scan className='text-[#D32F2F] mr-3 size-5 shrink-0 stroke-[2]' />
+        <div className='ml-96 flex-1 max-w-4xl flex items-center bg-white border border-gray-300 rounded-lg px-5 py-2.5 shadow-xs focus-within:border-[#D32F2F] focus-within:ring-1 focus-within:ring-[#D32F2F]/20 transition-all'>
+          <Scan className='text-[#D32F2F] mr-3 size-5 shrink-0 stroke-2' />
           <input
             type='text'
             placeholder='Tìm kiếm thông minh..'
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className='flex-grow bg-transparent outline-none text-[14px] text-gray-800 placeholder-gray-400 font-medium'
+            className='grow bg-transparent outline-hidden text-[14px] text-gray-800 placeholder-gray-400 font-medium'
           />
           <Search className='text-gray-400 size-5 shrink-0 hover:text-gray-600 transition-colors cursor-pointer' />
         </div>
@@ -277,7 +277,7 @@ export default function Product() {
         </div>
       </div>
 
-      <div className='flex flex-grow w-full'>
+      <div className='flex grow w-full'>
         <div className='w-72 bg-white border-r border-[#ffe5e5] p-6 flex flex-col gap-6 shrink-0'>
           <div className='flex flex-col gap-2 relative' ref={categoryDropdownRef}>
             <div className='flex justify-between items-center'>
@@ -291,7 +291,7 @@ export default function Product() {
             </div>
             <button
               onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
-              className='w-full border border-gray-300 hover:border-gray-400 rounded-[10px] px-3.5 py-2.5 bg-white text-[13.5px] text-gray-700 flex items-center justify-between shadow-sm transition-all focus:border-[#D32F2F]'
+              className='w-full border border-gray-300 hover:border-gray-400 rounded-[10px] px-3.5 py-2.5 bg-white text-[13.5px] text-gray-700 flex items-center justify-between shadow-xs transition-all focus:border-[#D32F2F]'
             >
               <span>
                 {selectedCategory === 'all' ? 'Chọn danh mục sản phẩm' : selectedCategory}
@@ -370,7 +370,7 @@ export default function Product() {
           )}
         </div>
 
-        <div className='flex-grow p-8 overflow-x-auto'>
+        <div className='grow p-8 overflow-x-auto'>
           {filteredProducts.length > 0 ? (
             <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-[700px]'>
               <table className='w-full text-left border-collapse'>
@@ -437,7 +437,7 @@ export default function Product() {
               <p className='text-gray-400 text-[13px] mb-4 text-center max-w-xs'>Hãy thử đổi từ khóa tìm kiếm hoặc đặt lại các bộ lọc hiện tại của bạn.</p>
               <button
                 onClick={handleResetFilters}
-                className='px-4 py-2 bg-[#D32F2F] text-white text-[13px] font-bold rounded-[8px] hover:bg-[#B71C1C] transition-colors shadow-sm'
+                className='px-4 py-2 bg-[#D32F2F] text-white text-[13px] font-bold rounded-[8px] hover:bg-[#B71C1C] transition-colors shadow-xs'
               >
                 Đặt lại bộ lọc
               </button>
@@ -447,7 +447,7 @@ export default function Product() {
       </div>
 
       {isModalOpen && (
-        <div className='fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
+        <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
           <div className='bg-white rounded-[16px] shadow-2xl max-w-xl w-full overflow-hidden animate-in zoom-in-95 duration-200'>
             <div className='flex items-center justify-between px-8 py-4 bg-[#fef2f2] border-b border-red-100'>
               <h3 className='text-[16px] font-bold text-gray-900 flex items-center gap-2'>
@@ -469,7 +469,7 @@ export default function Product() {
                   }
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-none focus:border-[#D32F2F] transition-all font-medium text-gray-800 mb-5'
+                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 mb-5'
                 />
               </div>
 
@@ -485,7 +485,7 @@ export default function Product() {
                   }
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-none focus:border-[#D32F2F] transition-all font-medium text-gray-800 mb-5'
+                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 mb-5'
                 />
               </div>
 
@@ -495,7 +495,7 @@ export default function Product() {
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
-                    className='w-full border border-gray-200 bg-white rounded-[8px] px-3.5 py-2 text-[13.5px] outline-none focus:border-[#D32F2F] transition-all font-medium text-gray-800'
+                    className='w-full border border-gray-200 bg-white rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
                   >
                     {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -505,7 +505,7 @@ export default function Product() {
                   <select
                     value={formUnit}
                     onChange={(e) => setFormUnit(e.target.value)}
-                    className='w-full border border-gray-200 bg-white rounded-[8px] px-3.5 py-2 text-[13.5px] outline-none focus:border-[#D32F2F] transition-all font-medium text-gray-800'
+                    className='w-full border border-gray-200 bg-white rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
                   >
                     {units.map((u) => (
                       <option key={u} value={u}>
@@ -538,7 +538,7 @@ export default function Product() {
                       setFormPrice(parseInt(clean).toLocaleString('vi-VN'))
                     }
                   }}
-                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-none focus:border-[#D32F2F] transition-all font-medium text-gray-800 text-right mb-5'
+                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 text-right mb-5'
                 />
               </div>
 
@@ -587,7 +587,7 @@ export default function Product() {
                 </button>
                 <button
                   type='submit'
-                  className='px-5 py-2 bg-[#D32F2F] hover:bg-[#B71C1C] active:bg-[#991B1B] text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-sm'
+                  className='px-5 py-2 bg-[#D32F2F] hover:bg-[#B71C1C] active:bg-[#991B1B] text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs'
                 >
                   {isEditing ? 'Lưu thay đổi' : 'Tạo mới'}
                 </button>

@@ -158,7 +158,7 @@ export default function LandingPage() {
             </div>
 
             <div className='lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-6' data-aos='fade-left'>
-              <div className='group rounded-3xl border border-orange-100 bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-lg'>
+              <div className='group rounded-3xl border border-orange-100 bg-white p-7 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-lg'>
                 <div className='mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-orange-100 text-orange-600'>
                   <FileX size={20} strokeWidth={2.2} />
                 </div>
@@ -170,7 +170,7 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              <div className='group rounded-3xl border border-rose-100 bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-rose-200 hover:shadow-lg'>
+              <div className='group rounded-3xl border border-rose-100 bg-white p-7 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-rose-200 hover:shadow-lg'>
                 <div className='mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-rose-100 text-rose-600'>
                   <PieChart size={20} strokeWidth={2.2} />
                 </div>
@@ -182,7 +182,7 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              <div className='group rounded-3xl border border-amber-100 bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-amber-200 hover:shadow-lg'>
+              <div className='group rounded-3xl border border-amber-100 bg-white p-7 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-amber-200 hover:shadow-lg'>
                 <div className='mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-600'>
                   <Clock size={20} strokeWidth={2.2} />
                 </div>
@@ -194,7 +194,7 @@ export default function LandingPage() {
                 </p>
               </div>
 
-              <div className='group rounded-3xl border border-emerald-100 bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg'>
+              <div className='group rounded-3xl border border-emerald-100 bg-white p-7 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg'>
                 <div className='mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600'>
                   <ShieldQuestion size={20} strokeWidth={2.2} />
                 </div>
@@ -223,8 +223,8 @@ export default function LandingPage() {
           </div>
 
           <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8 max-w-7xl mx-auto items-stretch'>
-            <div className='flex flex-col bg-[#F3FDF7] rounded-3xl border border-[#D5F5E3] overflow-hidden group shadow-sm hover:shadow-md transition-all duration-300' data-aos='fade-up' data-aos-delay='100'>
-              <div className='p-6 flex-grow'>
+            <div className='flex flex-col bg-[#F3FDF7] rounded-3xl border border-[#D5F5E3] overflow-hidden group shadow-xs hover:shadow-md transition-all duration-300' data-aos='fade-up' data-aos-delay='100'>
+              <div className='p-6 grow'>
                 <div className='flex items-center gap-3.5 mb-4'>
                   <div className='w-10 h-10 rounded-full bg-[#22C55E] text-white flex items-center justify-center shadow-md shadow-green-500/20 shrink-0'>
                     <Receipt size={20} />
@@ -237,7 +237,7 @@ export default function LandingPage() {
               </div>
 
               <div className='px-4 pb-4 mt-auto'>
-                <div className='bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden h-[240px] flex flex-col'>
+                <div className='bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden h-[240px] flex flex-col'>
                   <div className='bg-[#F3FDF7] py-2.5 px-3 border-b border-slate-100 flex items-center gap-1'>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className='text-[#22C55E]'>
                       <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -245,7 +245,7 @@ export default function LandingPage() {
                     <span className='text-[10px] font-bold text-slate-800'>Giao dịch mới</span>
                   </div>
                   
-                  <div className='p-3 space-y-2 flex-grow overflow-y-auto'>
+                  <div className='p-3 space-y-2 grow overflow-y-auto'>
                     <div className='flex justify-between items-center bg-slate-50 p-2 rounded-xl text-[10px]'>
                       <div className='flex items-center gap-2'>
                         <span className='text-sm'>☕</span>
@@ -285,7 +285,7 @@ export default function LandingPage() {
                       <span className='text-slate-500'>Tổng tiền</span>
                       <span className='font-extrabold text-slate-900 text-xs'>80.000đ</span>
                     </div>
-                    <button className='w-full py-1.5 bg-[#22C55E] text-white rounded-lg text-[9px] font-extrabold shadow-sm shadow-green-500/10'>
+                    <button className='w-full py-1.5 bg-[#22C55E] text-white rounded-lg text-[9px] font-extrabold shadow-xs shadow-green-500/10'>
                       Lưu giao dịch
                     </button>
                   </div>
@@ -293,8 +293,8 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className='flex flex-col bg-[#F3F7FD] rounded-3xl border border-[#D5E5F5] overflow-hidden group shadow-sm hover:shadow-md transition-all duration-300' data-aos='fade-up' data-aos-delay='200'>
-              <div className='p-6 flex-grow'>
+            <div className='flex flex-col bg-[#F3F7FD] rounded-3xl border border-[#D5E5F5] overflow-hidden group shadow-xs hover:shadow-md transition-all duration-300' data-aos='fade-up' data-aos-delay='200'>
+              <div className='p-6 grow'>
                 <div className='flex items-center gap-3.5 mb-4'>
                   <div className='w-10 h-10 rounded-full bg-[#3B82F6] text-white flex items-center justify-center shadow-md shadow-blue-500/20 shrink-0'>
                     <Wallet size={18} />
@@ -307,7 +307,7 @@ export default function LandingPage() {
               </div>
 
               <div className='px-4 pb-4 mt-auto'>
-                <div className='bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden h-[240px] flex flex-col'>
+                <div className='bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden h-[240px] flex flex-col'>
                   <div className='bg-[#F3F7FD] py-2.5 px-3 border-b border-slate-100 flex items-center gap-1'>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className='text-[#3B82F6]'>
                       <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -315,7 +315,7 @@ export default function LandingPage() {
                     <span className='text-[10px] font-bold text-slate-800'>Chi phí mới</span>
                   </div>
                   
-                  <div className='p-3 space-y-2.5 flex-grow overflow-y-auto'>
+                  <div className='p-3 space-y-2.5 grow overflow-y-auto'>
                     <div>
                       <label className='text-[8px] text-slate-400 block mb-1 font-bold'>Nguyên vật liệu</label>
                       <div className='w-full px-2 py-1.5 bg-slate-50 rounded-lg text-[9px] font-extrabold text-slate-800 border border-slate-100 flex justify-between'>
@@ -342,7 +342,7 @@ export default function LandingPage() {
                   </div>
 
                   <div className='p-3 border-t border-slate-50 bg-slate-50/50 mt-auto flex items-center justify-between gap-2'>
-                    <button className='w-full py-1.5 bg-[#3B82F6] text-white rounded-lg text-[9px] font-extrabold shadow-sm shadow-blue-500/10'>
+                    <button className='w-full py-1.5 bg-[#3B82F6] text-white rounded-lg text-[9px] font-extrabold shadow-xs shadow-blue-500/10'>
                       Lưu chi phí
                     </button>
                     <div className='w-7 h-7 bg-blue-50 rounded-lg flex items-center justify-center text-blue-500 border border-blue-100 shrink-0'>
@@ -357,8 +357,8 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className='flex flex-col bg-[#fff9f4] rounded-3xl border border-[#FADCD0] overflow-hidden group shadow-sm hover:shadow-md transition-all duration-300' data-aos='fade-up' data-aos-delay='300'>
-              <div className='p-6 flex-grow'>
+            <div className='flex flex-col bg-[#fff9f4] rounded-3xl border border-[#FADCD0] overflow-hidden group shadow-xs hover:shadow-md transition-all duration-300' data-aos='fade-up' data-aos-delay='300'>
+              <div className='p-6 grow'>
                 <div className='flex items-center gap-3.5 mb-4'>
                   <div className='w-10 h-10 rounded-full bg-[#F97316] text-white flex items-center justify-center shadow-md shadow-orange-500/20 shrink-0'>
                     <TrendingUp size={18} />
@@ -371,7 +371,7 @@ export default function LandingPage() {
               </div>
 
               <div className='px-4 pb-4 mt-auto'>
-                <div className='bg-white rounded-2xl border border-slate-100 shadow-sm p-3 h-[240px] flex flex-col justify-between'>
+                <div className='bg-white rounded-2xl border border-slate-100 shadow-xs p-3 h-[240px] flex flex-col justify-between'>
                   <div>
                     <span className='text-[8px] text-slate-400 block font-bold'>Lợi nhuận ước tính</span>
                     <span className='text-base font-black text-slate-900 block mt-0.5'>50.290.000đ</span>
@@ -380,19 +380,19 @@ export default function LandingPage() {
                     </span>
                   </div>
 
-                  <div className='mt-3 flex items-end justify-around gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 flex-grow max-h-[120px]'>
+                  <div className='mt-3 flex items-end justify-around gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 grow max-h-[120px]'>
                     <div className='flex flex-col items-center gap-1.5 w-full'>
-                      <div className='w-2.5 h-16 bg-[#22C55E] rounded-full shadow-sm' />
+                      <div className='w-2.5 h-16 bg-[#22C55E] rounded-full shadow-xs' />
                       <span className='text-[6px] font-bold text-slate-400 text-center scale-95'>Doanh thu</span>
                     </div>
 
                     <div className='flex flex-col items-center gap-1.5 w-full'>
-                      <div className='w-2.5 h-10 bg-[#FF4E11] rounded-full shadow-sm' />
+                      <div className='w-2.5 h-10 bg-[#FF4E11] rounded-full shadow-xs' />
                       <span className='text-[6px] font-bold text-slate-400 text-center scale-95'>Chi phí</span>
                     </div>
 
                     <div className='flex flex-col items-center gap-1.5 w-full'>
-                      <div className='w-2.5 h-12 bg-[#F59E0B] rounded-full shadow-sm' />
+                      <div className='w-2.5 h-12 bg-[#F59E0B] rounded-full shadow-xs' />
                       <span className='text-[6px] font-bold text-slate-400 text-center scale-95'>Lợi nhuận</span>
                     </div>
                   </div>
@@ -400,8 +400,8 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className='flex flex-col bg-[#FAF6FB] rounded-3xl border border-[#EADCEF] overflow-hidden group shadow-sm hover:shadow-md transition-all duration-300' data-aos='fade-up' data-aos-delay='400'>
-              <div className='p-6 flex-grow'>
+            <div className='flex flex-col bg-[#FAF6FB] rounded-3xl border border-[#EADCEF] overflow-hidden group shadow-xs hover:shadow-md transition-all duration-300' data-aos='fade-up' data-aos-delay='400'>
+              <div className='p-6 grow'>
                 <div className='flex items-center gap-3.5 mb-4'>
                   <div className='w-10 h-10 rounded-full bg-[#8B5CF6] text-white flex items-center justify-center shadow-md shadow-purple-500/20 shrink-0'>
                     <LayoutDashboard size={18} />
@@ -414,7 +414,7 @@ export default function LandingPage() {
               </div>
 
               <div className='px-4 pb-4 mt-auto'>
-                <div className='bg-white rounded-2xl border border-slate-100 shadow-sm p-3 h-[240px] flex flex-col justify-between'>
+                <div className='bg-white rounded-2xl border border-slate-100 shadow-xs p-3 h-[240px] flex flex-col justify-between'>
                   <span className='text-[8px] text-slate-800 font-extrabold block border-b border-slate-50 pb-1.5'>Báo cáo tháng 5/2024</span>
                   
                   <div className='space-y-1.5 mt-2'>
@@ -443,7 +443,7 @@ export default function LandingPage() {
                     </div>
                   </div>
 
-                  <div className='flex justify-center items-center py-2 relative flex-grow'>
+                  <div className='flex justify-center items-center py-2 relative grow'>
                     <svg width="100" height="100" viewBox="0 0 36 36" className="transform -rotate-90">
                       <circle cx="18" cy="18" r="15.915" fill="none" stroke="#E2E8F0" strokeWidth="3" />
                       <circle cx="18" cy="18" r="15.915" fill="none" stroke="#3B82F6" strokeWidth="3.5" strokeDasharray="73 27" strokeDashoffset="0" />

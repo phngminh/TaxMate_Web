@@ -10,7 +10,7 @@ export const getAllProducts = async (
   status?: string,
   category?: string
 ) => {
-  const response = await http.get<ApiResponse<PagedResult<Product>>>(`/api/Product/business/${businessId}`,
+  const response = await http.get<ApiResponse<PagedResult<Product>>>(`/Product/business/${businessId}`,
     {
       params: {
         pageNumber,
@@ -25,16 +25,16 @@ export const getAllProducts = async (
 }
 
 export const getProductById = async (id: string) => {
-  const response = await http.get<ApiResponse<Product>>(`/api/Product/${id}`)
+  const response = await http.get<ApiResponse<Product>>(`/Product/${id}`)
   return response.data
 }
 
 export const createProduct = async (businessId: string, body: CreateProductRequest) => {
-  const response = await http.post<ApiResponse<Product>>(`/api/Product/business/${businessId}`, body)
+  const response = await http.post<ApiResponse<Product>>(`/Product/business/${businessId}`, body)
   return response.data
 }
 
 export const updateProduct = async (id: string, body: UpdateProductRequest) => {
-  const response = await http.put<ApiResponse<Product>>(`/api/Product/${id}`, body)
+  const response = await http.put<ApiResponse<Product>>(`/Product/${id}`, body)
   return response.data
 }

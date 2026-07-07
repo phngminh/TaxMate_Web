@@ -143,14 +143,14 @@ export default function Order() {
   return (
     <div className='flex flex-col w-full bg-[#f8f9fa] h-[calc(100vh-51px)] overflow-hidden'>
       <div className='flex items-center justify-between px-8 py-4 gap-4 bg-white border-b border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.02)]'>
-        <div className='ml-96 flex-1 max-w-4xl flex items-center bg-white border border-gray-300 rounded-lg px-5 py-2.5 shadow-sm focus-within:border-[#D32F2F] focus-within:ring-1 focus-within:ring-[#D32F2F]/20 transition-all'>
-          <Scan className='text-[#D32F2F] mr-3 size-5 shrink-0 stroke-[2]' />
+        <div className='ml-96 flex-1 max-w-4xl flex items-center bg-white border border-gray-300 rounded-lg px-5 py-2.5 shadow-xs focus-within:border-[#D32F2F] focus-within:ring-1 focus-within:ring-[#D32F2F]/20 transition-all'>
+          <Scan className='text-[#D32F2F] mr-3 size-5 shrink-0 stroke-2' />
           <input
             type='text'
             placeholder='Tìm kiếm thông minh..'
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className='flex-grow bg-transparent outline-none text-[14px] text-gray-800 placeholder-gray-400 font-medium'
+            className='grow bg-transparent outline-hidden text-[14px] text-gray-800 placeholder-gray-400 font-medium'
           />
           <Search className='text-gray-400 size-5 shrink-0 hover:text-gray-600 transition-colors cursor-pointer' />
         </div>
@@ -163,7 +163,7 @@ export default function Order() {
         </div>
       </div>
 
-      <div className='flex flex-grow w-full overflow-hidden'>
+      <div className='flex grow w-full overflow-hidden'>
         <div className='w-72 bg-white border-r border-[#ffe5e5] p-6 flex flex-col gap-6 shrink-0 overflow-y-auto'>
         <div className='flex flex-col gap-3'>
           <span className='text-[13px] font-bold text-gray-500'>Trạng thái</span>
@@ -279,7 +279,7 @@ export default function Order() {
         )}
       </div>
 
-      <div className='flex-grow p-8 flex flex-col gap-4 overflow-y-auto'>
+      <div className='grow p-8 flex flex-col gap-4 overflow-y-auto'>
         <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden w-full'>
           <table className='w-full text-left border-collapse'>
             <thead>
@@ -327,7 +327,7 @@ export default function Order() {
       </div>
 
       {selectedOrder && (
-        <div className='fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
+        <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
           <div className='bg-white rounded-[16px] shadow-2xl max-w-2xl w-full overflow-hidden animate-in zoom-in-95 duration-200'>
             <div className='flex items-center justify-between px-8 py-4 bg-[#fef2f2] border-b border-red-100'>
               <h3 className='text-[16px] font-bold text-gray-900'>
