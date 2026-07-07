@@ -499,7 +499,7 @@ function ActionsMenu({doc, onView, onDelete, onToggle}: {
             className='fixed inset-0 z-40'
             onClick={() => setOpen(false)}
           />
-          <div className='absolute right-0 top-8 z-50 w-52 bg-white border border-[#e5e7eb] rounded-lg shadow-xl overflow-hidden'>
+          <div className='absolute right-0 top-8 z-50 w-52 bg-card border border-border rounded-xl shadow-xl overflow-hidden'>
             {actions.map((action, i) =>
               action === null ? (
                 <div
@@ -592,7 +592,7 @@ function DocumentDrawer({ doc, onClose }: {
               <h3 className='text-sm font-semibold text-[#9ca3af] uppercase tracking-wider'>
                 PDF Information
               </h3>
-              <div className='bg-white border border-[#e5e7eb] rounded-lg overflow-hidden'>
+              <div className='bg-card border border-border rounded-xl overflow-hidden'>
                 {[
                   {
                     label: 'Source File Name',
@@ -666,7 +666,7 @@ function DocumentDrawer({ doc, onClose }: {
 
               {/* Processing pipeline */}
               <div className='grid grid-cols-2 gap-3'>
-                <div className='bg-white border border-[#e5e7eb] rounded-lg p-4'>
+                <div className='bg-card border border-border rounded-xl p-4'>
                   <div className='flex items-center justify-between mb-3'>
                     <span className='text-sm text-[#9ca3af]'>
                       OCR Status
@@ -680,7 +680,7 @@ function DocumentDrawer({ doc, onClose }: {
                       : 'Digital PDF — no OCR needed'}
                   </p>
                 </div>
-                <div className='bg-white border border-[#e5e7eb] rounded-lg p-4'>
+                <div className='bg-card border border-border rounded-xl p-4'>
                   <div className='flex items-center justify-between mb-3'>
                     <span className='text-sm text-[#9ca3af]'>
                       Embedding Status
@@ -724,7 +724,7 @@ function DocumentDrawer({ doc, onClose }: {
               </div>
 
               {/* Token stats */}
-              <div className='bg-white border border-[#e5e7eb] rounded-lg overflow-hidden'>
+              <div className='bg-card border border-border rounded-xl overflow-hidden'>
                 <div className='px-4 py-3 border-b border-[#e5e7eb]'>
                   <span className='text-sm font-medium text-[#1a1a1a]'>
                     Token & Chunk Statistics
@@ -809,7 +809,7 @@ function DocumentDrawer({ doc, onClose }: {
                   chunks shown
                 </span>
               </div>
-              <div className='bg-white border border-[#e5e7eb] rounded-lg overflow-hidden'>
+              <div className='bg-card border border-border rounded-xl overflow-hidden'>
                 <table className='w-full text-sm'>
                   <thead>
                     <tr className='border-b border-[#e5e7eb] bg-[#f9fafb]'>
@@ -896,7 +896,7 @@ function DocumentDrawer({ doc, onClose }: {
                   {mockKeywords.length} extracted
                 </span>
               </div>
-              <div className='bg-white border border-[#e5e7eb] rounded-lg overflow-hidden'>
+              <div className='bg-card border border-border rounded-xl overflow-hidden'>
                 <table className='w-full text-sm'>
                   <thead>
                     <tr className='border-b border-[#e5e7eb] bg-[#f9fafb]'>
@@ -1033,18 +1033,19 @@ export default function LegalDocumentManagement() {
   }
 
   return (
-    <div className='space-y-6 relative'>
-        {/* Page Header */}
+    <div className='min-h-screen bg-[#f8f9fb] p-5'>
+      <div className='space-y-6'>
         <div className='flex items-start justify-between'>
           <div>
-            <h1 className='text-3xl font-semibold text-foreground'>
+            <h1 className='text-2xl font-bold text-[#0a0a0a]'>
               Tài liệu pháp lý
             </h1>
-            <p className='text-md text-muted-foreground mt-1'>
+            <p className='text-sm text-[#6b7280] mt-1'>
               Quản lý toàn bộ tài liệu pháp luật, quyết định và
-              hướng dẫn thuế trong hệ thống TaxMate AI
+              hướng dẫn thuế trong hệ thống TaxMate.
             </p>
           </div>
+
           <div className='flex shrink-0 items-center gap-3'>
             <button
               type='button'
@@ -1374,6 +1375,7 @@ export default function LegalDocumentManagement() {
             onClose={() => setSelectedDoc(null)}
           />
         )}
+      </div>
     </div>
   )
 }

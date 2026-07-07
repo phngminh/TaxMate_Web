@@ -300,32 +300,6 @@ export default function ComprehensiveDashboard() {
           </div>
         </div>
       </div>
-
-      {/* Row 5: AI Usage KPI Cards */}
-      <div className="bg-card border border-border rounded-xl p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <Zap className="w-5 h-5 text-primary" />
-          <h2 className="text-lg font-semibold text-card-foreground">Thống kê sử dụng AI</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-card border border-border rounded-xl p-5 hover:border-primary/50 transition-all">
-            <p className="text-sm text-muted-foreground">Tổng lượt truy vấn</p>
-            <h3 className="text-3xl font-semibold mt-2 text-card-foreground">84,231</h3>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-5 hover:border-primary/50 transition-all">
-            <p className="text-sm text-muted-foreground">Truy vấn hôm nay</p>
-            <h3 className="text-3xl font-semibold mt-2 text-card-foreground">3,856</h3>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-5 hover:border-primary/50 transition-all">
-            <p className="text-sm text-muted-foreground">Độ chính xác AI</p>
-            <h3 className="text-3xl font-semibold mt-2 text-card-foreground">98.4%</h3>
-          </div>
-          <div className="bg-card border border-border rounded-xl p-5 hover:border-primary/50 transition-all">
-            <p className="text-sm text-muted-foreground">Thời gian phản hồi trung bình</p>
-            <h3 className="text-3xl font-semibold mt-2 text-card-foreground">1.2s</h3>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -3,7 +3,6 @@ import {
   User,
   Settings,
   LogOut,
-  ChevronDown,
 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -38,7 +37,7 @@ export default function TopNav() {
     navigate(path.home)
   }
 
-  const displayName = 'Quản trị viên'
+  const displayName = user?.fullName ?? 'Quản trị viên'
   const displayEmail = user?.email ?? 'admin@taxmate.vn'
 
   return (
@@ -47,28 +46,32 @@ export default function TopNav() {
         <div className='ml-auto flex items-center gap-4'>
           <button className='relative p-2 rounded-lg hover:bg-white/10 transition-colors'>
             <Bell className='w-5 h-5 text-white' />
-            <span className='absolute top-2 right-2 w-2 h-2 rounded-full bg-white' />
+            <span className='absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500' />
           </button>
 
           <div className='relative' ref={dropdownRef}>
             <button
               onClick={() => setShowDropdown((prev) => !prev)}
-              className='flex items-center gap-3 pl-4 border-l border-white/20'
+              className='flex items-center gap-3 pl-4'
             >
               <div className='text-right'>
                 <p className='text-sm font-medium text-white'>{displayName}</p>
                 <p className='text-xs text-white/70'>{displayEmail}</p>
               </div>
 
-              <div className='w-10 h-10 rounded-full bg-white/15 flex items-center justify-center'>
-                <User className='w-5 h-5 text-white' />
+              <div className='w-10 h-10 rounded-full overflow-hidden bg-white/15'>
+                {user?.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={displayName}
+                    className='w-full h-full object-cover'
+                  />
+                ) : (
+                  <div className='w-full h-full flex items-center justify-center'>
+                    <User className='w-5 h-5 text-white' />
+                  </div>
+                )}
               </div>
-
-              <ChevronDown
-                className={`w-4 h-4 text-white/70 transition-transform ${
-                  showDropdown ? 'rotate-180' : ''
-                }`}
-              />
             </button>
 
             {showDropdown && (

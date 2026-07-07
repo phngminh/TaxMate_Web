@@ -48,9 +48,9 @@ export default function ComprehensiveSidebar() {
       label: 'Users & Businesses',
       icon: Users,
       children: [
-        { label: 'User List', path: path.ADMIN_USERS_LIST },
+        { label: 'Quản lý người dùng', path: path.ADMIN_USERS_LIST },
         {
-          label: 'Subscription Management',
+          label: 'Quản lý gói đăng ký',
           path: path.ADMIN_USERS_SUBSCRIPTIONS,
         },
       ],
@@ -60,15 +60,18 @@ export default function ComprehensiveSidebar() {
       label: 'AI Legal Assistant',
       icon: Brain,
       children: [
-        { label: 'Legal Documents', path: path.ADMIN_LEGAL_DOCUMENTS },
+        { label: 'Tài liệu pháp lý', path: path.ADMIN_LEGAL_DOCUMENTS },
       ],
     },
   ]
 
   return (
-    <div className='w-64 bg-sidebar border-r border-sidebar-border h-full flex flex-col flex-shrink-0'>
-      <div className='p-1 border-b border-sidebar-border flex-shrink-0'>
-        <img src={logo} alt='TaxMate' className='h-35 w-auto pl-10' />
+    <div className='w-64 bg-sidebar h-full flex flex-col flex-shrink-0'>
+      <div className='p-2 flex-shrink-0'>
+        <div className='flex items-center px-5'>
+          <img src={logo} alt='TaxMate' className='h-16 w-auto' />
+          <span className='mt-3 ml-3 font-bold text-2xl text-gray-200'>TaxMate</span>
+        </div>
       </div>
 
       <nav className='flex-1 p-3 overflow-y-auto'>
@@ -86,7 +89,7 @@ export default function ComprehensiveSidebar() {
                     onClick={() => toggleMenu(item.id)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 text-base ${
                       hasActiveChild
-                        ? 'bg-sidebar-accent text-primary'
+                        ? 'bg-gray-300 text-primary'
                         : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                     }`}
                   >

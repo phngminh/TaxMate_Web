@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import imgLogo from '../../assets/logo3.png'
 import path from '../../constants/path'
@@ -45,6 +45,7 @@ export default function OwnerHeader() {
   const [profileOpen, setProfileOpen] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
   const { currentBusiness } = useBusiness()
+  const navigate = useNavigate()
   const { logout } = useAuth()
 
   useEffect(() => {
@@ -59,6 +60,7 @@ export default function OwnerHeader() {
 
   const handleLogout = () => {
     logout()
+    navigate(path.home)
   }
 
   return (

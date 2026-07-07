@@ -107,234 +107,242 @@ export default function UserList() {
   )
 
   return (
-    <div className='space-y-6'>
-      <div>
-        <h1 className='text-3xl font-semibold text-foreground'>
-          Quản lý người dùng
-        </h1>
-        <p className='text-md text-muted-foreground mt-1'>
-          Quản lý tài khoản người dùng và hồ sơ doanh nghiệp
-        </p>
-      </div>
-
-      {/* Filters */}
-      <div className='flex flex-col sm:flex-row gap-3'>
-        <div className='flex-1 relative'>
-          <Search className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground' />
-          <input
-            type='text'
-            placeholder='Tìm kiếm theo tên, email, số điện thoại hoặc mã số thuế...'
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className='w-full pl-10 pr-4 py-2 bg-white border border-border/50 rounded-md text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all'
-          />
+    <div className='min-h-screen bg-[#f8f9fb] p-5'>
+      <div className='space-y-6'>
+        <div className='flex items-start justify-between'>
+          <div>
+            <h1 className='text-2xl font-bold text-[#0a0a0a]'>
+              Quản lý người dùng
+            </h1>
+            <p className='text-sm text-[#6b7280] mt-1'>
+              Quản lý tài khoản người dùng và hồ sơ kinh doanh của họ.
+            </p>
+          </div>
         </div>
 
-        <div className='flex gap-2'>
-          <select
-            value={filterRole}
-            onChange={(e) => setFilterRole(e.target.value)}
-            className='px-3 py-2 bg-card border border-border/50 rounded-md text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all'
-          >
-            <option value='all'>All Roles</option>
-            <option value='user'>User</option>
-            <option value='admin'>Admin</option>
-          </select>
+        {/* Filters */}
+        <div className='flex flex-col sm:flex-row gap-3'>
+          <div className='flex-1 max-w-5xl flex items-center bg-white border border-gray-300 rounded-lg px-5 py-2.5 shadow-sm focus-within:border-sidebar-primary focus-within:ring-1 focus-within:ring-[#D32F2F]/20 transition-all'>
+            <Search
+              className={`mr-3 size-5 shrink-0 stroke-[2] transition-colors ${
+                searchTerm ? 'text-sidebar-primary' : 'text-gray-400'
+              }`}
+            />
+            <input
+              type='text'
+              placeholder='Tìm kiếm theo tên, email, số điện thoại hoặc mã số thuế...'
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className='flex-grow bg-transparent outline-none text-[14px] text-gray-800 placeholder-gray-400 font-medium'
+            />
+          </div>
 
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className='px-3 py-2 bg-card border border-border/50 rounded-md text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all'
-          >
-            <option value='all'>All Status</option>
-            <option value='active'>Active</option>
-            <option value='inactive'>Inactive</option>
-          </select>
+          <div className='flex gap-2'>
+            <select
+              value={filterRole}
+              onChange={(e) => setFilterRole(e.target.value)}
+              className='px-3 py-2 bg-card border border-border rounded-md text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all'
+            >
+              <option value='all'>Tất cả vai trò</option>
+              <option value='owner'>Người dùng</option>
+              <option value='admin'>Admin</option>
+            </select>
+
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className='px-3 py-2 bg-card border border-border rounded-md text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary transition-all'
+            >
+              <option value='all'>Tất cả trạng thái</option>
+              <option value='active'>Đang hoạt động</option>
+              <option value='inactive'>Ngừng hoạt động</option>
+            </select>
+          </div>
         </div>
-      </div>
 
-      {/* Users Table */}
-      <div className='bg-card border border-border/50 rounded-lg overflow-hidden'>
-        <div className='overflow-x-auto'>
-          <table className='w-full'>
-            <thead>
-              <tr className='border-b border-border/50'>
-                <th className='px-4 py-3 text-left'>
-                  <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
-                    Người dùng
-                  </span>
-                </th>
-                <th className='px-4 py-3 text-left'>
-                  <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
-                    Liên hệ
-                  </span>
-                </th>
-                <th className='px-4 py-3 text-left'>
-                  <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
-                    Mã số thuế
-                  </span>
-                </th>
-                <th className='px-4 py-3 text-left'>
-                  <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
-                    Role
-                  </span>
-                </th>
-                <th className='px-4 py-3 text-left'>
-                  <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
-                    Doanh nghiệp
-                  </span>
-                </th>
-                <th className='px-4 py-3 text-left'>
-                  <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
-                    Status
-                  </span>
-                </th>
-                <th className='px-4 py-3 text-left'>
-                  <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
-                    Ngày tạo
-                  </span>
-                </th>
-                <th className='px-4 py-3 text-left'>
-                  <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
-                    Actions
-                  </span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className='divide-y divide-border/50'>
-              {paginatedUsers.map((user) => (
-                <tr
-                  key={user.id}
-                  className='hover:bg-background/50 transition-colors'
-                >
-                  <td className='px-4 py-3'>
-                    <div className='flex items-center gap-3'>
-                      <div className='w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0'>
-                        <UserIcon className='w-4 h-4 text-muted-foreground' />
-                      </div>
-                      <div className='min-w-0'>
-                        <p className='text-sm font-medium text-foreground truncate'>
-                          {user.full_name}
-                        </p>
-                        <p className='text-xs text-muted-foreground truncate'>
-                          {user.email}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className='px-4 py-3'>
-                    <div className='flex items-center gap-1.5 text-xs text-muted-foreground'>
-                      <Phone className='w-3 h-3' />
-                      <span>{user.phone}</span>
-                    </div>
-                  </td>
-                  <td className='px-4 py-3'>
-                    <span className='text-sm font-mono text-foreground'>
-                      {user.tax_code}
+        {/* Users Table */}
+        <div className='bg-card border border-border rounded-xl overflow-hidden'>
+          <div className='overflow-x-auto'>
+            <table className='w-full'>
+              <thead>
+                <tr className='border-b border-border'>
+                  <th className='px-4 py-3 text-left'>
+                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                      Người dùng
                     </span>
-                  </td>
-                  <td className='px-4 py-3'>
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                        user.role === 'admin'
-                          ? 'bg-violet-500/10 text-violet-400 border border-violet-500/20'
-                          : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
-                      }`}
-                    >
-                      {user.role}
+                  </th>
+                  <th className='px-4 py-3 text-left'>
+                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                      Liên hệ
                     </span>
-                  </td>
-                  <td className='px-4 py-3'>
-                    <div className='flex items-center gap-1.5'>
-                      <Building2 className='w-3.5 h-3.5 text-muted-foreground' />
+                  </th>
+                  <th className='px-4 py-3 text-left'>
+                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                      Mã số thuế
+                    </span>
+                  </th>
+                  <th className='px-4 py-3 text-left'>
+                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                      Role
+                    </span>
+                  </th>
+                  <th className='px-4 py-3 text-left'>
+                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                      Doanh nghiệp
+                    </span>
+                  </th>
+                  <th className='px-4 py-3 text-left'>
+                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                      Status
+                    </span>
+                  </th>
+                  <th className='px-4 py-3 text-left'>
+                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                      Ngày tạo
+                    </span>
+                  </th>
+                  <th className='px-4 py-3 text-left'>
+                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                      Actions
+                    </span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className='divide-y divide-border/50'>
+                {paginatedUsers.map((user) => (
+                  <tr
+                    key={user.id}
+                    className='hover:bg-background/50 transition-colors'
+                  >
+                    <td className='px-4 py-3'>
+                      <div className='flex items-center gap-3'>
+                        <div className='w-9 h-9 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center flex-shrink-0'>
+                          <UserIcon className='w-4 h-4 text-muted-foreground' />
+                        </div>
+                        <div className='min-w-0'>
+                          <p className='text-sm font-medium text-foreground truncate'>
+                            {user.full_name}
+                          </p>
+                          <p className='text-xs text-muted-foreground truncate'>
+                            {user.email}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className='px-4 py-3'>
+                      <div className='flex items-center gap-1.5 text-xs text-muted-foreground'>
+                        <Phone className='w-3 h-3' />
+                        <span>{user.phone}</span>
+                      </div>
+                    </td>
+                    <td className='px-4 py-3'>
+                      <span className='text-sm font-mono text-foreground'>
+                        {user.tax_code}
+                      </span>
+                    </td>
+                    <td className='px-4 py-3'>
                       <span
-                        className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded text-xs font-medium border ${
-                          user.total_business_profiles > 0
-                            ? 'bg-amber-100 text-amber-700 border-amber-200'
-                            : 'bg-slate-100 text-slate-500 border-slate-200'
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                          user.role === 'admin'
+                            ? 'bg-violet-500/10 text-violet-400 border border-violet-500/20'
+                            : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
                         }`}
                       >
-                        {user.total_business_profiles}
+                        {user.role}
                       </span>
-                    </div>
-                  </td>
-                  <td className='px-4 py-3'>
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                        user.is_active
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                          : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                      }`}
-                    >
-                      {user.is_active ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className='px-4 py-3'>
-                    <span className='text-xs text-muted-foreground'>
-                      {user.created_at}
-                    </span>
-                  </td>
-                  <td className='px-4 py-3 text-left'>
-                    <Link
-                      to={`${path.BASE_ADMIN}/users/${user.id}`}
-                      className='inline-flex items-center px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-primary/80 hover:bg-primary/5 rounded-md transition-all'
-                    >
-                      View Details
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </td>
+                    <td className='px-4 py-3'>
+                      <div className='flex items-center gap-1.5'>
+                        <Building2 className='w-3.5 h-3.5 text-muted-foreground' />
+                        <span
+                          className={`inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded text-xs font-medium border ${
+                            user.total_business_profiles > 0
+                              ? 'bg-amber-100 text-amber-700 border-amber-200'
+                              : 'bg-slate-100 text-slate-500 border-slate-200'
+                          }`}
+                        >
+                          {user.total_business_profiles}
+                        </span>
+                      </div>
+                    </td>
+                    <td className='px-4 py-3'>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                          user.is_active
+                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                        }`}
+                      >
+                        {user.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className='px-4 py-3'>
+                      <span className='text-xs text-muted-foreground'>
+                        {user.created_at}
+                      </span>
+                    </td>
+                    <td className='px-4 py-3 text-left'>
+                      <Link
+                        to={`${path.BASE_ADMIN}/users/${user.id}`}
+                        className='inline-flex items-center px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-primary/80 hover:bg-primary/5 rounded-md transition-all'
+                      >
+                        View Details
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-        {/* Pagination */}
-        <div className='px-4 py-3 border-t border-border/50 flex items-center justify-between bg-background/30'>
-          <p className='text-xs text-muted-foreground'>
-            Showing {startIndex + 1}-
-            {Math.min(
-              startIndex + itemsPerPage,
-              filteredUsers.length,
-            )}{' '}
-            of {filteredUsers.length} users
-          </p>
-          <div className='flex gap-1'>
-            <button
-              onClick={() =>
-                setCurrentPage((prev) => Math.max(prev - 1, 1))
-              }
-              disabled={currentPage === 1}
-              className='p-1.5 rounded-md border border-border/50 bg-card text-muted-foreground hover:bg-background hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-all'
-            >
-              <ChevronLeft className='w-4 h-4' />
-            </button>
-            {Array.from(
-              { length: totalPages },
-              (_, i) => i + 1,
-            ).map((page) => (
+          {/* Pagination */}
+          <div className='px-4 py-3 border-t border-border flex items-center justify-between bg-background/30'>
+            <p className='text-xs text-muted-foreground'>
+              Showing {startIndex + 1}-
+              {Math.min(
+                startIndex + itemsPerPage,
+                filteredUsers.length,
+              )}{' '}
+              of {filteredUsers.length} users
+            </p>
+            <div className='flex gap-1'>
               <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`min-w-[32px] px-2 py-1.5 rounded-md border text-xs font-medium transition-all ${
-                  currentPage === page
-                    ? 'bg-primary text-primary-foreground border-primary'
-                    : 'bg-card text-foreground border-border/50 hover:bg-background'
-                }`}
+                onClick={() =>
+                  setCurrentPage((prev) => Math.max(prev - 1, 1))
+                }
+                disabled={currentPage === 1}
+                className='p-1.5 rounded-md border border-border bg-card text-muted-foreground hover:bg-background hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-all'
               >
-                {page}
+                <ChevronLeft className='w-4 h-4' />
               </button>
-            ))}
-            <button
-              onClick={() =>
-                setCurrentPage((prev) =>
-                  Math.min(prev + 1, totalPages),
-                )
-              }
-              disabled={currentPage === totalPages}
-              className='p-1.5 rounded-md border border-border/50 bg-card text-muted-foreground hover:bg-background hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-all'
-            >
-              <ChevronRight className='w-4 h-4' />
-            </button>
+              {Array.from(
+                { length: totalPages },
+                (_, i) => i + 1,
+              ).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`min-w-[32px] px-2 py-1.5 rounded-md border text-xs font-medium transition-all ${
+                    currentPage === page
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-card text-foreground border-border hover:bg-background'
+                  }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                onClick={() =>
+                  setCurrentPage((prev) =>
+                    Math.min(prev + 1, totalPages),
+                  )
+                }
+                disabled={currentPage === totalPages}
+                className='p-1.5 rounded-md border border-border bg-card text-muted-foreground hover:bg-background hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-all'
+              >
+                <ChevronRight className='w-4 h-4' />
+              </button>
+            </div>
           </div>
         </div>
       </div>
