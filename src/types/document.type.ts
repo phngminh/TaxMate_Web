@@ -10,11 +10,11 @@ export interface LegalDocument {
   effective_date: string
   expired_date: string | null
   status:
-    | 'active'
-    | 'inactive'
-    | 'processing'
-    | 'error'
-    | 'pending'
+    | 'Active'
+    | 'Inactive'
+    | 'Processing'
+    | 'Error'
+    | 'Pending'
   requires_ocr: boolean
   total_pages: number
   total_chunks: number
@@ -23,15 +23,15 @@ export interface LegalDocument {
   source_file_name: string
   source_file_path: string
   ocr_status:
-    | 'completed'
-    | 'pending'
-    | 'failed'
-    | 'not_required'
+    | 'Completed'
+    | 'Pending'
+    | 'Failed'
+    | 'Not_required'
   embedding_status:
-    | 'completed'
-    | 'pending'
-    | 'failed'
-    | 'processing'
+    | 'Completed'
+    | 'Pending'
+    | 'Failed'
+    | 'Processing'
   token_count: number
   embedding_model: string
   vector_dimension: number
@@ -49,7 +49,7 @@ export interface DocumentChunk {
 
 export interface DocumentKeyword {
   keyword_text: string
-  keyword_type: 'entity' | 'concept' | 'legal_term' | 'numeric'
+  keyword_type: 'Entity' | 'Concept' | 'Legal_term' | 'Numeric'
   embedding_model: string
   vector_dimension: number
 }

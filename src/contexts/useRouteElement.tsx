@@ -17,6 +17,8 @@ import UserDetail from '../pages/admin/user/userDetail'
 import Subscription from '../pages/admin/user/subscription'
 import LegalDocuments from '../pages/admin/document/document'
 import { BusinessProvider } from './BusinessContext'
+import BusinessList from '../pages/admin/user/business'
+import Expense from '../pages/businessOwner/expense'
 
 export default function useRouteElements() {
   const routeElements = useRoutes([
@@ -27,7 +29,7 @@ export default function useRouteElements() {
     //================ Business Owner routes ================
     {
       path: path.BASE_BUSINESS_OWNER,
-      element: <ProtectedRoute allowedRoles={['Owner']} />,
+      //element: <ProtectedRoute allowedRoles={['Owner']} />,
       children: [
         {
           element: (
@@ -41,7 +43,7 @@ export default function useRouteElements() {
             { path: path.BUSINESS_OWNER_PRODUCTS, element: <Product /> },
             { path: path.BUSINESS_OWNER_INGREDIENTS, element: <Ingredient /> },
             { path: path.BUSINESS_OWNER_ORDERS, element: <Order /> },
-            { path: path.BUSINESS_OWNER_EXPENSES, element: <Home /> },
+            { path: path.BUSINESS_OWNER_EXPENSES, element: <Expense /> },
             { path: path.BUSINESS_OWNER_REPORTS, element: <Home /> }
           ]
         },
@@ -57,7 +59,7 @@ export default function useRouteElements() {
     //================ Admin routes ================
     {
       path: path.BASE_ADMIN,
-      element: <ProtectedRoute allowedRoles={['Admin']} />,
+      // element: <ProtectedRoute allowedRoles={['Admin']} />,
       children: [
         {
           element: <AdminLayout />,
@@ -66,6 +68,7 @@ export default function useRouteElements() {
             { path: path.ADMIN_DASHBOARD, element: <Dashboard /> },
             { path: path.ADMIN_USERS_LIST, element: <UserList /> },
             { path: path.ADMIN_USERS_DETAIL, element: <UserDetail /> },
+            { path: path.ADMIN_BUSINESSES_LIST, element: <BusinessList /> },
             { path: path.ADMIN_USERS_SUBSCRIPTIONS, element: <Subscription /> },
             { path: path.ADMIN_LEGAL_DOCUMENTS, element: <LegalDocuments /> },
           ]

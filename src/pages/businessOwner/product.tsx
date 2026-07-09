@@ -299,7 +299,7 @@ export default function Product() {
               <ChevronDown size={16} className={`text-gray-400 transition-transform ${categoryDropdownOpen ? 'rotate-180' : ''}`} />
             </button>
             {categoryDropdownOpen && (
-              <div className='absolute left-0 right-0 top-[74px] bg-white border border-gray-100 rounded-[10px] shadow-lg py-1 z-40 max-h-60 overflow-y-auto animate-in fade-in duration-100'>
+              <div className='absolute left-0 right-0 top-18.5 bg-white border border-gray-100 rounded-[10px] shadow-lg py-1 z-40 max-h-60 overflow-y-auto animate-in fade-in duration-100'>
                 <button
                   onClick={() => {
                     setSelectedCategory('all')
@@ -372,7 +372,7 @@ export default function Product() {
 
         <div className='grow p-8 overflow-x-auto'>
           {filteredProducts.length > 0 ? (
-            <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-[700px]'>
+            <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-175'>
               <table className='w-full text-left border-collapse'>
                 <thead>
                   <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>

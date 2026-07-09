@@ -237,7 +237,7 @@ export default function LandingPage() {
               </div>
 
               <div className='px-4 pb-4 mt-auto'>
-                <div className='bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden h-[240px] flex flex-col'>
+                <div className='bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden h-60 flex flex-col'>
                   <div className='bg-[#F3FDF7] py-2.5 px-3 border-b border-slate-100 flex items-center gap-1'>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className='text-[#22C55E]'>
                       <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -307,7 +307,7 @@ export default function LandingPage() {
               </div>
 
               <div className='px-4 pb-4 mt-auto'>
-                <div className='bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden h-[240px] flex flex-col'>
+                <div className='bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden h-60 flex flex-col'>
                   <div className='bg-[#F3F7FD] py-2.5 px-3 border-b border-slate-100 flex items-center gap-1'>
                     <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className='text-[#3B82F6]'>
                       <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -371,7 +371,7 @@ export default function LandingPage() {
               </div>
 
               <div className='px-4 pb-4 mt-auto'>
-                <div className='bg-white rounded-2xl border border-slate-100 shadow-xs p-3 h-[240px] flex flex-col justify-between'>
+                <div className='bg-white rounded-2xl border border-slate-100 shadow-xs p-3 h-60 flex flex-col justify-between'>
                   <div>
                     <span className='text-[8px] text-slate-400 block font-bold'>Lợi nhuận ước tính</span>
                     <span className='text-base font-black text-slate-900 block mt-0.5'>50.290.000đ</span>
@@ -380,7 +380,7 @@ export default function LandingPage() {
                     </span>
                   </div>
 
-                  <div className='mt-3 flex items-end justify-around gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 grow max-h-[120px]'>
+                  <div className='mt-3 flex items-end justify-around gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-100 grow max-h-30'>
                     <div className='flex flex-col items-center gap-1.5 w-full'>
                       <div className='w-2.5 h-16 bg-[#22C55E] rounded-full shadow-xs' />
                       <span className='text-[6px] font-bold text-slate-400 text-center scale-95'>Doanh thu</span>
@@ -414,7 +414,7 @@ export default function LandingPage() {
               </div>
 
               <div className='px-4 pb-4 mt-auto'>
-                <div className='bg-white rounded-2xl border border-slate-100 shadow-xs p-3 h-[240px] flex flex-col justify-between'>
+                <div className='bg-white rounded-2xl border border-slate-100 shadow-xs p-3 h-60 flex flex-col justify-between'>
                   <span className='text-[8px] text-slate-800 font-extrabold block border-b border-slate-50 pb-1.5'>Báo cáo tháng 5/2024</span>
                   
                   <div className='space-y-1.5 mt-2'>
@@ -461,12 +461,6 @@ export default function LandingPage() {
       <footer className='bg-slate-900 text-slate-400 py-4 border-t border-slate-800'>
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6'>
           <div className='flex items-center'>
-            <img
-              src={logo}
-              alt='TaxMate'
-              className='h-10 w-auto brightness-0 invert object-contain'
-            />
-
             <span className='text-2xl font-bold text-white tracking-tight'>
               TaxMate
             </span>

@@ -49,6 +49,7 @@ export default function ComprehensiveSidebar() {
       icon: Users,
       children: [
         { label: 'Quản lý người dùng', path: path.ADMIN_USERS_LIST },
+        { label: 'Quản lý hộ kinh doanh', path: path.ADMIN_BUSINESSES_LIST },
         {
           label: 'Quản lý gói đăng ký',
           path: path.ADMIN_USERS_SUBSCRIPTIONS,
@@ -79,9 +80,7 @@ export default function ComprehensiveSidebar() {
           {menuItems.map((item) => {
             if (item.children) {
               const isExpanded = expandedMenus.includes(item.id)
-              const hasActiveChild = isParentActive(
-                item.children.map((c) => c.path),
-              )
+              const hasActiveChild = isParentActive(item.children.map((c) => c.path))
 
               return (
                 <li key={item.id}>
@@ -89,7 +88,7 @@ export default function ComprehensiveSidebar() {
                     onClick={() => toggleMenu(item.id)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-all duration-200 text-base ${
                       hasActiveChild
-                        ? 'bg-gray-300 text-primary'
+                        ? 'bg-gray-300 text-black'
                         : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
                     }`}
                   >

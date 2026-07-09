@@ -4,14 +4,10 @@ import {
   User as UserIcon,
   Mail,
   Phone,
-  Shield,
   Calendar,
   Building2,
   MapPin,
   FileText,
-  MoreVertical,
-  Eye,
-  XCircle,
 } from 'lucide-react'
 import { Link, useParams } from 'react-router-dom'
 import path from '../../../constants/path'
@@ -35,7 +31,7 @@ const mockUserData: { [key: string]: any } = {
         province_code: 'HCM',
         ward_code: '01',
         address: '123 Đường Lê Lợi, Quận 1, TP.HCM',
-        main_category_id: 'retail',
+        main_category_id: 'fnb',
         prefer_electronic_invoice: true,
         created_at: '2024-01-20T08:00:00Z',
         updated_at: '2026-04-10T16:30:00Z',
@@ -83,7 +79,6 @@ const mockUserData: { [key: string]: any } = {
 export default function UserDetail() {
   const { id } = useParams()
   const user = mockUserData[id || '1'] || mockUserData['1']
-  const [activeBusinessMenu, setActiveBusinessMenu] = useState<number | null>(null)
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString)
@@ -98,24 +93,24 @@ export default function UserDetail() {
 
   const getCategoryLabel = (categoryId: string) => {
     const categories: { [key: string]: string } = {
-      retail: 'Bán lẻ',
       services: 'Dịch vụ',
-      investment: 'Đầu tư',
-      beauty: 'Làm đẹp',
+      fnb: 'Ăn uống',
     }
     return categories[categoryId] || categoryId
   }
 
   return (
     <div className='space-y-6'>
-      {/* Header */}
       <div className='grid grid-cols-3 items-center'>
         <div>
           <Link
             to={path.ADMIN_USERS_LIST}
-            className='inline-flex p-2 rounded-md border border-border bg-card hover:bg-background transition-colors'
+            className='inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 hover:bg-background transition-colors'
           >
-            <ArrowLeft className='w-4 h-4 text-foreground' />
+            <ArrowLeft className='h-4 w-4 text-foreground' />
+            <span className='text-sm font-medium text-foreground'>
+              Quay lại
+            </span>
           </Link>
         </div>
         <div className='text-center'>
@@ -161,16 +156,15 @@ export default function UserDetail() {
               }`}
             >
               {user.is_active
-                ? 'Active Account'
-                : 'Inactive Account'}
+                ? 'Tài khoản đang hoạt động'
+                : 'Tài khoản ngừng hoạt động'}
             </span>
           </div>
 
-          {/* User Details */}
           <div className='lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5'>
             <div>
               <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-1.5'>
-                Full Name
+                Họ và tên
               </label>
               <p className='text-sm text-foreground font-medium'>
                 {user.full_name}
@@ -179,7 +173,7 @@ export default function UserDetail() {
 
             <div>
               <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-1.5'>
-                Email Address
+                Email
               </label>
               <div className='flex items-center gap-2'>
                 <Mail className='w-3.5 h-3.5 text-muted-foreground' />
@@ -191,7 +185,7 @@ export default function UserDetail() {
 
             <div>
               <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-1.5'>
-                Phone Number
+                Số điện thoại
               </label>
               <div className='flex items-center gap-2'>
                 <Phone className='w-3.5 h-3.5 text-muted-foreground' />
@@ -206,7 +200,6 @@ export default function UserDetail() {
                 Role
               </label>
               <div className='flex items-center gap-2'>
-                <Shield className='w-3.5 h-3.5 text-muted-foreground' />
                 <span
                   className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                     user.role === 'admin'
@@ -214,14 +207,14 @@ export default function UserDetail() {
                       : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
                   }`}
                 >
-                  {user.role}
+                  {user.role === 'admin' ? 'Admin' : 'Business Owner'}
                 </span>
               </div>
             </div>
 
             <div>
               <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-1.5'>
-                Tax Code
+                Mã số thuế
               </label>
               <p className='text-sm text-foreground font-mono'>
                 {user.tax_code}
@@ -230,7 +223,7 @@ export default function UserDetail() {
 
             <div>
               <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-1.5'>
-                Created At
+                Ngày tạo
               </label>
               <div className='flex items-center gap-2'>
                 <Calendar className='w-3.5 h-3.5 text-muted-foreground' />
@@ -242,7 +235,7 @@ export default function UserDetail() {
 
             <div>
               <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-1.5'>
-                Last Updated
+                Cập nhật lần cuối
               </label>
               <div className='flex items-center gap-2'>
                 <Calendar className='w-3.5 h-3.5 text-muted-foreground' />
@@ -263,7 +256,7 @@ export default function UserDetail() {
             <h2 className='text-lg font-semibold text-foreground'>
               Hồ sơ doanh nghiệp
             </h2>
-            <span className='inline-flex items-center justify-center min-w-[24px] h-6 px-2 bg-primary/10 text-primary rounded-md text-xs font-medium border border-primary/20'>
+            <span className='inline-flex items-center justify-center min-w-6 h-6 px-2 bg-primary/10 text-primary rounded-md text-xs font-medium border border-primary/20'>
               {user.business_profiles.length}
             </span>
           </div>
@@ -285,9 +278,6 @@ export default function UserDetail() {
               >
                 <div className='flex items-start justify-between mb-4'>
                   <div className='flex items-start gap-3 flex-1'>
-                    <div className='w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0'>
-                      <Building2 className='w-5 h-5 text-muted-foreground' />
-                    </div>
                     <div className='flex-1 min-w-0'>
                       <h3 className='text-base font-semibold text-foreground mb-1'>
                         {business.business_name}
@@ -299,48 +289,18 @@ export default function UserDetail() {
                         {business.prefer_electronic_invoice && (
                           <span className='inline-flex items-center gap-1 px-2 py-0.5 rounded-sm text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'>
                             <FileText className='w-3 h-3' />
-                            E-Invoice
+                            Có sử dụng E-Invoice
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
-
-                  {/* Business Actions */}
-                  <div className='relative'>
-                    <button
-                      onClick={() =>
-                        setActiveBusinessMenu(
-                          activeBusinessMenu === business.id
-                            ? null
-                            : business.id,
-                        )
-                      }
-                      className='p-1.5 rounded-md hover:bg-background border border-transparent hover:border-border transition-all'
-                    >
-                      <MoreVertical className='w-4 h-4 text-muted-foreground' />
-                    </button>
-
-                    {activeBusinessMenu === business.id && (
-                      <div className='absolute right-0 top-full mt-1 w-48 bg-white border-gray-600 shadow-lg rounded-xl overflow-hidden z-10'>
-                        <button className='w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-foreground hover:bg-background transition-colors'>
-                          <Eye className='w-3.5 h-3.5 text-muted-foreground' />
-                          View Business
-                        </button>
-                        <button className='w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-destructive hover:bg-background transition-colors'>
-                          <XCircle className='w-3.5 h-3.5' />
-                          Disable Business
-                        </button>
-                      </div>
-                    )}
-                  </div>
                 </div>
 
-                {/* Business Details */}
                 <div className='grid grid-cols-4 gap-x-6 pt-4 border-t border-border/30'>
                   <div>
                     <label className='text-[10px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
-                      Address
+                      Địa chỉ
                     </label>
                     <div className='flex items-start gap-1.5'>
                       <MapPin className='w-3 h-3 text-muted-foreground mt-0.5 shrink-0' />
@@ -352,17 +312,17 @@ export default function UserDetail() {
 
                   <div>
                     <label className='text-[10px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
-                      Province / Ward
+                      Tỉnh/Thành phố - Quận/Huyện
                     </label>
                     <p className='text-xs text-foreground'>
-                      {business.province_code} / Ward{' '}
+                      {business.province_code} - Ward{' '}
                       {business.ward_code}
                     </p>
                   </div>
 
                   <div>
                     <label className='text-[10px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
-                      Created At
+                      Ngày tạo
                     </label>
                     <p className='text-xs text-foreground'>
                       {formatDateTime(business.created_at)}
@@ -371,7 +331,7 @@ export default function UserDetail() {
 
                   <div>
                     <label className='text-[10px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
-                      Last Updated
+                      Cập nhật lần cuối
                     </label>
                     <p className='text-xs text-foreground'>
                       {formatDateTime(business.updated_at)}

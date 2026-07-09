@@ -6,11 +6,10 @@ import {
   Check,
   X,
   Users,
-  DollarSign,
-  CalendarDays,
-  LayoutGrid,
+  CalendarDays
 } from 'lucide-react'
 import type { Plan } from '../../../types/subscription.type'
+import { Button } from '../../../components/ui/button'
 
 const initialPlans: Plan[] = [
   {
@@ -18,132 +17,147 @@ const initialPlans: Plan[] = [
     name: 'Gói Dùng thử',
     price: 0,
     period: 'month',
-    description: 'Dành cho trải nghiệm nền tảng',
+    description: 'Dành cho cá nhân và trải nghiệm nền tảng',
     activeUsers: 12,
     isActive: true,
     features: [
-      { id: 'f1', name: '10 tài liệu/tháng', included: true },
-      { id: 'f2', name: 'Hỗ trợ cơ bản', included: true },
+      {
+        id: 'f1',
+        name: 'Ghi nhận doanh thu',
+        included: true,
+      },
+      {
+        id: 'f2',
+        name: 'Thống kê doanh thu theo tháng & năm',
+        included: true,
+      },
       {
         id: 'f3',
-        name: 'Chỉ hỗ trợ qua email',
+        name: 'Báo cáo doanh thu hằng ngày',
         included: true,
       },
       {
         id: 'f4',
-        name: 'Lưu trữ giới hạn (1GB)',
+        name: 'Theo dõi lịch sử đơn hàng',
         included: true,
       },
       {
         id: 'f5',
-        name: 'Truy cập 1 người dùng',
+        name: 'Thống kê danh mục bán chạy',
         included: true,
       },
       {
         id: 'f6',
-        name: 'Tốc độ xử lý tiêu chuẩn',
+        name: 'Quản lý sản phẩm',
         included: true,
       },
     ],
   },
+
   {
     id: 'plan-2',
-    name: 'Gói Starter',
+    name: 'Gói Doanh nghiệp',
     price: 99000,
     period: 'month',
-    description: 'Lý tưởng cho nhóm nhỏ và startup',
+    description: 'Dành cho hộ kinh doanh và doanh nghiệp nhỏ',
     activeUsers: 847,
     isActive: true,
     features: [
       {
         id: 'f1',
-        name: 'Tải tài liệu không giới hạn',
+        name: 'Bao gồm toàn bộ tính năng Gói Dùng thử',
         included: true,
       },
-      { id: 'f2', name: 'Xử lý OCR nâng cao', included: true },
+      {
+        id: 'f2',
+        name: 'Ghi nhận và theo dõi chi phí',
+        included: true,
+      },
       {
         id: 'f3',
-        name: 'Phân tích tài liệu bằng AI',
+        name: 'Dashboard ước tính lợi nhuận',
         included: true,
       },
       {
         id: 'f4',
-        name: 'Hỗ trợ email & chat ưu tiên',
+        name: 'AI tư vấn thuế',
         included: true,
       },
       {
         id: 'f5',
-        name: 'Tối đa 10 thành viên',
+        name: 'Tra cứu văn bản pháp luật bằng AI (RAG)',
         included: true,
       },
       {
         id: 'f6',
-        name: 'Lưu trữ đám mây 50GB',
+        name: 'Báo cáo phân tích hoạt động kinh doanh',
         included: true,
       },
       {
         id: 'f7',
-        name: 'Bảng phân tích nâng cao',
-        included: true,
+        name: 'Tích hợp hóa đơn điện tử',
+        included: false,
       },
-      { id: 'f8', name: 'Quy trình tùy chỉnh', included: true },
-      { id: 'f9', name: 'Truy cập API', included: false },
       {
-        id: 'f10',
-        name: 'Giải pháp White-Label',
+        id: 'f8',
+        name: 'Phân tích kinh doanh nâng cao',
+        included: false,
+      },
+      {
+        id: 'f9',
+        name: 'Theo dõi mức độ sẵn sàng tăng trưởng',
         included: false,
       },
     ],
   },
+
   {
     id: 'plan-3',
-    name: 'Gói Enterprise',
+    name: 'Gói Premium Doanh nghiệp',
     price: 499000,
     period: 'month',
-    description: 'Cho tổ chức lớn với nhu cầu nâng cao',
+    description: 'Dành cho doanh nghiệp cần phân tích và tự động hóa nâng cao',
     activeUsers: 234,
     isActive: true,
     features: [
       {
         id: 'f1',
-        name: 'Tất cả tính năng gói Starter',
+        name: 'Bao gồm toàn bộ tính năng Gói Doanh nghiệp',
         included: true,
       },
       {
         id: 'f2',
-        name: 'Thành viên không giới hạn',
+        name: 'Tích hợp hóa đơn điện tử',
         included: true,
       },
       {
         id: 'f3',
-        name: 'Lưu trữ đám mây 500GB',
+        name: 'Phân tích kinh doanh nâng cao',
         included: true,
       },
       {
         id: 'f4',
-        name: 'Quản lý tài khoản riêng',
+        name: 'Theo dõi mức độ sẵn sàng tăng trưởng',
         included: true,
       },
-      { id: 'f5', name: 'Hỗ trợ ưu tiên 24/7', included: true },
-      { id: 'f6', name: 'Tích hợp tùy chỉnh', included: true },
+      {
+        id: 'f5',
+        name: 'Dashboard phân tích chuyên sâu',
+        included: true,
+      },
+      {
+        id: 'f6',
+        name: 'Báo cáo AI nâng cao',
+        included: true,
+      },
       {
         id: 'f7',
-        name: 'Bảo mật nâng cao (SSO)',
+        name: 'Ưu tiên xử lý và hỗ trợ',
         included: true,
       },
       {
         id: 'f8',
-        name: 'Truy cập API & tài liệu',
-        included: true,
-      },
-      {
-        id: 'f9',
-        name: 'Giải pháp White-Label',
-        included: true,
-      },
-      {
-        id: 'f10',
-        name: 'Đào tạo theo yêu cầu',
+        name: 'API tích hợp hệ thống',
         included: true,
       },
     ],
@@ -179,22 +193,26 @@ function TimeFilter({
 }) {
   return (
     <div className='flex items-center gap-2'>
-      <CalendarDays className='w-4 h-4 text-[#9ca3af]' />
-      <select
-        value={month}
-        onChange={(e) => onMonthChange(Number(e.target.value))}
-        className='text-sm border border-[#e5e7eb] rounded-lg px-3 py-1.5 text-[#374151] bg-white focus:outline-hidden focus:ring-2 focus:ring-[#5d2ec0]/30 cursor-pointer'
-      >
-        {MONTHS.map((label, idx) => (
-          <option key={idx} value={idx + 1}>
-            {label}
-          </option>
-        ))}
-      </select>
+      <div className='relative'>
+        <CalendarDays className='absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#9ca3af] pointer-events-none' />
+
+        <select
+          value={month}
+          onChange={(e) => onMonthChange(Number(e.target.value))}
+          className='pl-10 pr-8 py-2 text-sm border border-[#e5e7eb] rounded-lg bg-white text-[#374151] focus:outline-none focus:ring-2 focus:ring-[#5d2ec0]/30 cursor-pointer appearance-none'
+        >
+          {MONTHS.map((label, idx) => (
+            <option key={idx} value={idx + 1}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <select
         value={year}
         onChange={(e) => onYearChange(Number(e.target.value))}
-        className='text-sm border border-[#e5e7eb] rounded-lg px-3 py-1.5 text-[#374151] bg-white focus:outline-hidden focus:ring-2 focus:ring-[#5d2ec0]/30 cursor-pointer'
+        className='px-3 py-2 text-sm border border-[#e5e7eb] rounded-lg bg-white text-[#374151] focus:outline-none focus:ring-2 focus:ring-[#5d2ec0]/30 cursor-pointer'
       >
         {YEARS.map((y) => (
           <option key={y} value={y}>
@@ -209,13 +227,8 @@ function TimeFilter({
 export default function SubscriptionManagement() {
   const [plans] = useState<Plan[]>(initialPlans)
   const now = new Date()
-  const [statsMonth, setStatsMonth] = useState(now.getMonth() + 1)
-  const [statsYear, setStatsYear] = useState(now.getFullYear())
   const [tableMonth, setTableMonth] = useState(now.getMonth() + 1)
   const [tableYear, setTableYear] = useState(now.getFullYear())
-
-  const totalActiveUsers = plans.reduce((sum, p) => sum + p.activeUsers, 0)
-  const totalRevenue = plans.reduce((sum, p) => sum + p.price * p.activeUsers, 0)
 
   return (
     <div className='min-h-screen bg-[#f8f9fb] p-5'>
@@ -229,10 +242,10 @@ export default function SubscriptionManagement() {
               Tạo và quản lý các gói đăng ký cho khách hàng
             </p>
           </div>
-          <button className='flex items-center gap-2 px-4 py-2 bg-[#5d2ec0] text-white rounded-lg text-sm font-medium hover:bg-[#4c25a0] transition-colors shadow-xs'>
+          <Button className='flex items-center gap-2 px-4 py-5 bg-[#5d2ec0] text-white rounded-lg text-sm font-medium hover:bg-[#4c25a0] transition-colors shadow-xs'>
             <Plus className='w-4 h-4' />
             Tạo gói mới
-          </button>
+          </Button>
         </div>
 
         <div>
@@ -322,77 +335,8 @@ export default function SubscriptionManagement() {
           </div>
         </div>
 
-        {/* Tổng quan thống kê */}
         <div className='bg-card border border-border rounded-xl shadow-xs overflow-hidden'>
-          <div className='px-6 py-4 border-b border-border flex items-center justify-between'>
-            <h3 className='text-base font-bold text-[#0a0a0a]'>
-              Tổng quan thống kê
-            </h3>
-
-            <TimeFilter
-              month={statsMonth}
-              year={statsYear}
-              onMonthChange={setStatsMonth}
-              onYearChange={setStatsYear}
-            />
-          </div>
-          <div className='grid grid-cols-3 gap-6'>
-            <div className='bg-card border border-border rounded-xl p-6 shadow-xs'>
-              <div className='flex items-center justify-between mb-4'>
-                <div className='w-10 h-10 rounded-lg bg-[#eff6ff] flex items-center justify-center'>
-                  <LayoutGrid className='w-5 h-5 text-[#3b82f6]' />
-                </div>
-              </div>
-              <h3 className='text-sm font-medium text-[#6b7280] mb-1'>
-                Gói đang hoạt động
-              </h3>
-              <p className='text-2xl font-bold text-[#0a0a0a]'>
-                {plans.filter((p) => p.isActive).length}
-              </p>
-              <p className='text-sm text-[#9ca3af] mt-1'>
-                {MONTHS[statsMonth - 1]} / Năm {statsYear}
-              </p>
-            </div>
-
-            <div className='bg-card border border-border rounded-xl p-6 shadow-xs'>
-              <div className='flex items-center justify-between mb-4'>
-                <div className='w-10 h-10 rounded-lg bg-[#ecfdf5] flex items-center justify-center'>
-                  <Users className='w-5 h-5 text-[#10b981]' />
-                </div>
-              </div>
-              <h3 className='text-sm font-medium text-[#6b7280] mb-1'>
-                Tổng người đăng ký
-              </h3>
-              <p className='text-2xl font-bold text-[#0a0a0a]'>
-                {totalActiveUsers.toLocaleString()}
-              </p>
-              <p className='text-sm text-[#9ca3af] mt-1'>
-                Trên tất cả gói
-              </p>
-            </div>
-
-            <div className='bg-card border border-border rounded-xl p-6 shadow-xs'>
-              <div className='flex items-center justify-between mb-4'>
-                <div className='w-10 h-10 rounded-lg bg-[#faf5ff] flex items-center justify-center'>
-                  <DollarSign className='w-5 h-5 text-[#5d2ec0]' />
-                </div>
-              </div>
-              <h3 className='text-sm font-medium text-[#6b7280] mb-1'>
-                Doanh thu tháng
-              </h3>
-              <p className='text-2xl font-bold text-[#0a0a0a]'>
-                ₫{totalRevenue.toLocaleString()}
-              </p>
-              <p className='text-sm text-[#9ca3af] mt-1'>
-                Từ đăng ký dịch vụ
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Bảng chi tiết gói */}
-        <div className='bg-card border border-border rounded-xl shadow-xs overflow-hidden'>
-          <div className='px-6 py-4 border-b border-border flex items-center justify-between'>
+          <div className='px-6 py-4 flex items-center justify-between'>
             <h3 className='text-base font-bold text-[#0a0a0a]'>
               Chi tiết tất cả gói đăng ký
             </h3>
@@ -407,24 +351,18 @@ export default function SubscriptionManagement() {
             <table className='w-full'>
               <thead>
                 <tr className='border-b border-[#f9fafb]'>
-                  <th className='px-6 py-3.5 text-left text-[11px] font-bold text-[#9ca3af] uppercase tracking-wide'>
+                  <th className='px-6 py-3.5 text-left text-[13px] font-bold text-[#9ca3af] uppercase tracking-wide'>
                     Tên gói
                   </th>
-                  <th className='px-4 py-3.5 text-left text-[11px] font-bold text-[#9ca3af] uppercase tracking-wide'>
+                  <th className='px-4 py-3.5 text-left text-[13px] font-bold text-[#9ca3af] uppercase tracking-wide'>
                     Giá
                   </th>
-                  <th className='px-4 py-3.5 text-left text-[11px] font-bold text-[#9ca3af] uppercase tracking-wide'>
-                    Người đăng ký
+                  <th className='px-4 py-3.5 text-left text-[13px] font-bold text-[#9ca3af] uppercase tracking-wide'>
+                    Số người đăng ký
                   </th>
-                  <th className='px-4 py-3.5 text-left text-[11px] font-bold text-[#9ca3af] uppercase tracking-wide'>
+                  <th className='px-4 py-3.5 text-left text-[13px] font-bold text-[#9ca3af] uppercase tracking-wide'>
                     Doanh thu ({MONTHS[tableMonth - 1]}{' '}
                     {tableYear})
-                  </th>
-                  <th className='px-4 py-3.5 text-left text-[11px] font-bold text-[#9ca3af] uppercase tracking-wide'>
-                    Trạng thái
-                  </th>
-                  <th className='px-4 py-3.5 text-right text-[11px] font-bold text-[#9ca3af] uppercase tracking-wide'>
-                    Thao tác
                   </th>
                 </tr>
               </thead>
@@ -448,7 +386,7 @@ export default function SubscriptionManagement() {
                       <span className='text-sm font-medium text-[#0a0a0a]'>
                         {plan.price === 0
                           ? 'Miễn phí'
-                          : `₫${plan.price.toLocaleString()}/${plan.period === 'month' ? 'tháng' : 'năm'}`}
+                          : `${plan.price.toLocaleString()}₫/${plan.period === 'month' ? 'tháng' : 'năm'}`}
                       </span>
                     </td>
                     <td className='px-4 py-4'>
@@ -461,34 +399,10 @@ export default function SubscriptionManagement() {
                     </td>
                     <td className='px-4 py-4'>
                       <span className='text-sm font-medium text-[#0a0a0a]'>
-                        ₫
                         {(
                           plan.price * plan.activeUsers
-                        ).toLocaleString()}
+                        ).toLocaleString()}₫
                       </span>
-                    </td>
-                    <td className='px-4 py-4'>
-                      {plan.isActive ? (
-                        <span className='inline-flex items-center gap-1.5 text-xs font-medium text-[#10b981] bg-[#ecfdf5] px-2 py-1 rounded-full'>
-                          <span className='w-1.5 h-1.5 rounded-full bg-[#10b981]' />
-                          Đang hoạt động
-                        </span>
-                      ) : (
-                        <span className='inline-flex items-center gap-1.5 text-xs font-medium text-[#9ca3af] bg-[#f3f4f6] px-2 py-1 rounded-full'>
-                          <span className='w-1.5 h-1.5 rounded-full bg-[#9ca3af]' />
-                          Ngừng hoạt động
-                        </span>
-                      )}
-                    </td>
-                    <td className='px-4 py-4'>
-                      <div className='flex items-center justify-end gap-2'>
-                        <button className='p-1.5 hover:bg-[#f3f4f6] rounded-sm transition-colors'>
-                          <Edit3 className='w-4 h-4 text-[#6b7280]' />
-                        </button>
-                        <button className='p-1.5 hover:bg-[#fef2f2] rounded-sm transition-colors'>
-                          <Trash2 className='w-4 h-4 text-[#ef4444]' />
-                        </button>
-                      </div>
                     </td>
                   </tr>
                 ))}

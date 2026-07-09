@@ -16,7 +16,7 @@ export default function FloatingAIAssistant({ onClick }: FloatingAIAssistantProp
         className={`fixed z-50 flex flex-col bg-[#f0f2f5] shadow-2xl transition-all duration-300 ${
           isExpanded 
             ? 'inset-0' 
-            : 'bottom-4 right-4 h-[600px] w-[380px] rounded-2xl border border-gray-200'
+            : 'bottom-4 right-4 h-150 w-95 rounded-2xl border border-gray-200'
         }`}
       >
         <div className={`flex items-center justify-between bg-white px-4 py-3 shadow-xs ${!isExpanded ? 'rounded-t-2xl' : ''}`}>
@@ -164,7 +164,7 @@ export default function FloatingAIAssistant({ onClick }: FloatingAIAssistantProp
               <span className='text-[#edfd13]'>★★★</span>
             </div>
 
-            <div className='mt-0.5 max-w-[175px] text-[10px] italic leading-tight text-[#4b4b4b]'>
+            <div className='mt-0.5 max-w-43.75 text-[10px] italic leading-tight text-[#4b4b4b]'>
               Chat với trợ lý AI để được giải đáp mọi thắc mắc nhanh chóng!
             </div>
           </div>

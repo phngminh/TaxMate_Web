@@ -374,7 +374,7 @@ export default function Ingredient() {
             loadingIngredients ? (
               <LoadingSkeleton />
             ) : filteredIngredients.length > 0 ? (
-              <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-[700px]'>
+              <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-175'>
                 <table className='w-full text-left border-collapse'>
                   <thead>
                     <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
@@ -453,7 +453,7 @@ export default function Ingredient() {
             loadingRecipes ? (
               <LoadingSkeleton />
             ) : filteredRecipes.length > 0 ? (
-              <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-[600px]'>
+              <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-150'>
                 <table className='w-full text-left border-collapse'>
                   <thead>
                     <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>

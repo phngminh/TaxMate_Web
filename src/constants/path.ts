@@ -21,7 +21,7 @@ const path = {
   ADMIN_DASHBOARD: '/admin/dashboard',
   ADMIN_USERS_LIST: '/admin/users/list',
   ADMIN_USERS_DETAIL: '/admin/users/:id',
-  ADMIN_USERS_BUSINESSES: '/admin/users/businesses',
+  ADMIN_BUSINESSES_LIST: '/admin/businesses/list',
   ADMIN_USERS_SUBSCRIPTIONS: '/admin/users/subscriptions',
   ADMIN_LEGAL_DOCUMENTS: '/admin/legal/documents',
 }

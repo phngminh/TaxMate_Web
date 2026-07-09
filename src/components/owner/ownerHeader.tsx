@@ -21,7 +21,7 @@ function NavItem({ label, isActive }: {
 }) {
   return (
     <div
-      className={`px-5 h-[28px] flex items-center justify-center rounded-full text-[14px] font-bold relative shrink-0
+      className={`px-5 h-7 flex items-center justify-center rounded-full text-[14px] font-bold relative shrink-0
         transition-all duration-600 ease-out
         ${
         isActive
@@ -64,11 +64,11 @@ export default function OwnerHeader() {
   }
 
   return (
-    <div className='h-[51px] bg-linear-to-r from-[#d00c0c] to-[#4c51bf] shadow-[0px_1px_1px_rgba(0,0,0,0.05)] flex items-center justify-between px-4'>
+    <div className='h-12.75 bg-linear-to-r from-[#d00c0c] to-[#4c51bf] shadow-[0px_1px_1px_rgba(0,0,0,0.05)] flex items-center justify-between px-4'>
       <div className='flex items-center gap-6'>
-        <div className='bg-white h-[33px] rounded-[16px] flex items-center px-3 shrink-0'>
+        <div className='bg-white h-8.25 rounded-[16px] flex items-center px-3 shrink-0'>
           <div
-            className='size-[44px] rounded-full overflow-hidden relative shrink-0'
+            className='size-11 rounded-full overflow-hidden relative shrink-0'
             style={{ width: 44, height: 25 }}
           >
             <img
@@ -89,7 +89,7 @@ export default function OwnerHeader() {
           </span>
         </div>
 
-        <div className='bg-white h-[33px] rounded-[16px] flex items-center px-1 gap-1'>
+        <div className='bg-white h-8.25 rounded-[16px] flex items-center px-1 gap-1'>
           <NavLink to={path.BUSINESS_OWNER_HOME}>
             {({ isActive }) => (
               <NavItem label='Tổng quan' isActive={isActive} />
@@ -129,18 +129,18 @@ export default function OwnerHeader() {
       </div>
 
       <div className='flex items-center gap-3'>
-        <NavLink to={path.BUSINESS_OWNER_POS} className='bg-white rounded-full px-4 h-[29px] flex items-center text-[#e00000] text-[14px] font-bold whitespace-nowrap'>
+        <NavLink to={path.BUSINESS_OWNER_POS} className='bg-white rounded-full px-4 h-7.25 flex items-center text-[#e00000] text-[14px] font-bold whitespace-nowrap'>
           + &nbsp;Bán hàng
         </NavLink>
 
-        <div className='bg-white h-[28px] w-[28px] rounded-[15px] border border-[#ff8e8e] flex items-center justify-center'>
+        <div className='bg-white h-7 w-7 rounded-[15px] border border-[#ff8e8e] flex items-center justify-center'>
           <Bell size={18} strokeWidth={2.2} color='#e00000' />
         </div>
 
         <div>
           <button
             onClick={() => setProfileOpen(true)}
-            className='bg-white h-[28px] w-[28px] rounded-[15px] border border-[#ff8e8e] flex items-center justify-center cursor-pointer hover:bg-[#fff0f0] transition-colors'
+            className='bg-white h-7 w-7 rounded-[15px] border border-[#ff8e8e] flex items-center justify-center cursor-pointer hover:bg-[#fff0f0] transition-colors'
           >
             <User size={20} strokeWidth={2.2} color='#e00000' />
           </button>
@@ -155,16 +155,16 @@ export default function OwnerHeader() {
           />
 
           <div
-            className='relative w-[340px] h-screen bg-white shadow-[-8px_0_32px_rgba(0,0,0,0.1)] flex flex-row'
+            className='relative w-85 h-screen bg-white shadow-[-8px_0_32px_rgba(0,0,0,0.1)] flex flex-row'
             style={{ animation: 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}
           >
             <div className='flex-1 flex flex-col border-r border-gray-100'>
-              <div className='bg-[#9b0000] px-5 py-6 text-white h-[140px] flex flex-col justify-center'>
+              <div className='bg-[#9b0000] px-5 py-6 text-white h-35 flex flex-col justify-center'>
                 <h2 className='text-[22px] font-bold leading-tight mb-1'>{currentBusiness?.businessName}</h2>
                 <p className='text-[14px] text-white/90 mb-3'>{currentBusiness?.mainCategoryName}</p>
                 <div className='bg-white inline-flex items-center px-2.5 py-1 rounded-md self-start shadow-xs'>
                   <span className='text-[#1d1d1d] text-[12px] font-semibold mr-1.5'>Gói Hộ Kinh Doanh</span>
-                  <div className='bg-yellow-400 text-white rounded-full w-[16px] h-[16px] flex items-center justify-center text-[10px] leading-none'>★</div>
+                  <div className='bg-yellow-400 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] leading-none'>★</div>
                 </div>
               </div>
 
@@ -191,10 +191,10 @@ export default function OwnerHeader() {
               </div>
             </div>
 
-            <div className='w-[80px] bg-white flex flex-col items-center py-5 gap-6 shrink-0'>
-              <div className='flex w-[50px] flex-col items-stretch gap-1.5 cursor-pointer'>
+            <div className='w-20 bg-white flex flex-col items-center py-5 gap-6 shrink-0'>
+              <div className='flex w-12.5 flex-col items-stretch gap-1.5 cursor-pointer'>
                 <div className='flex justify-center'>
-                  <div className='w-[50px] h-[50px] rounded-full bg-[#ffd6d8] flex items-center justify-center shadow-xs'>
+                  <div className='w-12.5 h-12.5 rounded-full bg-[#ffd6d8] flex items-center justify-center shadow-xs'>
                     <Store size={22} color='#9b0000' />
                   </div>
                 </div>
@@ -207,7 +207,7 @@ export default function OwnerHeader() {
               </div>
 
               <div className='flex flex-col items-center gap-1.5 cursor-pointer group'>
-                <div className='w-[50px] h-[50px] rounded-full border border-[#9b0000] flex items-center justify-center group-hover:bg-[#ffeaeb] transition-colors'>
+                <div className='w-12.5 h-12.5 rounded-full border border-[#9b0000] flex items-center justify-center group-hover:bg-[#ffeaeb] transition-colors'>
                   <Plus size={24} color='#9b0000' />
                 </div>
                 <span className='text-[12px] font-medium text-[#9b0000]'>Thêm</span>

@@ -253,7 +253,7 @@ export default function POS() {
               <div className='bg-[#ffebeb] w-full aspect-square rounded-md flex items-center justify-center mb-3'>
                 <Utensils className='text-taxmate-red size-8 stroke-[1.5]' />
               </div>
-              <div className='text-xs font-medium text-slate-700 mb-1 line-clamp-2 min-h-[32px] flex items-center justify-center'>
+              <div className='text-xs font-medium text-slate-700 mb-1 line-clamp-2 min-h-8 flex items-center justify-center'>
                 {product.name}
               </div>
               <div className='text-xs font-bold text-slate-900'>

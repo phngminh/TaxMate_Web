@@ -101,7 +101,7 @@ const mockUsers = [
   },
 ]
 
-export default function UserList() {
+export default function BusinessList() {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterRole, setFilterRole] = useState('All')
   const [filterStatus, setFilterStatus] = useState('All')
@@ -149,16 +149,16 @@ export default function UserList() {
         <div className='flex items-start justify-between'>
           <div>
             <h1 className='text-2xl font-bold text-[#0a0a0a]'>
-              Quản lý người dùng
+              Quản lý hộ kinh doanh
             </h1>
             <p className='text-sm text-[#6b7280] mt-1'>
-              Quản lý tài khoản người dùng và hồ sơ kinh doanh của họ.
+              Quản lý tất cả hộ kinh doanh, thông tin liên hệ, mã số thuế và trạng thái hoạt động của họ.
             </p>
           </div>
         </div>
 
         <div className='flex flex-col sm:flex-row gap-3'>
-          <div className='flex-1 max-w-5xl flex items-center bg-white border border-gray-300 rounded-lg px-5 py-2.5 shadow-xs focus-within:border-sidebar-primary focus-within:ring-1 focus-within:ring-[#D32F2F]/20 transition-all'>
+          <div className='flex-1 max-w-6xl flex items-center bg-white border border-gray-300 rounded-lg px-5 py-2.5 shadow-xs focus-within:border-sidebar-primary focus-within:ring-1 focus-within:ring-[#D32F2F]/20 transition-all'>
             <Search
               className={`mr-3 size-5 shrink-0 stroke-2 transition-colors ${
                 searchTerm ? 'text-sidebar-primary' : 'text-gray-400'
@@ -174,23 +174,6 @@ export default function UserList() {
           </div>
 
           <div className='flex gap-2'>
-            <Select value={filterRole} onValueChange={(val) => setFilterRole(val ?? 'All')}>
-              <SelectTrigger className='py-5 bg-white!'>
-                <SelectValue>
-                  {filterRole === 'All'
-                    ? 'Role'
-                    : filterRole === 'Owner'
-                    ? 'Người dùng'
-                    : 'Admin'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value='All'>Role</SelectItem>
-                <SelectItem value='Owner'>Người dùng</SelectItem>
-                <SelectItem value='Admin'>Admin</SelectItem>
-              </SelectContent>
-            </Select>
-
             <Select value={filterStatus} onValueChange={(val) => setFilterStatus(val ?? 'All')}>
               <SelectTrigger className='py-5 bg-white!'>
                 <SelectValue>
@@ -260,7 +243,7 @@ export default function UserList() {
               <TableBody>
                 {paginatedUsers.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className='py-3'>
+                    <TableCell>
                       <div className='flex items-center gap-3'>
                         <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10'>
                           <UserIcon className='h-4 w-4 text-muted-foreground' />
@@ -375,8 +358,14 @@ export default function UserList() {
             </Table>
           </CardContent>
 
-          <CardFooter className='px-6 py-4 border-t border-[#f3f4f6] flex items-center justify-between'>
-            <Pagination className='justify-start mx-0 w-auto'>
+          <CardFooter className='flex items-center justify-between py-3'>
+            <p className='text-xs text-muted-foreground'>
+              Showing {startIndex + 1}–
+              {Math.min(startIndex + itemsPerPage, filteredUsers.length)}{' '}
+              of {filteredUsers.length} users
+            </p>
+
+            <Pagination className='mx-0 w-auto'>
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious
@@ -387,23 +376,24 @@ export default function UserList() {
                     aria-disabled={currentPage === 1}
                     className={
                       currentPage === 1
-                        ? 'pointer-events-none opacity-40'
-                        : 'cursor-pointer'
+                        ? 'pointer-events-none opacity-30'
+                        : ''
                     }
                   />
                 </PaginationItem>
 
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      isActive={currentPage === page}
-                      onClick={() => setCurrentPage(page)}
-                      className='cursor-pointer'
-                    >
-                      {page}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        isActive={currentPage === page}
+                        onClick={() => setCurrentPage(page)}
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ),
+                )}
 
                 <PaginationItem>
                   <PaginationNext
@@ -416,20 +406,13 @@ export default function UserList() {
                     aria-disabled={currentPage === totalPages}
                     className={
                       currentPage === totalPages
-                        ? 'pointer-events-none opacity-40'
-                        : 'cursor-pointer'
+                        ? 'pointer-events-none opacity-30'
+                        : ''
                     }
                   />
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
-
-            <span className='text-sm text-[#9ca3af]'>
-              Hiển thị{' '}
-              {filteredUsers.length === 0 ? 0 : startIndex + 1} đến{' '}
-              {Math.min(startIndex + itemsPerPage, filteredUsers.length)} trong tổng số{' '}
-              {filteredUsers.length} người dùng
-            </span>
           </CardFooter>
         </Card>
       </div>

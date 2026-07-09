@@ -414,7 +414,7 @@ export default function App() {
           <div className='bg-white border border-[#eef0f2] rounded-[12px] shadow-[0px_1px_1px_rgba(0,0,0,0.05)] p-6 flex-[330_330_0] min-w-0 flex flex-col'>
             <div className='flex items-center justify-between mb-4'>
               <div className='text-[#1f2937] text-[16px] font-bold'>Top sản phẩm/dịch vụ</div>
-              <div className='bg-[#f9fafb] border border-[#e5e7eb] rounded-[4px] flex items-center gap-1 px-2 py-1 text-[#4b5563] text-[10px]'>
+              <div className='bg-[#f9fafb] border border-[#e5e7eb] rounded-lg flex items-center gap-1 px-2 py-1 text-[#4b5563] text-[10px]'>
                 <CalIcon size={10} />
                 <span>30 ngày qua</span>
               </div>
@@ -427,7 +427,7 @@ export default function App() {
                     <span className='text-[12px] text-[#374151]'>{p.name}</span>
                     <span className='text-[12px] font-bold text-[#1a1a1a]'>{p.amount}</span>
                   </div>
-                  <div className='bg-[#f3f4f6] h-[6px] rounded-full overflow-hidden'>
+                  <div className='bg-[#f3f4f6] h-1.5 rounded-full overflow-hidden'>
                     <div
                       className='h-full bg-[#7c3aed] rounded-full'
                       style={{ width: `${p.pct}%` }}
@@ -447,9 +447,9 @@ export default function App() {
 
       {showBusinessModal && (
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4'>
-          <div className='w-full max-w-[640px] overflow-hidden rounded-2xl bg-white shadow-2xl'>
+          <div className='w-full max-w-160 overflow-hidden rounded-2xl bg-white shadow-2xl'>
             <div className='max-h-[90vh] overflow-y-auto'>
-              <div className='mx-auto w-full max-w-[520px] px-8 py-6'>
+              <div className='mx-auto w-full max-w-130 px-8 py-6'>
                 <div className='flex justify-center'>
                   <img
                     src={storeImage}
