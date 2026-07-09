@@ -144,7 +144,7 @@ export default function BusinessList() {
   }
 
   return (
-    <div className='min-h-screen bg-[#f8f9fb] p-5'>
+    <div className='bg-[#f8f9fb] p-5'>
       <div className='space-y-6'>
         <div className='flex items-start justify-between'>
           <div>
