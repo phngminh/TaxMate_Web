@@ -9,6 +9,8 @@ import { login, loginWithGoogle } from '../../apis/auth.api'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
 import { GoogleLogin, type CredentialResponse } from '@react-oauth/google'
+import { getBusinessProfiles } from '../../apis/profile.api'
+import { useBusiness } from '../../contexts/BusinessContext'
 
 export default function BusinessOwnerLoginPage() {
   const { login: authLogin } = useAuth()
@@ -25,6 +27,7 @@ export default function BusinessOwnerLoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showVerifyModal, setShowVerifyModal] = useState(false)
+  const { setBusinesses, setCurrentBusiness } = useBusiness()
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -53,8 +56,22 @@ export default function BusinessOwnerLoginPage() {
       }
 
       authLogin(auth)
+      if (auth.user.role === 'Owner') {
+        const businessRes = await getBusinessProfiles(auth.user.id)
+        const businesses = businessRes.data.items
+
+        setBusinesses(businesses)
+
+        if (businesses.length > 0) {
+          setCurrentBusiness(businesses[0])
+        }
+      }
+
       toast.success('Đăng nhập thành công')
-      navigate(getHomePathForRole(auth.user.role), { state: { direction: 'right' } })
+
+      navigate(getHomePathForRole(auth.user.role), {
+        state: { direction: 'right' }
+      })
     } catch (error: any) {
       const message = error?.response?.data?.message || 'Sai tài khoản hoặc mật khẩu'
       toast.error(message)
@@ -73,15 +90,30 @@ export default function BusinessOwnerLoginPage() {
       setIsSubmitting(true)
 
       const auth = await loginWithGoogle(credentialResponse.credential)
-      authLogin(auth)
 
       if (auth.requiresEmailVerification) {
         setShowVerifyModal(true)
         return
       }
 
+      authLogin(auth)
+
+      if (auth.user.role === 'Owner') {
+        const businessRes = await getBusinessProfiles(auth.user.id)
+        const businesses = businessRes.data.items
+
+        setBusinesses(businesses)
+
+        if (businesses.length > 0) {
+          setCurrentBusiness(businesses[0])
+        }
+      }
+
       toast.success('Đăng nhập thành công')
-      navigate(getHomePathForRole(auth.user.role), { state: { direction: 'right' } })
+
+      navigate(getHomePathForRole(auth.user.role), {
+        state: { direction: 'right' }
+      })
     } catch (error: any) {
       toast.error( error?.response?.data?.message || 'Đăng nhập Google thất bại')
     } finally {
@@ -92,7 +124,7 @@ export default function BusinessOwnerLoginPage() {
   return (
     <div className={`flex min-h-screen w-full flex-col lg:flex-row ${slideClass}`}>
         {/* Hero panel */}
-        <div className='relative flex min-h-[220px] flex-col overflow-hidden bg-taxmate-red lg:min-h-screen lg:w-[45%]'>
+        <div className='relative flex min-h-55 flex-col overflow-hidden bg-taxmate-red lg:min-h-screen lg:w-[45%]'>
           <img
             src={heroBg}
             alt=''
@@ -116,7 +148,7 @@ export default function BusinessOwnerLoginPage() {
                 <h1 className='text-2xl font-bold leading-snug text-white sm:text-2xl lg:text-[2.5rem] lg:leading-tight'>
                   Quản lý bán hàng và hỗ trợ nghĩa vụ thuế cho hộ kinh doanh nhỏ
                 </h1>
-                <div className='mt-8 h-px w-[100px] bg-white' />
+                <div className='mt-8 h-px w-25 bg-white' />
               </div>
             </div>
           </div>
@@ -124,7 +156,7 @@ export default function BusinessOwnerLoginPage() {
 
         {/* Login form */}
         <div className='flex min-h-screen flex-1 items-center justify-center bg-white px-6 py-10 sm:px-10 sm:py-12 lg:px-14'>
-          <div className='w-full max-w-[400px] space-y-8'>
+          <div className='w-full max-w-100 space-y-8'>
             <header className='space-y-2 text-center'>
               <h2 className='text-2xl font-bold text-taxmate-red sm:text-[1.75rem]'>
                 Chào mừng quay trở lại
@@ -137,7 +169,7 @@ export default function BusinessOwnerLoginPage() {
             <form className='space-y-5' onSubmit={handleSubmit} noValidate>
               <div className='relative'>
                 <span className='pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400'>
-                  <Mail className='h-[18px] w-[18px]' strokeWidth={1.75} />
+                  <Mail className='h-4.5 w-4.5' strokeWidth={1.75} />
                 </span>
                 <input
                   type='text'
@@ -153,7 +185,7 @@ export default function BusinessOwnerLoginPage() {
               <div className='space-y-2'>
                 <div className='relative'>
                   <span className='pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400'>
-                    <Lock className='h-[18px] w-[18px]' strokeWidth={1.75} />
+                    <Lock className='h-4.5 w-4.5' strokeWidth={1.75} />
                   </span>
                   <input
                     type={showPassword ? 'text' : 'password'}
@@ -171,9 +203,9 @@ export default function BusinessOwnerLoginPage() {
                     aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                   >
                     {showPassword ? (
-                      <Eye className='h-[18px] w-[18px]' strokeWidth={1.75} />
+                      <Eye className='h-4.5 w-4.5' strokeWidth={1.75} />
                     ) : (
-                      <EyeOff className='h-[18px] w-[18px]' strokeWidth={1.75} />
+                      <EyeOff className='h-4.5 w-4.5' strokeWidth={1.75} />
                     )}
                   </button>
                 </div>

@@ -10,7 +10,7 @@ import {
   Pie,
   Cell,
 } from 'recharts'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { createBusinessProfile, getBusinessProfiles } from '../../apis/profile.api'
 import { toast } from 'react-toastify'
@@ -19,13 +19,13 @@ import { useBusiness } from '../../contexts/BusinessContext'
 
 const categories = [
   {
-    id: '11111111-1111-1111-1111-111111111111',
+    businessCategoryId: '60a42842-9fba-406c-8282-fc88ee0ccd24',
     name: 'Ăn uống (F&B)',
     icon: UtensilsCrossed,
     color: 'text-green-500'
   },
   {
-    id: '22222222-2222-2222-2222-222222222222',
+    businessCategoryId: 'cafbdef3-e1d5-467c-8e60-355995d8e70a',
     name: 'Dịch vụ',
     icon: Handshake,
     color: 'text-purple-500'
@@ -124,25 +124,7 @@ export default function App() {
   const [wardCode, setWardCode] = useState('')
   const [categoryId, setCategoryId] = useState('')
   const [loading, setLoading] = useState(false)
-  const { setCurrentBusiness } = useBusiness()
-
-  const checkBusinessProfile = async () => {
-    if (!user) return
-
-    try {
-      const res = await getBusinessProfiles(user.id)
-      console.log('Business profiles:', res.data.items)
-      if (res.data.items.length === 0) {
-        setShowBusinessProfileModal(true)
-      }
-    } catch (error) {
-      console.error(error)
-    }
-  }
-
-  useEffect(() => {
-      checkBusinessProfile()
-  }, [])
+  const { businesses, setBusinesses, setCurrentBusiness } = useBusiness()
 
   const handleCreateBusiness = async () => {
     if (!businessName.trim()) {
@@ -166,9 +148,12 @@ export default function App() {
         mainCategoryId: categoryId,
         preferElectronicInvoice: false
       })
-      setCurrentBusiness(res.data)
-      toast.success('Tạo hồ sơ cửa hàng thành công')
 
+      const newBusiness = res.data
+      setBusinesses([...businesses, newBusiness])
+      setCurrentBusiness(newBusiness)
+
+      toast.success('Tạo hồ sơ cửa hàng thành công')
       setShowBusinessProfileModal(false)
     } catch (error) {
       toast.error('Failed to create business profile')
@@ -534,13 +519,13 @@ export default function App() {
 
                     <div className='space-y-3 mb-2'>
                       {categories.map((category) => {
-                        const selected = categoryId === category.id
+                        const selected = categoryId === category.businessCategoryId
                         const Icon = category.icon
                         return (
                           <button
-                            key={category.id}
+                            key={category.businessCategoryId}
                             type='button'
-                            onClick={() => setCategoryId(category.id)}
+                            onClick={() => setCategoryId(category.businessCategoryId)}
                             className={`flex h-12 w-full items-center justify-between rounded-xl border px-5 py-6 transition-all ${
                               selected
                                 ? 'border-taxmate-red bg-taxmate-red/10'

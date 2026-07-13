@@ -1,26 +1,19 @@
 import { useState, useMemo, useRef, useEffect, type ChangeEvent } from 'react'
 import { Search, Plus, ChevronDown, Scan, X, Trash2, Edit2, ShoppingBag, RotateCcw, ImagePlus } from 'lucide-react'
 import type { Product } from '../../types/product.type'
+import { createProduct, getAllProducts, updateProduct } from '../../apis/product.api'
+import { useBusiness } from '../../contexts/BusinessContext'
 
-const INITIAL_PRODUCTS: Product[] = [
-  { id: 'SP000001', name: 'Pizza', category: 'Fast food', productCategory: 'Ăn uống', unit: 'Cái', currentPrice: 55000, status: 'active', description: 'Pizza hải sản với phô mai Mozzarella' },
-  { id: 'SP000002', name: 'Hamburger', category: 'Fast food', productCategory: 'Ăn uống', unit: 'Cái', currentPrice: 35000, status: 'active', description: 'Hamburger thịt bò nướng' },
-  { id: 'SP000003', name: 'Coca', category: 'Fast food', productCategory: 'Ăn uống', unit: 'Lon', currentPrice: 20000, status: 'active', description: 'Nước ngọt Coca-Cola' }
-]
-
-const CATEGORIES = ['Fast food', 'Món chính', 'Tráng miệng', 'Đồ uống']
-const MAIN_CATEGORIES = ['Ăn uống', 'Dịch vụ']
 const PRODUCT_UNITS = [ 'Cái', 'Chiếc', 'Đĩa', 'Bát', 'Ly', 'Lon', 'Chai' ]
 const SERVICE_UNITS = [ 'Giờ', 'Buổi', 'Ngày', 'Tuần', 'Tháng', 'Lần' ]
 
 export default function Product() {
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS)
+  const [products, setProducts] = useState<Product[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMainCategory, setSelectedMainCategory] = useState('all')
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'active' | 'inactive'>('all')
 
-  const [typeDropdownOpen, setTypeDropdownOpen] = useState(false)
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
   const [addNewDropdownOpen, setAddNewDropdownOpen] = useState(false)
 
@@ -32,7 +25,6 @@ export default function Product() {
   const [isEditServiceModalOpen, setIsEditServiceModalOpen] = useState(false)
   const [editingService, setEditingService] = useState<Product | null>(null)
 
-  const typeDropdownRef = useRef<HTMLDivElement>(null)
   const categoryDropdownRef = useRef<HTMLDivElement>(null)
   const addNewDropdownRef = useRef<HTMLDivElement>(null)
 
@@ -57,20 +49,19 @@ export default function Product() {
     : SERVICE_UNITS
 
   const [formName, setFormName] = useState('')
-  const [formCategory, setFormCategory] = useState(CATEGORIES[0])
-  const [formMainCategory, setFormMainCategory] = useState(MAIN_CATEGORIES[0])
+  const [formCategory, setFormCategory] = useState('')
   const [formUnit, setFormUnit] = useState(units[0])
   const [formPrice, setFormPrice] = useState('')
   const [formStatus, setFormStatus] = useState<'active' | 'inactive'>('active')
   const [formDescription, setFormDescription] = useState('')
   const [imagePreview, setImagePreview] = useState<string>()
   const [imageFile, setImageFile] = useState<File>()
+  const { currentBusiness } = useBusiness()
+  const businessId = currentBusiness?.id
+  console.log(businessId)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (typeDropdownRef.current && !typeDropdownRef.current.contains(event.target as Node)) {
-        setTypeDropdownOpen(false)
-      }
       if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(event.target as Node)) {
         setCategoryDropdownOpen(false)
       }
@@ -82,23 +73,39 @@ export default function Product() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const fetchProducts = async () => {
+    if (!businessId) {
+      console.error('Missing businessId')
+      return
+    }
+
+    try {
+      const res = await getAllProducts(businessId)
+      setProducts(res.data.items)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  useEffect(() => {
+      fetchProducts()
+  }, [])
+
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
       const matchesSearch =
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.id.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesMainCategory = selectedMainCategory === 'all' || product.productCategory === selectedMainCategory
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory
       const matchesStatus = selectedStatus === 'all' || product.status === selectedStatus
 
-      return matchesSearch && matchesMainCategory && matchesCategory && matchesStatus
+      return matchesSearch && matchesCategory && matchesStatus
     })
   }, [products, searchQuery, selectedMainCategory, selectedCategory, selectedStatus])
 
   const handleOpenAddProductModal = () => {
     setFormName('')
-    setFormCategory(CATEGORIES[0])
-    setFormMainCategory(MAIN_CATEGORIES[0])
+    setFormCategory('')
     setFormUnit(PRODUCT_UNITS[0])
     setFormPrice('')
     setFormDescription('')
@@ -110,8 +117,7 @@ export default function Product() {
 
   const handleOpenAddServiceModal = () => {
     setFormName('')
-    setFormCategory(CATEGORIES[0])
-    setFormMainCategory(MAIN_CATEGORIES[0])
+    setFormCategory('')
     setFormUnit(SERVICE_UNITS[0])
     setFormPrice('')
     setFormDescription('')
@@ -137,12 +143,11 @@ export default function Product() {
     console.log('Editing product:', product)
     setEditingProduct(product)
     setFormName(product.name)
-    setFormCategory(product.category)
-    setFormMainCategory(product.productCategory || '')
-    setFormUnit(product.unit || '')
-    setFormPrice(product.currentPrice?.toString() || '')
-    setFormStatus(product.status)
-    setFormDescription(product.description || '')
+    setFormCategory(product.category ?? '')
+    setFormUnit(product.unit ?? '')
+    setFormDescription(product.description ?? '')
+    setImagePreview(product.imageUrl ?? undefined)
+
     setIsEditProductModalOpen(true)
   }
 
@@ -154,61 +159,53 @@ export default function Product() {
     setImagePreview(URL.createObjectURL(file))
   }
 
-  const handleAddProduct = (e: React.FormEvent) => {
+  const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formName.trim() || !formPrice.trim()) return
 
     const priceNum = Number(formPrice.replace(/\./g, ''))
     if (isNaN(priceNum)) return
 
-    const nextNum = products.length > 0 
-      ? Math.max(...products.map(p => parseInt(p.id.replace('SP', '')))) + 1 
-      : 1
-    const newId = `SP${nextNum.toString().padStart(6, '0')}`
-
-    const newProduct: Product = {
-      id: newId,
-      name: formName,
-      productCategory: formMainCategory,
-      category: formCategory,
-      unit: formUnit,
-      currentPrice: priceNum,
-      status: formStatus,
-      description: formDescription
+    if (!businessId) {
+      console.error('Missing businessId')
+      return
     }
 
-    setProducts([newProduct, ...products])
-    setIsAddProductModalOpen(false)
+    try {
+      await createProduct(businessId, {
+        name: formName,
+        category: formCategory,
+        description: formDescription,
+        unit: formUnit,
+        imageUrl: undefined
+      })
+
+      await fetchProducts()
+      closeModal()
+    } catch (err) {
+      console.error(err)
+    }
   }
 
-  const handleEditProduct = (e: React.FormEvent) => {
+  const handleEditProduct = async (e: React.FormEvent) => {
     e.preventDefault()
-    const editingItem = editingProduct ?? editingService
-    if (!editingItem || !formName.trim() || !formPrice.trim()) return
+    if (!editingProduct) return
 
-    const priceNum = parseFloat(formPrice.replace(/,/g, ''))
-    if (isNaN(priceNum)) return
+    try {
+      await updateProduct(editingProduct.id, {
+        name: formName,
+        category: formCategory,
+        description: formDescription,
+        unit: formUnit,
+        imageUrl: editingProduct.imageUrl ?? undefined
+      })
 
-    const updatedProducts = products.map((p) => {
-      if (p.id === editingItem.id) {
-        return {
-          ...p,
-          name: formName,
-          mainCategory: formMainCategory,
-          category: formCategory,
-          unit: formUnit,
-          price: priceNum,
-          status: formStatus,
-          description: formDescription
-        }
-      }
-      return p
-    })
+      await fetchProducts()
 
-    setProducts(updatedProducts)
-    setIsEditProductModalOpen(false)
-    setEditingProduct(null)
-    setEditingService(null)
+      closeModal()
+    } catch (err) {
+      console.error(err)
+    }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -309,7 +306,7 @@ export default function Product() {
                 >
                   Tất cả danh mục
                 </button>
-                {CATEGORIES.map((c) => (
+                {/* {CATEGORIES.map((c) => (
                   <button
                     key={c}
                     onClick={() => {
@@ -320,7 +317,7 @@ export default function Product() {
                   >
                     {c}
                   </button>
-                ))}
+                ))} */}
               </div>
             )}
           </div>
@@ -497,7 +494,7 @@ export default function Product() {
                     onChange={(e) => setFormCategory(e.target.value)}
                     className='w-full border border-gray-200 bg-white rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
                   >
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    {/* {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)} */}
                   </select>
                 </div>
                 <div className='flex flex-col gap-1.5'>
