@@ -444,18 +444,24 @@ export default function Product() {
       </div>
 
       {isModalOpen && (
-        <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
-          <div className='bg-white rounded-[16px] shadow-2xl max-w-xl w-full overflow-hidden animate-in zoom-in-95 duration-200'>
-            <div className='flex items-center justify-between px-8 py-4 bg-[#fef2f2] border-b border-red-100'>
+        <div className='fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4'>
+          <div className='bg-white rounded-[16px] shadow-2xl max-w-xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200'>
+            <div className='flex items-center justify-between px-8 py-4 bg-[#fef2f2] border-b border-red-100 shrink-0'>
               <h3 className='text-[16px] font-bold text-gray-900 flex items-center gap-2'>
                 <ShoppingBag className='text-[#D32F2F] size-5' />
                 {modalTitle}
               </h3>
             </div>
 
-            <form onSubmit={handleSubmit} className='p-6 flex flex-col gap-4.5'>
+            <form
+              id='product-form'
+              onSubmit={handleSubmit}
+              className='flex-1 overflow-y-auto p-6 flex flex-col gap-5'
+            >
               <div className='flex flex-col gap-1.5'>
-                <label className='text-[13px] font-bold text-gray-600'>Tên {itemLabel} <span className='text-red-500'>*</span></label>
+                <label className='text-[13px] font-bold text-gray-600'>
+                  Tên {itemLabel} <span className='text-red-500'>*</span>
+                </label>
                 <input
                   type='text'
                   required
@@ -466,12 +472,14 @@ export default function Product() {
                   }
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
-                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 mb-5'
+                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
                 />
               </div>
 
               <div className='flex flex-col gap-1.5'>
-                <label className='text-[13px] font-bold text-gray-600'>Mô tả {itemLabel}</label>
+                <label className='text-[13px] font-bold text-gray-600'>
+                  Mô tả {itemLabel}
+                </label>
                 <input
                   type='text'
                   required
@@ -482,23 +490,27 @@ export default function Product() {
                   }
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
-                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 mb-5'
+                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
                 />
               </div>
 
-              <div className='grid grid-cols-2 gap-4 mb-5'>
+              <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Danh mục</label>
+                  <label className='text-[13px] font-bold text-gray-600'>
+                    Danh mục
+                  </label>
                   <select
                     value={formCategory}
                     onChange={(e) => setFormCategory(e.target.value)}
                     className='w-full border border-gray-200 bg-white rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
                   >
-                    {/* {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)} */}
                   </select>
                 </div>
+
                 <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Đơn vị tính</label>
+                  <label className='text-[13px] font-bold text-gray-600'>
+                    Đơn vị tính
+                  </label>
                   <select
                     value={formUnit}
                     onChange={(e) => setFormUnit(e.target.value)}
@@ -514,7 +526,9 @@ export default function Product() {
               </div>
 
               <div className='flex flex-col gap-1.5'>
-                <label className='text-[13px] font-bold text-gray-600'>Giá bán (đ) <span className='text-red-500'>*</span></label>
+                <label className='text-[13px] font-bold text-gray-600'>
+                  Giá bán (đ) <span className='text-red-500'>*</span>
+                </label>
                 <input
                   type='text'
                   required
@@ -522,25 +536,20 @@ export default function Product() {
                   value={formPrice}
                   onChange={(e) => {
                     const clean = e.target.value.replace(/\D/g, '')
-
-                    console.log({
-                      raw: e.target.value,
-                      clean,
-                      parsed: parseInt(clean)
-                    })
-
                     if (clean === '') {
                       setFormPrice('')
                     } else {
                       setFormPrice(parseInt(clean).toLocaleString('vi-VN'))
                     }
                   }}
-                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 text-right mb-5'
+                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 text-right'
                 />
               </div>
 
               <div className='flex flex-col gap-2'>
-                <label className='text-[13px] font-bold text-gray-600'>Hình ảnh {itemLabel}</label>
+                <label className='text-[13px] font-bold text-gray-600'>
+                  Hình ảnh {itemLabel}
+                </label>
                 <label
                   htmlFor='product-image'
                   className='border-2 border-dashed border-gray-300 rounded-xl h-44 flex flex-col items-center justify-center cursor-pointer hover:border-[#D32F2F] transition'
@@ -571,25 +580,24 @@ export default function Product() {
                   />
                 </label>
               </div>
-
-              <div className='flex items-center justify-end gap-3 mt-4 pt-4 border-t border-gray-100'>
-                <button
-                  type='button'
-                  onClick={() => {
-                    closeModal()
-                  }}
-                  className='px-8 py-2 border-2 border-taxmate-red text-taxmate-red text-[13px] font-bold rounded-[8px] hover:bg-gray-50 active:bg-gray-100 transition-colors'
-                >
-                  Hủy
-                </button>
-                <button
-                  type='submit'
-                  className='px-5 py-2 bg-[#D32F2F] hover:bg-[#B71C1C] active:bg-[#991B1B] text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs'
-                >
-                  {isEditing ? 'Lưu thay đổi' : 'Tạo mới'}
-                </button>
-              </div>
             </form>
+
+            <div className='flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 shrink-0 bg-white'>
+              <button
+                type='button'
+                onClick={closeModal}
+                className='px-8 py-2 border-2 border-taxmate-red text-taxmate-red text-[13px] font-bold rounded-[8px] hover:bg-gray-50 active:bg-gray-100 transition-colors'
+              >
+                Hủy
+              </button>
+              <button
+                type='submit'
+                form='product-form'
+                className='px-5 py-2 bg-[#D32F2F] hover:bg-[#B71C1C] active:bg-[#991B1B] text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs'
+              >
+                {isEditing ? 'Lưu thay đổi' : 'Tạo mới'}
+              </button>
+            </div>
           </div>
         </div>
       )}

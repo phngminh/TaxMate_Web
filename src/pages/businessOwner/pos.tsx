@@ -3,12 +3,12 @@ import { Search, Plus, Menu, X, Check, Utensils, Printer } from 'lucide-react'
 import type { Product } from '../../types/product.type'
 
 const PRODUCTS: Product[] = [
-  { id: 'SP000001', name: 'Pizza', currentPrice: 55000, category: 'Fast food', status: 'active' },
-  { id: 'SP000002', name: 'Hamburger', currentPrice: 35000, category: 'Fast food', status: 'active' },
-  { id: 'SP000003', name: 'Coca', currentPrice: 20000, category: 'Đồ uống', status: 'active' },
-  { id: 'SP000004', name: 'Trà đào', currentPrice: 25000, category: 'Đồ uống', status: 'active' },
-  { id: 'SP000005', name: 'Khoai tây chiên', currentPrice: 30000, category: 'Fast food', status: 'active' },
-  { id: 'SP000006', name: 'Mì Ý', currentPrice: 65000, category: 'Món chính', status: 'active' },
+  { id: 'SP000001', name: 'Pizza', currentPrice: 55000, category: 'Fast food', status: 'active', createdAt: '', updatedAt: '' },
+  { id: 'SP000002', name: 'Hamburger', currentPrice: 35000, category: 'Fast food', status: 'active', createdAt: '', updatedAt: '' },
+  { id: 'SP000003', name: 'Coca', currentPrice: 20000, category: 'Đồ uống', status: 'active', createdAt: '', updatedAt: '' },
+  { id: 'SP000004', name: 'Trà đào', currentPrice: 25000, category: 'Đồ uống', status: 'active', createdAt: '', updatedAt: '' },
+  { id: 'SP000005', name: 'Khoai tây chiên', currentPrice: 30000, category: 'Fast food', status: 'active', createdAt: '', updatedAt: '' },
+  { id: 'SP000006', name: 'Mì Ý', currentPrice: 65000, category: 'Món chính', status: 'active', createdAt: '', updatedAt: '' },
 ]
 
 interface OrderItem {

@@ -16,13 +16,16 @@ import UserList from '../pages/admin/user/user'
 import UserDetail from '../pages/admin/user/userDetail'
 import Subscription from '../pages/admin/user/subscription'
 import LegalDocuments from '../pages/admin/document/document'
+import SubscriptionPage from '../pages/landingPage/Subscription'
 import { BusinessProvider } from './BusinessContext'
 import BusinessList from '../pages/admin/user/business'
 import Expense from '../pages/businessOwner/expense'
+import Report from '../pages/businessOwner/report'
 
 export default function useRouteElements() {
   const routeElements = useRoutes([
     { path: path.home, element: <LandingPage /> },
+    { path: path.subscription, element: <SubscriptionPage /> },
     { path: path.callback, element: <></> },
     { path: path.BUSINESS_OWNER_LOGIN, element: <BusinessOwnerLoginPage /> },
     { path: path.BUSINESS_OWNER_REGISTER, element: <BusinessOwnerRegisterPage /> },
@@ -44,7 +47,7 @@ export default function useRouteElements() {
             { path: path.BUSINESS_OWNER_INGREDIENTS, element: <Ingredient /> },
             { path: path.BUSINESS_OWNER_ORDERS, element: <Order /> },
             { path: path.BUSINESS_OWNER_EXPENSES, element: <Expense /> },
-            { path: path.BUSINESS_OWNER_REPORTS, element: <Home /> }
+            { path: path.BUSINESS_OWNER_REPORTS, element: <Report /> }
           ]
         },
         { 
@@ -59,7 +62,7 @@ export default function useRouteElements() {
     //================ Admin routes ================
     {
       path: path.BASE_ADMIN,
-      element: <ProtectedRoute allowedRoles={['Admin']} />,
+      // element: <ProtectedRoute allowedRoles={['Admin']} />,
       children: [
         {
           element: <AdminLayout />,
