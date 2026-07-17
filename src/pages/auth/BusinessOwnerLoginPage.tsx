@@ -1,5 +1,6 @@
-import { useState, type FormEvent } from 'react'
-import { Eye, EyeOff, Lock, Mail, X } from 'lucide-react'
+import { useEffect, useState, type FormEvent } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { Eye, EyeOff, Lock, Mail, X, CircleCheckBig } from 'lucide-react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import logo from '../../assets/logo1.png'
 import email from '../../assets/email.jpeg'
@@ -27,7 +28,19 @@ export default function BusinessOwnerLoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showVerifyModal, setShowVerifyModal] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [showVerifiedModal, setShowVerifiedModal] = useState(false)
   const { setBusinesses, setCurrentBusiness } = useBusiness()
+  
+  useEffect(() => {
+    const verified = searchParams.get('verified')
+
+    if (verified === '1') {
+      setShowVerifiedModal(true)
+      searchParams.delete('verified')
+      setSearchParams(searchParams, { replace: true })
+    }
+  }, [searchParams, setSearchParams])
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -300,8 +313,44 @@ export default function BusinessOwnerLoginPage() {
               </button>
             </div>
           </div>
-        )
-      }
+        )}
+
+        {showVerifiedModal && (
+          <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60'>
+            <div className='relative w-full max-w-md rounded-2xl bg-white p-8 shadow-xl'>
+              <button
+                onClick={() => setShowVerifiedModal(false)}
+                className='absolute right-4 top-4 text-gray-400 hover:text-gray-600'
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex justify-center">
+                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-green-100 animate-in zoom-in duration-300">
+                  <CircleCheckBig
+                    className="h-14 w-14 text-green-500 animate-pulse"
+                    strokeWidth={2.5}
+                  />
+                </div>
+              </div>
+
+              <h2 className='mt-2 text-center text-2xl font-bold text-green-500'>
+                Xác thực email thành công!
+              </h2>
+
+              <p className='px-5 mt-4 text-center text-gray-600'>
+                Vui lòng đăng nhập để bắt đầu sử dụng TaxMate.
+              </p>
+
+              <button
+                onClick={() => setShowVerifiedModal(false)}
+                className='mt-6 h-12 w-full rounded-lg bg-taxmate-red font-semibold text-white hover:bg-taxmate-red-hover'
+              >
+                Tiếp tục
+              </button>
+            </div>
+          </div>
+        )}
     </div>
   )
 }
