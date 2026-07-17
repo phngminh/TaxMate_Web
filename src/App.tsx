@@ -6,6 +6,7 @@ import { useEffect } from 'react'
 import useRouteElements from './contexts/useRouteElement'
 import AOS from 'aos'
 import 'aos/dist/aos.css'
+import { BusinessProvider } from './contexts/BusinessContext'
 
 function App() {
   const routeElement = useRouteElements()
@@ -22,8 +23,10 @@ function App() {
 
   return (
     <AuthProvider>
-      {routeElement}
-      <ToastContainer />
+      <BusinessProvider>
+        {routeElement}
+        <ToastContainer />
+      </BusinessProvider>
     </AuthProvider>
   )
 }

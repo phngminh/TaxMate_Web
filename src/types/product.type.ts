@@ -1,18 +1,19 @@
 export interface Product {
   id: string
   name: string
-  productCategory?: string
-  category: string
+  category?: string
   description?: string
   unit?: string
   currentPrice?: number
   imageUrl?: string
-  status: 'active' | 'inactive'
+  status: string
+  createdAt: string
+  updatedAt: string
 }
 
 export interface CreateProductRequest {
   name: string
-  productCategory?: string
+  category?: string
   description?: string
   unit?: string
   currentPrice?: number
@@ -21,7 +22,7 @@ export interface CreateProductRequest {
 
 export interface UpdateProductRequest {
   name: string
-  productCategory?: string
+  category?: string
   description?: string
   unit?: string
   currentPrice?: number

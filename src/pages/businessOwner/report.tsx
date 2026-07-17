@@ -10,11 +10,11 @@ import {
   Pie,
   Cell,
 } from 'recharts'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import { createBusinessProfile, getBusinessProfiles } from '../../apis/profile.api'
 import { toast } from 'react-toastify'
-import { UtensilsCrossed, Handshake } from 'lucide-react'
+import { UtensilsCrossed, Handshake, TrendingUp, CircleDollarSign, Receipt } from 'lucide-react'
 import { useBusiness } from '../../contexts/BusinessContext'
 
 const categories = [
@@ -115,7 +115,13 @@ function MiniLineChart({ color }: { color: string }) {
   )
 }
 
-export default function App() {
+type Tab = 'sell' | 'profit' | 'expense'
+
+export default function Report() {
+  const [activeTab, setActiveTab] = useState<Tab>('sell')
+  const [loadingSellData, setLoadingSellData] = useState(false)
+  const [loadingProfitData, setLoadingProfitData] = useState(false)
+  const [loadingExpenseData, setLoadingExpenseData] = useState(false)
   const [showBusinessModal, setShowBusinessProfileModal] = useState(false)
   const { user } = useAuth()
   const [businessName, setBusinessName] = useState('')
@@ -125,6 +131,17 @@ export default function App() {
   const [categoryId, setCategoryId] = useState('')
   const [loading, setLoading] = useState(false)
   const { businesses, setBusinesses, setCurrentBusiness } = useBusiness()
+
+  useEffect(() => {
+    if (activeTab === 'sell') {
+      setLoadingSellData(true)
+    } if (activeTab === 'profit') {
+      setLoadingProfitData(true)
+    }  
+    else {
+      setLoadingExpenseData(true)
+    }
+  }, [activeTab])
 
   const handleCreateBusiness = async () => {
     if (!businessName.trim()) {
@@ -163,9 +180,51 @@ export default function App() {
   }
 
   return (
-    <div className='bg-[#f8f9fa] pt-4 pb-6 min-h-[calc(100vh-51px)]'>
-      <div className='px-6'>
-        <div className='flex gap-4 mb-6'>
+    <div className='flex flex-col bg-[#f8f9fa] min-h-[calc(100vh-51px)] w-full'>
+      <div className='flex grow w-full'>
+        <div className='w-72 bg-white border-r border-[#ffe5e5] p-6 flex flex-col gap-4 shrink-0'>
+          <span className='text-[13px] font-bold text-gray-500 uppercase tracking-wide'>Báo cáo</span>
+          <div className='flex flex-col gap-1'>
+            <button
+              onClick={() => setActiveTab('sell')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-[10px] text-[13.5px] font-semibold transition-all ${
+                activeTab === 'sell'
+                  ? 'bg-[#eef2ff] text-[#4c51bf]'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <TrendingUp size={17} className={activeTab === 'sell' ? 'text-[#4c51bf]' : 'text-gray-400'} />
+              Bán hàng
+            </button>
+            <button
+              onClick={() => setActiveTab('profit')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-[10px] text-[13.5px] font-semibold transition-all ${
+                activeTab === 'profit'
+                  ? 'bg-[#eef2ff] text-[#4c51bf]'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <CircleDollarSign size={17} className={activeTab === 'profit' ? 'text-[#4c51bf]' : 'text-gray-400'} />
+              Lợi nhuận
+            </button>
+            <button
+              onClick={() => setActiveTab('expense')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-[10px] text-[13.5px] font-semibold transition-all ${
+                activeTab === 'expense'
+                  ? 'bg-[#eef2ff] text-[#4c51bf]'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <Receipt size={17} className={activeTab === 'expense' ? 'text-[#4c51bf]' : 'text-gray-400'} />
+              Chi phí
+            </button>
+          </div>
+        </div>
+
+        <div className='grow p-8 overflow-x-auto'>
+          {activeTab === 'sell' && (
+            <div className='flex flex-col gap-6 w-full'>
+              <div className='flex gap-4'>
           {/* Card 1: Revenue */}
           <div className='bg-white border border-[#eef0f2] rounded-[12px] shadow-[0px_1px_1px_rgba(0,0,0,0.05)] p-5 flex flex-col gap-3 flex-1 min-w-0'>
             <div className='flex items-center gap-3'>
@@ -429,8 +488,23 @@ export default function App() {
           </div>
         </div>
       </div>
+    )}
 
-      {showBusinessModal && (
+    {activeTab === 'profit' && (
+      <div className='flex items-center justify-center h-full text-gray-500 font-medium'>
+        Đang phát triển tính năng Lợi nhuận
+      </div>
+    )}
+
+    {activeTab === 'expense' && (
+      <div className='flex items-center justify-center h-full text-gray-500 font-medium'>
+        Đang phát triển tính năng Chi phí
+      </div>
+    )}
+  </div>
+</div>
+
+{showBusinessModal && (
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4'>
           <div className='w-full max-w-160 overflow-hidden rounded-2xl bg-white shadow-2xl'>
             <div className='max-h-[90vh] overflow-y-auto'>

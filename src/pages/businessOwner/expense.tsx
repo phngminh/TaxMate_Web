@@ -36,22 +36,6 @@ const EXPENSE_CATEGORIES = [
 
 const TIME_OPTIONS = ['Hôm nay', '7 ngày qua', 'Tháng này', 'Năm nay', 'Tùy chọn']
 
-function Sparkline({ color, points }: { color: string; points: number[] }) {
-  const w = 100
-  const h = 36
-  const max = Math.max(...points)
-  const min = Math.min(...points)
-  const range = max - min || 1
-  const step = w / (points.length - 1)
-  const coords = points.map((v, i) => `${i * step},${h - ((v - min) / range) * (h - 6) - 3}`)
-  const path = `M${coords.join(' L')}`
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} width={100} height={36} fill='none' className='shrink-0'>
-      <path d={path} stroke={color} strokeWidth='2.5' strokeLinecap='round' strokeLinejoin='round' />
-    </svg>
-  )
-}
-
 function CategoryBadge({ label, color }: { label: string; color: string }) {
   const styles =
     color === 'orange'
@@ -226,7 +210,6 @@ export default function Expense() {
                     <span className='text-gray-400'>(922.000)</span>
                   </p>
                 </div>
-                <Sparkline color='#f97316' points={expenseSparkPoints} />
               </div>
             </div>
 
@@ -247,7 +230,6 @@ export default function Expense() {
                     <span className='text-gray-400'>(1.580.000)</span>
                   </p>
                 </div>
-                <Sparkline color='#10b981' points={incomeSparkPoints} />
               </div>
             </div>
           </div>

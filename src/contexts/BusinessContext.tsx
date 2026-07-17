@@ -1,38 +1,86 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState
+} from 'react'
 import type { ReactNode } from 'react'
 import type { BusinessProfile } from '../types/profile.type'
 
 interface BusinessContextType {
+  businesses: BusinessProfile[]
   currentBusiness: BusinessProfile | null
+  businessId?: string
+
+  setBusinesses: (businesses: BusinessProfile[]) => void
   setCurrentBusiness: (business: BusinessProfile | null) => void
   clearBusiness: () => void
 }
 
-const BusinessContext = createContext<BusinessContextType | undefined>(undefined)
+const BusinessContext = createContext<BusinessContextType | undefined>(
+  undefined
+)
 
 interface Props {
   children: ReactNode
 }
 
 export const BusinessProvider = ({ children }: Props) => {
-  const [currentBusiness, setCurrentBusinessState] =
-    useState<BusinessProfile | null>(null)
+  const [businesses, setBusinessesState] = useState<BusinessProfile[]>(() => {
+    const saved = localStorage.getItem('businesses')
+    return saved ? JSON.parse(saved) : []
+  })
 
-  const setCurrentBusiness = useCallback((business: BusinessProfile | null) => {
-    setCurrentBusinessState(business)
+  const [currentBusiness, setCurrentBusinessState] =
+    useState<BusinessProfile | null>(() => {
+      const saved = localStorage.getItem('currentBusiness')
+      return saved ? JSON.parse(saved) : null
+    })
+
+  const setBusinesses = useCallback((list: BusinessProfile[]) => {
+    setBusinessesState(list)
+    localStorage.setItem('businesses', JSON.stringify(list))
   }, [])
 
+  const setCurrentBusiness = useCallback(
+    (business: BusinessProfile | null) => {
+      setCurrentBusinessState(business)
+
+      if (business) {
+        localStorage.setItem('currentBusiness', JSON.stringify(business))
+      } else {
+        localStorage.removeItem('currentBusiness')
+      }
+    },
+    []
+  )
+
   const clearBusiness = useCallback(() => {
+    setBusinessesState([])
     setCurrentBusinessState(null)
+
+    localStorage.removeItem('businesses')
+    localStorage.removeItem('currentBusiness')
   }, [])
 
   const value = useMemo(
     () => ({
+      businesses,
       currentBusiness,
+      businessId: currentBusiness?.id,
+
+      setBusinesses,
       setCurrentBusiness,
       clearBusiness
     }),
-    [currentBusiness, setCurrentBusiness, clearBusiness]
+    [
+      businesses,
+      currentBusiness,
+      setBusinesses,
+      setCurrentBusiness,
+      clearBusiness
+    ]
   )
 
   return (
