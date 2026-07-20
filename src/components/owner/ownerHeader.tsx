@@ -35,10 +35,10 @@ function NavItem({ label, isActive }: {
 }
 
 const menuItems = [
-  { icon: HeadphonesIcon, label: 'Hỗ trợ' },
-  { icon: Heart,          label: 'Gói của tôi' },
-  { icon: Store,          label: 'Cài đặt Cửa hàng' },
-  { icon: Settings,       label: 'Cài đặt cá nhân' },
+  { icon: HeadphonesIcon, label: 'Hỗ trợ', path: null },
+  { icon: Heart,          label: 'Gói của tôi', path: path.BUSINESS_OWNER_SUBSCRIPTION },
+  { icon: Store,          label: 'Tài khoản Nhận tiền', path: path.BUSINESS_OWNER_BANK_CONFIG },
+  { icon: Settings,       label: 'Cấu hình HĐĐT', path: path.BUSINESS_OWNER_EINVOICE_CONFIG },
 ]
 
 export default function OwnerHeader() {
@@ -169,9 +169,15 @@ export default function OwnerHeader() {
               </div>
 
               <div className='flex-1 py-2 overflow-y-auto'>
-                {menuItems.map(({ icon: Icon, label }) => (
+                {menuItems.map(({ icon: Icon, label, path: itemPath }) => (
                   <button
                     key={label}
+                    onClick={() => {
+                      if (itemPath) {
+                        navigate(itemPath)
+                        setProfileOpen(false)
+                      }
+                    }}
                     className='w-full flex items-center gap-4 px-5 py-3.5 hover:bg-[#fef2f2] group transition-colors cursor-pointer border-b border-transparent hover:border-gray-50'
                   >
                     <Icon size={20} strokeWidth={2} className='text-[#c0392b] shrink-0' />

@@ -76,3 +76,17 @@ export interface UpdateOrderItemRequest {
   discountValue?: number
   note?: string
 }
+
+export interface PaymentEntry {
+  paymentMethod: 'Cash' | 'Transfer' | 'EWallet'
+  amount: number
+  paymentAccountId?: string | null
+}
+
+export interface CheckoutRequest {
+  payments: PaymentEntry[]
+  buyerTaxCode?: string | null
+  buyerCompanyName?: string | null
+  buyerAddress?: string | null
+  buyerEmail?: string | null
+}

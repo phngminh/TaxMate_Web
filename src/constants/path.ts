@@ -15,6 +15,9 @@ const path = {
   BUSINESS_OWNER_ORDERS: '/business-owner/orders',
   BUSINESS_OWNER_EXPENSES: '/business-owner/expenses',
   BUSINESS_OWNER_REPORTS: '/business-owner/reports',
+  BUSINESS_OWNER_SUBSCRIPTION: '/business-owner/subscription',
+  BUSINESS_OWNER_BANK_CONFIG: '/business-owner/bank-config',
+  BUSINESS_OWNER_EINVOICE_CONFIG: '/business-owner/einvoice-config',
 
   //============= Admin ============
   BASE_ADMIN: '/admin',
