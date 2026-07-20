@@ -1,4 +1,3 @@
-import storeImage from '../../assets/store.png'
 import {
   LineChart,
   Line,
@@ -10,27 +9,7 @@ import {
   Pie,
   Cell,
 } from 'recharts'
-import { useState } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
-import { createBusinessProfile, getBusinessProfiles } from '../../apis/profile.api'
-import { toast } from 'react-toastify'
-import { UtensilsCrossed, Handshake } from 'lucide-react'
-import { useBusiness } from '../../contexts/BusinessContext'
-
-const categories = [
-  {
-    businessCategoryId: '60a42842-9fba-406c-8282-fc88ee0ccd24',
-    name: 'Ăn uống (F&B)',
-    icon: UtensilsCrossed,
-    color: 'text-green-500'
-  },
-  {
-    businessCategoryId: 'cafbdef3-e1d5-467c-8e60-355995d8e70a',
-    name: 'Dịch vụ',
-    icon: Handshake,
-    color: 'text-purple-500'
-  }
-]
 
 const revenueData = [
   { date: '26/05', revenue: 5000, trend: 4800 },
@@ -116,51 +95,7 @@ function MiniLineChart({ color }: { color: string }) {
 }
 
 export default function App() {
-  const [showBusinessModal, setShowBusinessProfileModal] = useState(false)
   const { user } = useAuth()
-  const [businessName, setBusinessName] = useState('')
-  const [address, setAddress] = useState('')
-  const [provinceCode, setProvinceCode] = useState('')
-  const [wardCode, setWardCode] = useState('')
-  const [categoryId, setCategoryId] = useState('')
-  const [loading, setLoading] = useState(false)
-  const { businesses, setBusinesses, setCurrentBusiness } = useBusiness()
-
-  const handleCreateBusiness = async () => {
-    if (!businessName.trim()) {
-      toast.error('Vui lòng nhập tên cửa hàng')
-      return
-    }
-
-    if (!categoryId) {
-      toast.error('Vui lòng chọn danh mục cửa hàng')
-      return
-    }
-
-    try {
-      setLoading(true)
-      const res = await createBusinessProfile({
-        ownerId: user!.id,
-        businessName: businessName.trim(),
-        provinceCode: provinceCode.trim() || undefined,
-        wardCode: wardCode.trim() || undefined,
-        address: address.trim() || undefined,
-        mainCategoryId: categoryId,
-        preferElectronicInvoice: false
-      })
-
-      const newBusiness = res.data
-      setBusinesses([...businesses, newBusiness])
-      setCurrentBusiness(newBusiness)
-
-      toast.success('Tạo hồ sơ cửa hàng thành công')
-      setShowBusinessProfileModal(false)
-    } catch (error) {
-      toast.error('Failed to create business profile')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <div className='bg-[#f8f9fa] pt-4 pb-6 min-h-[calc(100vh-51px)]'>
@@ -429,146 +364,6 @@ export default function App() {
           </div>
         </div>
       </div>
-
-      {showBusinessModal && (
-        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4'>
-          <div className='w-full max-w-160 overflow-hidden rounded-2xl bg-white shadow-2xl'>
-            <div className='max-h-[90vh] overflow-y-auto'>
-              <div className='mx-auto w-full max-w-130 px-8 py-6'>
-                <div className='flex justify-center'>
-                  <img
-                    src={storeImage}
-                    alt='Store'
-                    className='w-44'
-                  />
-                </div>
-
-                <div className='mt-2 text-center'>
-                  <h2 className='text-3xl font-bold leading-tight'>
-                    Chào mừng đến với
-                  </h2>
-                  <p className='text-3xl font-bold text-blue-500'>
-                    TaxMate
-                  </p>
-                  <p className='mt-3 text-gray-500'>
-                    Hãy thiết lập thông tin cửa hàng của bạn để bắt đầu sử dụng.
-                  </p>
-                </div>
-
-                <div className='mt-8 space-y-5'>
-                  <div>
-                    <label className='mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
-                      Tên cửa hàng <span className='text-taxmate-red'>*</span>
-                    </label>
-
-                    <input
-                      type='text'
-                      value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
-                      placeholder='Nhập tên cửa hàng'
-                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
-                    />
-                  </div>
-
-                  <div>
-                    <label className='mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
-                      Địa chỉ cửa hàng
-                    </label>
-
-                    <input
-                      type='text'
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder='Nhập địa chỉ cửa hàng'
-                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
-                    />
-                  </div>
-
-                  <div>
-                    <label className='mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
-                      Mã tỉnh/thành phố
-                    </label>
-
-                    <input
-                      type='text'
-                      value={provinceCode}
-                      onChange={(e) => setProvinceCode(e.target.value)}
-                      placeholder='Ví dụ: 79'
-                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
-                    />
-                  </div>
-
-                  <div>
-                    <label className='mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
-                      Mã quận/huyện
-                    </label>
-
-                    <input
-                      type='text'
-                      value={wardCode}
-                      onChange={(e) => setWardCode(e.target.value)}
-                      placeholder='Ví dụ: 26734'
-                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
-                    />
-                  </div>
-
-                  <div>
-                    <label className='mb-3 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
-                      Loại cửa hàng <span className='text-taxmate-red'>*</span>
-                    </label>
-
-                    <div className='space-y-3 mb-2'>
-                      {categories.map((category) => {
-                        const selected = categoryId === category.businessCategoryId
-                        const Icon = category.icon
-                        return (
-                          <button
-                            key={category.businessCategoryId}
-                            type='button'
-                            onClick={() => setCategoryId(category.businessCategoryId)}
-                            className={`flex h-12 w-full items-center justify-between rounded-xl border px-5 py-6 transition-all ${
-                              selected
-                                ? 'border-taxmate-red bg-taxmate-red/10'
-                                : 'border-gray-300 hover:border-taxmate-red'
-                            }`}
-                          >
-                            <div className='flex items-center gap-4'>
-                              <Icon className={`h-6 w-6 ${category.color}`} />
-
-                              <span>{category.name}</span>
-                            </div>
-
-                            <div
-                              className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition ${
-                                selected
-                                  ? 'border-taxmate-red'
-                                  : 'border-gray-400'
-                              }`}
-                            >
-                              {selected && (
-                                <div className='h-3 w-3 rounded-full bg-taxmate-red' />
-                              )}
-                            </div>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  <button
-                    type='button'
-                    disabled={loading}
-                    onClick={handleCreateBusiness}
-                    className='h-14 w-full rounded-xl bg-red-600 py-3 text-lg font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60'
-                  >
-                    {loading ? 'Đang tạo...' : 'Xác nhận'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
