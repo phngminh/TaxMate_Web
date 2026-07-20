@@ -328,7 +328,7 @@ export default function Order() {
 
       {selectedOrder && (
         <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
-          <div className='bg-white rounded-[16px] shadow-2xl max-w-2xl w-full overflow-hidden animate-in zoom-in-95 duration-200'>
+          <div className='bg-white rounded-[16px] shadow-2xl max-w-xl w-full overflow-hidden animate-in zoom-in-95 duration-200'>
             <div className='flex items-center justify-between px-8 py-4 bg-[#fef2f2] border-b border-red-100'>
               <h3 className='text-[16px] font-bold text-gray-900'>
                 Chi tiết đơn hàng: {selectedOrder.transactionCode}

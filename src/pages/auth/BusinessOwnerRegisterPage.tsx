@@ -51,7 +51,7 @@ export default function BusinessOwnerRegisterPage() {
     }
 
     if (!/^\d{12}$/.test(form.taxCode)) {
-      toast.error('Số CCCD/mã số thuế phải gồm đúng 12 chữ số')
+      toast.error('Số CCCD phải gồm đúng 12 chữ số')
       return
     }
 
@@ -87,11 +87,14 @@ export default function BusinessOwnerRegisterPage() {
 
     try {
       setIsSubmitting(true)
-      
       const auth = await register(form)
+
       if (auth.requiresEmailVerification) {
         setShowVerifyModal(true)
       }
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'Đăng ký thất bại. Vui lòng thử lại.'
+      toast.error(message)
     } finally {
       setIsSubmitting(false)
     }
