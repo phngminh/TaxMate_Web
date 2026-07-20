@@ -1,9 +1,14 @@
 import type { ApiResponse } from '../types/common.type'
-import type { SubscriptionPlan, UserSubscription, SubscribeRequest, SubscribeResponse } from '../types/subscription.type'
+import type { SubscriptionPlan, UserSubscription, SubscriptionPlanResponse, UserSubscriptionResponse, SubscribeRequest, SubscribeResponse } from '../types/subscription.type'
 import http from '../utils/http'
 
 export const getPlans = async () => {
   const response = await http.get<ApiResponse<SubscriptionPlan[]>>('/Subscription/plans')
+  return response.data
+}
+
+export const getSubscriptionPlans = async () => {
+  const response = await http.get<ApiResponse<SubscriptionPlanResponse[]>>('/Subscription/plans')
   return response.data
 }
 
@@ -23,6 +28,11 @@ export const cancelAutoRenew = async (userId: string) => {
 }
 
 export const cancelSubscriptionImmediately = async (userId: string) => {
+  const response = await http.post<ApiResponse<string>>(`/Subscription/user/${userId}/cancel`)
+  return response.data
+}
+
+export const cancelSubscription = async (userId: string) => {
   const response = await http.post<ApiResponse<string>>(`/Subscription/user/${userId}/cancel`)
   return response.data
 }

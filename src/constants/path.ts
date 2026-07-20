@@ -1,6 +1,7 @@
 const path = {
   //============= Public ==============
   home: '/',
+  subscription: '/subscription',
   callback: '/callback',
 
   //============ Business Owner ============

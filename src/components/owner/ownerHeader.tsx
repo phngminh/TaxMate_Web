@@ -1,19 +1,28 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
+import storeImage from '../../assets/store.png'
 import imgLogo from '../../assets/logo3.png'
 import path from '../../constants/path'
-import {
-  Bell,
-  User,
-  HeadphonesIcon,
-  Heart,
-  Store,
-  Settings,
-  LogOut,
-  Plus
-} from 'lucide-react'
+import { Bell, User, HeadphonesIcon, Heart, Store, Settings, LogOut, Plus, UtensilsCrossed, Handshake } from 'lucide-react'
 import { useBusiness } from '../../contexts/BusinessContext'
 import { useAuth } from '../../contexts/AuthContext'
+import { toast } from 'react-toastify'
+import { createBusinessProfile } from '../../apis/profile.api'
+
+const categories = [
+  {
+    businessCategoryId: '60a42842-9fba-406c-8282-fc88ee0ccd24',
+    name: 'Ăn uống (F&B)',
+    icon: UtensilsCrossed,
+    color: 'text-green-500'
+  },
+  {
+    businessCategoryId: 'cafbdef3-e1d5-467c-8e60-355995d8e70a',
+    name: 'Dịch vụ',
+    icon: Handshake,
+    color: 'text-purple-500'
+  }
+]
 
 function NavItem({ label, isActive }: {
   label: string
@@ -43,10 +52,17 @@ const menuItems = [
 
 export default function OwnerHeader() {
   const [profileOpen, setProfileOpen] = useState(false)
+  const [showAddBusinessModal, setShowAddBusinessModal] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
-  const { currentBusiness } = useBusiness()
+  const { businesses, currentBusiness, setCurrentBusiness, clearBusiness, setBusinesses } = useBusiness()
+  const [businessName, setBusinessName] = useState('')
+  const [address, setAddress] = useState('')
+  const [provinceCode, setProvinceCode] = useState('')
+  const [wardCode, setWardCode] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -58,9 +74,56 @@ export default function OwnerHeader() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [profileOpen])
 
+  const handleCreateBusiness = async () => {
+    if (!businessName.trim()) {
+      toast.error('Vui lòng nhập tên cửa hàng')
+      return
+    }
+
+    if (!categoryId) {
+      toast.error('Vui lòng chọn danh mục cửa hàng')
+      return
+    }
+
+    try {
+      setLoading(true)
+      const res = await createBusinessProfile({
+        ownerId: user!.id,
+        businessName: businessName.trim(),
+        provinceCode: provinceCode.trim() || undefined,
+        wardCode: wardCode.trim() || undefined,
+        address: address.trim() || undefined,
+        mainCategoryId: categoryId,
+        preferElectronicInvoice: false
+      })
+
+      const newBusiness = res.data
+      setBusinesses([...businesses, newBusiness])
+      setCurrentBusiness(newBusiness)
+
+      toast.success('Tạo hồ sơ cửa hàng thành công')
+      setShowAddBusinessModal(false)
+    } catch (error) {
+      toast.error('Failed to create business profile')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleLogout = () => {
+    clearBusiness()
     logout()
     navigate(path.home)
+  }
+
+  const handleCloseAddBusinessModal = () => {
+    setShowAddBusinessModal(false)
+
+    setBusinessName('')
+    setAddress('')
+    setProvinceCode('')
+    setWardCode('')
+    setCategoryId('')
   }
 
   return (
@@ -198,25 +261,192 @@ export default function OwnerHeader() {
             </div>
 
             <div className='w-20 bg-white flex flex-col items-center py-5 gap-6 shrink-0'>
-              <div className='flex w-12.5 flex-col items-stretch gap-1.5 cursor-pointer'>
-                <div className='flex justify-center'>
-                  <div className='w-12.5 h-12.5 rounded-full bg-[#ffd6d8] flex items-center justify-center shadow-xs'>
-                    <Store size={22} color='#9b0000' />
-                  </div>
-                </div>
-                <span
-                  className='truncate text-center text-[12px] font-semibold text-[#9b0000]'
-                  title={currentBusiness?.businessName}
+              {businesses.map((business) => (
+                <div
+                  key={business.id}
+                  onClick={() => setCurrentBusiness(business)}
+                  className='flex w-12.5 flex-col items-stretch gap-1.5 cursor-pointer'
                 >
-                  {currentBusiness?.businessName}
-                </span>
-              </div>
+                  <div
+                    className={`w-12.5 h-12.5 rounded-full flex items-center justify-center
+                    ${
+                      currentBusiness?.id === business.id
+                        ? 'bg-[#ffd6d8]'
+                        : 'bg-gray-100'
+                    }`}
+                  >
+                    <Store
+                      size={22}
+                      color={
+                        currentBusiness?.id === business.id
+                          ? '#9b0000'
+                          : '#666'
+                      }
+                    />
+                  </div>
 
-              <div className='flex flex-col items-center gap-1.5 cursor-pointer group'>
-                <div className='w-12.5 h-12.5 rounded-full border border-[#9b0000] flex items-center justify-center group-hover:bg-[#ffeaeb] transition-colors'>
+                  <span
+                    className={`truncate text-center text-[12px] font-semibold ${
+                      currentBusiness?.id === business.id
+                        ? 'text-[#9b0000]'
+                        : 'text-gray-500'
+                    }`}
+                  >
+                    {business.businessName}
+                  </span>
+                </div>
+              ))}
+
+              <button 
+                className='flex flex-col items-center gap-1.5 cursor-pointer group'
+                onClick={() => {
+                  setShowAddBusinessModal(true)
+                }}
+              >
+                <div className='w-12.5 h-12.5 rounded-full border border-[#9b0000] flex items-center justify-center'>
                   <Plus size={24} color='#9b0000' />
                 </div>
-                <span className='text-[12px] font-medium text-[#9b0000]'>Thêm</span>
+
+                <div className='text-[12px] font-medium text-[#9b0000]'>
+                  Thêm
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddBusinessModal && (
+        <div className='fixed inset-0 z-60 flex items-center justify-center bg-black/60 p-4' onClick={handleCloseAddBusinessModal}>
+          <div
+            className='relative w-full max-w-160 overflow-hidden rounded-2xl bg-white shadow-2xl'
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className='max-h-[90vh] overflow-y-auto'>
+              <div className='mx-auto w-full max-w-130 px-8 py-6'>
+                <div className='flex justify-center'>
+                  <img
+                    src={storeImage}
+                    alt='Store'
+                    className='w-44'
+                  />
+                </div>
+
+                <div className='mt-2 text-center'>
+                  <p className='text-2xl font-bold text-blue-500'>
+                    Tạo hồ sơ cửa hàng mới
+                  </p>
+                </div>
+
+                <div className='mt-8 space-y-5'>
+                  <div>
+                    <label className='mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
+                      Tên cửa hàng <span className='text-taxmate-red'>*</span>
+                    </label>
+
+                    <input
+                      type='text'
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      placeholder='Nhập tên cửa hàng'
+                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
+                      Địa chỉ cửa hàng
+                    </label>
+
+                    <input
+                      type='text'
+                      value={address}
+                      onChange={(e) => setAddress(e.target.value)}
+                      placeholder='Nhập địa chỉ cửa hàng'
+                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
+                      Mã tỉnh/thành phố
+                    </label>
+
+                    <input
+                      type='text'
+                      value={provinceCode}
+                      onChange={(e) => setProvinceCode(e.target.value)}
+                      placeholder='Ví dụ: 79'
+                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
+                      Mã quận/huyện
+                    </label>
+
+                    <input
+                      type='text'
+                      value={wardCode}
+                      onChange={(e) => setWardCode(e.target.value)}
+                      placeholder='Ví dụ: 26734'
+                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+                    />
+                  </div>
+
+                  <div>
+                    <label className='mb-3 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
+                      Loại cửa hàng <span className='text-taxmate-red'>*</span>
+                    </label>
+
+                    <div className='space-y-3 mb-2'>
+                      {categories.map((category) => {
+                        const selected = categoryId === category.businessCategoryId
+                        const Icon = category.icon
+                        return (
+                          <button
+                            key={category.businessCategoryId}
+                            type='button'
+                            onClick={() => setCategoryId(category.businessCategoryId)}
+                            className={`flex h-12 w-full items-center justify-between rounded-xl border px-5 py-6 transition-all ${
+                              selected
+                                ? 'border-taxmate-red bg-taxmate-red/10'
+                                : 'border-gray-300 hover:border-taxmate-red'
+                            }`}
+                          >
+                            <div className='flex items-center gap-4'>
+                              <Icon className={`h-6 w-6 ${category.color}`} />
+
+                              <span>{category.name}</span>
+                            </div>
+
+                            <div
+                              className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition ${
+                                selected
+                                  ? 'border-taxmate-red'
+                                  : 'border-gray-400'
+                              }`}
+                            >
+                              {selected && (
+                                <div className='h-3 w-3 rounded-full bg-taxmate-red' />
+                              )}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <button
+                    type='button'
+                    disabled={loading}
+                    onClick={handleCreateBusiness}
+                    className='h-14 w-full rounded-xl bg-red-600 py-3 text-lg font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60'
+                  >
+                    {loading ? 'Đang tạo...' : 'Tạo mới'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>

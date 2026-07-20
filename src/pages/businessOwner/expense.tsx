@@ -38,6 +38,39 @@ import type { IngredientPurchaseResponse } from '../../types/ingredientPurchase.
 
 interface PurchaseLineItem {
   itemId: string // Product or Ingredient ID
+  'Thuê nhà, mặt bằng',
+  'Điện, nước, Internet',
+  'Thiết bị, dụng cụ',
+  'Chi phí nhập hàng',
+  'Chi phí bán hàng',
+  'Lương nhân viên',
+  'Chưa phân loại',
+]
+
+const TIME_OPTIONS = ['Hôm nay', '7 ngày qua', 'Tháng này', 'Năm nay', 'Tùy chọn']
+
+function CategoryBadge({ label, color }: { label: string; color: string }) {
+  const styles =
+    color === 'orange'
+      ? 'bg-orange-50 text-orange-500 border border-orange-200'
+      : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+  return (
+    <span className={`inline-block text-[11.5px] font-bold px-2.5 py-0.5 rounded-full ${styles}`}>
+      {label}
+    </span>
+  )
+}
+
+function FilterGroup({
+  title,
+  options,
+  name,
+  value,
+  onChange,
+}: {
+  title: string
+  options: { val: string; label: string }[]
+>>>>>>> origin/main
   name: string
   quantity: number
   costPrice: number
@@ -601,6 +634,28 @@ export default function ExpensePage() {
           {loading ? (
             <div className='flex justify-center items-center py-20'>
               <Loader2 className='animate-spin text-[#D32F2F] size-10' />
+=======
+        <div className='grow p-6 overflow-y-auto flex flex-col gap-5'>
+          <div className='grid grid-cols-2 gap-5'>
+            <div className='bg-white rounded-[14px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.03)] px-7 py-5'>
+              <div className='flex items-start justify-between'>
+                <div>
+                  <div className='flex items-center gap-2 mb-1'>
+                    <ArrowUpCircle size={20} className='text-orange-500' strokeWidth={2.2} />
+                    <span className='text-[13px] font-semibold text-gray-500'>Tổng Chi</span>
+                  </div>
+                  <p className='text-[28px] font-extrabold text-orange-500 tracking-tight leading-none mt-2'>
+                    {fmt(totalExpense)}
+                  </p>
+                  <p className='text-[12.5px] text-gray-400 mt-2 flex items-center gap-1.5'>
+                    <TrendingUp size={13} className='text-orange-400' />
+                    So với tháng trước{' '}
+                    <span className='text-orange-500 font-bold'>↑ 8.5%</span>{' '}
+                    <span className='text-gray-400'>(922.000)</span>
+                  </p>
+                </div>
+              </div>
+>>>>>>> origin/main
             </div>
           ) : (
             <>
