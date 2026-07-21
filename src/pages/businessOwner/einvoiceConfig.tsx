@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Receipt, Activity, CheckCircle, Wifi, AlertTriangle, Loader2, ShieldCheck, RefreshCw } from 'lucide-react'
+import { Receipt, Activity, CheckCircle, Wifi, AlertTriangle, Loader2, ShieldCheck, RefreshCw, Info } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useBusiness } from '../../contexts/BusinessContext'
 import {
@@ -27,6 +27,7 @@ export default function EInvoiceConfig() {
   const [clientId, setClientId] = useState('')
   const [clientSecret, setClientSecret] = useState('')
   const [isConnected, setIsConnected] = useState(false)
+  const [hasSavedConfig, setHasSavedConfig] = useState(false)
   const [isEnabled, setIsEnabled] = useState(false)
   const [quotaRemaining, setQuotaRemaining] = useState<number | null>(null)
   const [quotaWarningThreshold, setQuotaWarningThreshold] = useState(100)
@@ -70,22 +71,23 @@ export default function EInvoiceConfig() {
         setIsEnabled(config.isEnabled)
         setQuotaWarningThreshold(config.quotaWarningThreshold || 100)
         setIsConnected(true)
+        setHasSavedConfig(true)
 
         // 2. Fetch saved providers and templates
         const savedRes = await getSavedProvidersAndTemplates(businessId)
         if (savedRes.success && savedRes.data) {
           setProviders(savedRes.data.providers || [])
           setSelectedProviderId(config.providerAccountId || '')
-          setTemplates(savedRes.data.templates || [])
           setSelectedTemplateCode(config.invoiceTemplateCode || '')
           setSelectedSymbol(config.symbol || '')
         }
+
+        // 3. Fetch Quota
+        await fetchQuota()
       } else {
         setIsConnected(false)
+        setHasSavedConfig(false)
       }
-
-      // 3. Fetch Quota
-      await fetchQuota()
     } catch (err: any) {
       // 404 is normal when not configured
       if (err?.response?.status !== 404) {
@@ -145,21 +147,30 @@ export default function EInvoiceConfig() {
     setSelectedProviderId(providerId)
     setSelectedTemplateCode('')
     setSelectedSymbol('')
-    setTemplates([])
 
-    if (!providerId) return
+    if (!providerId) {
+      setTemplates([])
+      return
+    }
 
     try {
       setLoadingTemplates(true)
-      const res = await getTemplates({
-        baseUrl: getBaseUrl(isSandbox),
-        clientId: clientId.trim(),
-        clientSecret: clientSecret.trim(),
-        providerAccountId: providerId
-      })
-
-      if (res.success && res.data) {
-        setTemplates(res.data)
+      // If user typed a new secret, test with new secret. Otherwise fetch using backend saved credentials
+      if (clientSecret.trim()) {
+        const res = await getTemplates({
+          baseUrl: getBaseUrl(isSandbox),
+          clientId: clientId.trim(),
+          clientSecret: clientSecret.trim(),
+          providerAccountId: providerId
+        })
+        if (res.success && res.data) {
+          setTemplates(res.data)
+        }
+      } else if (businessId) {
+        const savedRes = await getSavedProvidersAndTemplates(businessId)
+        if (savedRes.success && savedRes.data) {
+          setTemplates(savedRes.data.templates || [])
+        }
       }
     } catch (err: any) {
       console.error(err)
@@ -174,10 +185,6 @@ export default function EInvoiceConfig() {
     e.preventDefault()
     if (!businessId) return
 
-    if (!isConnected) {
-      toast.error('Vui lòng kiểm tra kết nối thành công trước khi lưu.')
-      return
-    }
     if (!selectedProviderId) {
       toast.error('Vui lòng chọn tài khoản nhà cung cấp.')
       return
@@ -349,7 +356,7 @@ export default function EInvoiceConfig() {
                         <option value=''>-- Chọn tài khoản --</option>
                         {providers.map(p => (
                           <option key={p.id} value={p.id}>
-                            {p.provider} ({p.tax_authority_approved_date ? `Approved: ${new Date(p.tax_authority_approved_date).toLocaleDateString('vi-VN')}` : 'No date'})
+                            {p.provider} {p.tax_authority_approved_date ? `(Đã duyệt: ${new Date(p.tax_authority_approved_date).toLocaleDateString('vi-VN')})` : ''}
                           </option>
                         ))}
                       </select>
@@ -361,45 +368,31 @@ export default function EInvoiceConfig() {
                         <span className='text-xs text-gray-500 font-semibold ml-2'>Đang tải mẫu hóa đơn...</span>
                       </div>
                     ) : selectedProviderId && templates.length > 0 ? (
-                      <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                        <div className='flex flex-col gap-1.5'>
-                          <label className='text-[13px] font-bold text-gray-600'>
-                            Mẫu hóa đơn (Template) <span className='text-red-500'>*</span>
-                          </label>
-                          <select
-                            value={selectedTemplateCode}
-                            onChange={(e) => setSelectedTemplateCode(e.target.value)}
-                            className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-[#D32F2F] bg-white transition-all font-medium text-gray-800 cursor-pointer'
-                          >
-                            <option value=''>-- Chọn mẫu hóa đơn --</option>
-                            {templates.map(t => (
-                              <option key={t.template_code} value={t.template_code}>
-                                {t.template_code} - {t.invoice_label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className='flex flex-col gap-1.5'>
-                          <label className='text-[13px] font-bold text-gray-600'>
-                            Ký hiệu (Symbol) <span className='text-red-500'>*</span>
-                          </label>
-                          <select
-                            value={selectedSymbol}
-                            onChange={(e) => setSelectedSymbol(e.target.value)}
-                            className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-[#D32F2F] bg-white transition-all font-medium text-gray-800 cursor-pointer'
-                          >
-                            <option value=''>-- Chọn ký hiệu --</option>
-                            {/* Unique list of symbols of selected template */}
-                            {templates
-                              .filter(x => !selectedTemplateCode || x.template_code === selectedTemplateCode)
-                              .map(t => (
-                                <option key={t.invoice_series} value={t.invoice_series}>
-                                  {t.invoice_series}
-                                </option>
-                              ))}
-                          </select>
-                        </div>
+                      <div className='flex flex-col gap-1.5'>
+                        <label className='text-[13px] font-bold text-gray-600'>
+                          Mẫu hóa đơn & Ký hiệu <span className='text-red-500'>*</span>
+                        </label>
+                        <select
+                          value={selectedTemplateCode}
+                          onChange={(e) => {
+                            const code = e.target.value
+                            setSelectedTemplateCode(code)
+                            const matchedTemplate = templates.find(t => t.template_code === code)
+                            if (matchedTemplate) {
+                              setSelectedSymbol(matchedTemplate.invoice_series)
+                            } else {
+                              setSelectedSymbol('')
+                            }
+                          }}
+                          className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-[#D32F2F] bg-white transition-all font-medium text-gray-800 cursor-pointer'
+                        >
+                          <option value=''>-- Chọn mẫu hóa đơn --</option>
+                          {templates.map(t => (
+                            <option key={t.template_code} value={t.template_code}>
+                              {t.template_code} ({t.invoice_series}) - {t.invoice_label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     ) : (
                       selectedProviderId && (
@@ -443,8 +436,13 @@ export default function EInvoiceConfig() {
                     <button
                       type='button'
                       onClick={fetchQuota}
-                      className='p-1 hover:bg-red-100/50 rounded-md transition-colors text-[#D32F2F]'
-                      title='Tải lại hạn ngạch'
+                      disabled={!hasSavedConfig}
+                      className={`p-1 rounded-md transition-colors ${
+                        hasSavedConfig
+                          ? 'hover:bg-red-100/50 text-[#D32F2F] cursor-pointer'
+                          : 'opacity-30 text-gray-400 cursor-not-allowed'
+                      }`}
+                      title={hasSavedConfig ? 'Tải lại hạn ngạch' : 'Vui lòng bấm "Lưu cấu hình" để tải hạn ngạch'}
                     >
                       <RefreshCw size={14} />
                     </button>
@@ -455,6 +453,13 @@ export default function EInvoiceConfig() {
                     </span>
                     <span className='text-xs font-bold text-gray-400'>số hóa đơn</span>
                   </div>
+
+                  {!hasSavedConfig && (
+                    <div className='mt-2 pt-2 border-t border-red-100/60 text-[11px] font-medium text-gray-500 flex items-start gap-1.5 leading-tight'>
+                      <Info size={13} className='text-red-400 shrink-0 mt-0.5' />
+                      <span>💡 Hoàn tất chọn mẫu và bấm <b>"Lưu cấu hình"</b> bên dưới để kiểm tra hạn ngạch.</span>
+                    </div>
+                  )}
 
                   {isLowQuota && quotaRemaining !== null && (
                     <div className='flex items-start gap-1.5 mt-3 text-amber-700 bg-amber-50 rounded-lg p-2.5 border border-amber-100 text-[11px] leading-normal'>

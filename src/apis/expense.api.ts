@@ -10,7 +10,7 @@ export const getExpenseCategories = async (businessId: string) => {
 
 export const createExpenseCategory = async (
   businessId: string,
-  body: { name: string; description?: string }
+  body: { categoryName: string; description?: string }
 ) => {
   const response = await http.post<ApiResponse<ExpenseCategoryDTO>>(`/ExpenseCategory/business/${businessId}`, body)
   return response.data

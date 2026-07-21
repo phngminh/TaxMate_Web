@@ -76,6 +76,8 @@ export interface SubscribeRequest {
   subscriptionPlanId: string
   billingCycle: 'Monthly' | 'Annual'
   autoRenew: boolean
+  returnUrl?: string
+  cancelUrl?: string
 }
 
 export interface SubscribeResponse {

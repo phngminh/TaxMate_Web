@@ -8,10 +8,26 @@ import {
   Users,
   CalendarDays
 } from 'lucide-react'
-import type { Plan } from '../../../types/subscription.type'
 import { Button } from '../../../components/ui/button'
 
-const initialPlans: Plan[] = [
+export interface PlanFeatureItem {
+  id: string
+  name: string
+  included: boolean
+}
+
+export interface AdminPlan {
+  id: string
+  name: string
+  price: number
+  period: string
+  description: string
+  activeUsers: number
+  isActive: boolean
+  features: PlanFeatureItem[]
+}
+
+const initialPlans: AdminPlan[] = [
   {
     id: 'plan-1',
     name: 'Gói Dùng thử',
@@ -225,7 +241,7 @@ function TimeFilter({
 }
 
 export default function SubscriptionManagement() {
-  const [plans] = useState<Plan[]>(initialPlans)
+  const [plans] = useState<AdminPlan[]>(initialPlans)
   const now = new Date()
   const [tableMonth, setTableMonth] = useState(now.getMonth() + 1)
   const [tableYear, setTableYear] = useState(now.getFullYear())
@@ -296,7 +312,7 @@ export default function SubscriptionManagement() {
                   <p className='text-xs font-semibold text-[#9ca3af] uppercase tracking-wide'>
                     Tính năng:
                   </p>
-                  {plan.features.slice(0, 6).map((feature) => (
+                  {plan.features.slice(0, 6).map((feature: PlanFeatureItem) => (
                     <div
                       key={feature.id}
                       className='flex items-start gap-2'

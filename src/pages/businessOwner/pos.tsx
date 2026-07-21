@@ -1,9 +1,11 @@
-import { useState, useMemo, useEffect } from 'react'
-import { Search, Plus, X, Check, Utensils, Printer, Loader2, PlayCircle, RefreshCw } from 'lucide-react'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import * as signalR from '@microsoft/signalr'
+import { Search, Plus, X, Check, Utensils, Printer, Loader2, PlayCircle, RefreshCw, FileText, Sparkles, Building, Mail, MapPin, Hash } from 'lucide-react'
 import { toast } from 'react-toastify'
+import http from '../../utils/http'
 import { useBusiness } from '../../contexts/BusinessContext'
 import { useAuth } from '../../contexts/AuthContext'
-import { getAllProducts } from '../../apis/product.api'
+import { getAllProducts, createProduct } from '../../apis/product.api'
 import { getProductCategories } from '../../apis/productCategory.api'
 import {
   createOrder,
@@ -15,11 +17,25 @@ import {
   checkoutOrder,
   confirmPayment
 } from '../../apis/order.api'
-import { getPaymentAccounts, createSePayMockPayment } from '../../apis/paymentAccount.api'
+import { getPaymentAccounts, createPaymentAccount, createSePayMockPayment } from '../../apis/paymentAccount.api'
+import { getEInvoiceConfig } from '../../apis/einvoice.api'
 import type { Product } from '../../types/product.type'
 import type { ProductCategory } from '../../types/productCategory.type'
 import type { OrderDetail } from '../../types/order.type'
 import type { PaymentAccount } from '../../types/paymentAccount.type'
+
+const BANK_OPTIONS = [
+  { shortName: 'VCB', fullName: 'Vietcombank' },
+  { shortName: 'TCB', fullName: 'Techcombank' },
+  { shortName: 'MB', fullName: 'MBBank' },
+  { shortName: 'ACB', fullName: 'ACB' },
+  { shortName: 'VPB', fullName: 'VPBank' },
+  { shortName: 'BIDV', fullName: 'BIDV' },
+  { shortName: 'VTB', fullName: 'VietinBank' },
+  { shortName: 'STB', fullName: 'Sacombank' },
+  { shortName: 'TPB', fullName: 'TPBank' },
+  { shortName: 'CAKE', fullName: 'CAKE' }
+]
 
 interface POSTab {
   tabId: string // e.g. "T-1", "T-2"
@@ -55,6 +71,27 @@ export default function POS() {
   const [checkingOut, setCheckingOut] = useState(false)
   const [showAccountModal, setShowAccountModal] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<PaymentAccount | null>(null)
+
+  // E-Invoice VAT State
+  const [requireEInvoice, setRequireEInvoice] = useState(false)
+  const [buyerTaxCode, setBuyerTaxCode] = useState('')
+  const [buyerCompanyName, setBuyerCompanyName] = useState('')
+  const [buyerAddress, setBuyerAddress] = useState('')
+  const [buyerEmail, setBuyerEmail] = useState('')
+
+  // Quick Add Product state
+  const [showQuickAddModal, setShowQuickAddModal] = useState(false)
+  const [quickName, setQuickName] = useState('')
+  const [quickPrice, setQuickPrice] = useState('')
+  const [quickSubmitting, setQuickSubmitting] = useState(false)
+
+  // Inline Add Bank Account state
+  const [showInlineAddBank, setShowInlineAddBank] = useState(false)
+  const [inlineBankShortName, setInlineBankShortName] = useState('VCB')
+  const [inlineBankFullName, setInlineBankFullName] = useState('Vietcombank')
+  const [inlineAccountNumber, setInlineAccountNumber] = useState('')
+  const [inlineAccountName, setInlineAccountName] = useState('')
+  const [submittingInlineBank, setSubmittingInlineBank] = useState(false)
   
   // Awaiting payment overlay state
   const [showAwaitingOverlay, setShowAwaitingOverlay] = useState(false)
@@ -63,21 +100,29 @@ export default function POS() {
   const [awaitingAmount, setAwaitingAmount] = useState<number>(0)
   const [simulatingSePay, setSimulatingSePay] = useState(false)
 
-  // Success overlay state
+  // success overlay state
   const [showSuccessOverlay, setShowSuccessOverlay] = useState(false)
   const [successOrderCode, setSuccessOrderCode] = useState('')
   const [successAmount, setSuccessAmount] = useState(0)
   const [successInvoiceNumber, setSuccessInvoiceNumber] = useState<string | null>(null)
+  const [successOfficialPdfUrl, setSuccessOfficialPdfUrl] = useState<string | null>(null)
+  const [successOfficialXmlUrl, setSuccessOfficialXmlUrl] = useState<string | null>(null)
+  const [successInvoiceStatus, setSuccessInvoiceStatus] = useState<string | null>(null)
+  const [successTaxAuthorityCode, setSuccessTaxAuthorityCode] = useState<string | null>(null)
 
-  // 1. Fetch initial products, categories and bank accounts
+  // Flag to prevent concurrent initialization in StrictMode
+  const isInitializingRef = useRef(false)
+
+  // 1. Fetch initial products, categories, bank accounts and e-invoice preference
   const loadInitialData = async () => {
     if (!businessId) return
     try {
       setLoadingPOS(true)
-      const [prodRes, catRes, accRes] = await Promise.all([
+      const [prodRes, catRes, accRes, configRes] = await Promise.all([
         getAllProducts(businessId, 1, 100),
         getProductCategories(businessId),
-        getPaymentAccounts(businessId)
+        getPaymentAccounts(businessId),
+        getEInvoiceConfig(businessId).catch(() => null)
       ])
 
       if (prodRes.success) setProducts(prodRes.data.items || [])
@@ -88,9 +133,13 @@ export default function POS() {
         const defaultAcc = accs.find(x => x.isDefault) || accs[0] || null
         setSelectedAccount(defaultAcc)
       }
+      if (configRes && configRes.success && configRes.data) {
+        setRequireEInvoice(configRes.data.isEnabled || false)
+      }
 
-      // If no tab exists, initialize the first tab
-      if (tabs.length === 0) {
+      // If no tab exists, initialize the first tab with concurrency protection
+      if (tabs.length === 0 && !isInitializingRef.current) {
+        isInitializingRef.current = true
         await initFirstTab(businessId)
       }
     } catch (err) {
@@ -103,7 +152,8 @@ export default function POS() {
 
   const initFirstTab = async (bId: string) => {
     try {
-      const orderId = await createOrder(bId, { note: '' })
+      const orderRes = await createOrder(bId, { note: '' })
+      const orderId = orderRes.data
       const detail = await getOrderById(orderId)
       
       const newTab: POSTab = {
@@ -120,12 +170,73 @@ export default function POS() {
     } catch (err) {
       console.error('Init first tab failed:', err)
       toast.error('Không thể khởi tạo đơn hàng nháp.')
+    } finally {
+      isInitializingRef.current = false
     }
   }
 
   useEffect(() => {
     loadInitialData()
   }, [businessId])
+
+  // SignalR connection reference for payment monitoring
+  const hubConnectionRef = useRef<signalR.HubConnection | null>(null)
+
+  useEffect(() => {
+    if (!showAwaitingOverlay || !awaitingOrderId) return
+
+    const apiBaseUrl = (http.defaults.baseURL || '').replace(/\/api$/, '')
+    const connection = new signalR.HubConnectionBuilder()
+      .withUrl(`${apiBaseUrl}/paymentHub`)
+      .withAutomaticReconnect()
+      .build()
+
+    hubConnectionRef.current = connection
+
+    connection
+      .start()
+      .then(() => {
+        console.log('[SignalR Web] Connected, joining order group:', awaitingOrderId)
+        connection.invoke('JoinOrderGroup', awaitingOrderId)
+      })
+      .catch((err) => console.warn('[SignalR Web] Connection failed:', err))
+
+    connection.on('PaymentConfirmed', async (transactionId: string) => {
+      if (transactionId === awaitingOrderId) {
+        console.log('[SignalR Web] Payment confirmed event received for:', transactionId)
+        connection.stop()
+        setShowAwaitingOverlay(false)
+        toast.success('Hệ thống đã tự động ghi nhận thanh toán!')
+
+        // Đợi 500ms để backend tạo hóa đơn điện tử xong
+        await delay(600)
+
+        // Gọi API lấy dữ liệu mới nhất
+        try {
+          const detail = await getOrderById(awaitingOrderId)
+          setSuccessOrderCode(awaitingOrderCode)
+          setSuccessAmount(awaitingAmount)
+          setSuccessInvoiceNumber(detail.data?.invoiceNumber || null)
+          setSuccessOfficialPdfUrl(detail.data?.officialPdfUrl || null)
+          setSuccessOfficialXmlUrl(detail.data?.officialXmlUrl || null)
+          setSuccessInvoiceStatus(detail.data?.invoiceStatus || null)
+          setSuccessTaxAuthorityCode(detail.data?.taxAuthorityCode || null)
+          setShowSuccessOverlay(true)
+
+          if (activeTab) {
+            await removeFinishedTab(activeTab.tabId)
+          }
+        } catch (err) {
+          console.error('[SignalR Web] Failed to fetch updated order:', err)
+        }
+      }
+    })
+
+    return () => {
+      console.log('[SignalR Web] Stopping connection for:', awaitingOrderId)
+      connection.stop()
+    }
+  }, [showAwaitingOverlay, awaitingOrderId])
 
   // Get active tab object
   const activeTab = useMemo(() => {
@@ -223,7 +334,8 @@ export default function POS() {
           : 1
 
       const newTabId = `T-${nextIndex}`
-      const orderId = await createOrder(businessId, { note: '' })
+      const orderRes = await createOrder(businessId, { note: '' })
+      const orderId = orderRes.data
       const detail = await getOrderById(orderId)
 
       const newTab: POSTab = {
@@ -273,16 +385,102 @@ export default function POS() {
     }
   }
 
-  // 6. Checkout Handlers
+  // 6. Quick Add Product Handler
+  const handleQuickAddProduct = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!businessId) return
+    if (!quickName.trim()) {
+      toast.error('Vui lòng nhập tên sản phẩm')
+      return
+    }
+    const priceNum = parseFloat(quickPrice.replace(/\D/g, ''))
+    if (isNaN(priceNum) || priceNum <= 0) {
+      toast.error('Vui lòng nhập giá bán hợp lệ')
+      return
+    }
+
+    try {
+      setQuickSubmitting(true)
+      const res = await createProduct(businessId, {
+        name: quickName.trim(),
+        currentPrice: priceNum,
+        unit: 'Món',
+        category: categories[0]?.name || 'Khác'
+      })
+
+      if (res.success && res.data) {
+        toast.success('Đã tạo sản phẩm thành công!')
+        const newProduct = res.data
+        setProducts(prev => [newProduct, ...prev])
+        setShowQuickAddModal(false)
+        setQuickName('')
+        setQuickPrice('')
+        
+        // Auto add to active cart
+        await handleAddProductToCart(newProduct)
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Tạo sản phẩm thất bại.')
+    } finally {
+      setQuickSubmitting(false)
+    }
+  }
+
+  // Inline Bank Add Handler
+  const handleAddInlineBank = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!businessId) return
+    if (!inlineAccountNumber.trim()) {
+      toast.error('Vui lòng nhập số tài khoản')
+      return
+    }
+    if (!inlineAccountName.trim()) {
+      toast.error('Vui lòng nhập tên chủ tài khoản')
+      return
+    }
+
+    try {
+      setSubmittingInlineBank(true)
+      const res = await createPaymentAccount(businessId, {
+        bankShortName: inlineBankShortName,
+        bankName: inlineBankFullName,
+        accountNumber: inlineAccountNumber.trim(),
+        accountName: inlineAccountName.trim().toUpperCase(),
+        isDefault: false,
+        description: 'Thêm nhanh tại POS'
+      })
+
+      if (res.success) {
+        toast.success('Đã thêm tài khoản ngân hàng thành công!')
+        const updatedAccs = await getPaymentAccounts(businessId)
+        if (updatedAccs.success) {
+          const accs = updatedAccs.data || []
+          setPaymentAccounts(accs)
+          const newAcc = accs.find(x => x.accountNumber === inlineAccountNumber.trim()) || accs[0]
+          if (newAcc) setSelectedAccount(newAcc)
+        }
+        setShowInlineAddBank(false)
+        setInlineAccountNumber('')
+        setInlineAccountName('')
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Không thể thêm tài khoản ngân hàng.')
+    } finally {
+      setSubmittingInlineBank(false)
+    }
+  }
+
+  // 7. Checkout Handlers
   const handleCheckoutClick = async () => {
     if (!activeTab || activeTab.items.length === 0) {
-      toast.error('Giỏ hàng trống. Vui lòng thêm sản phẩm.')
+      toast.error('Giỏ hàng trống. V vui lòng thêm sản phẩm.')
       return
     }
 
     if (paymentMethod === 'Transfer') {
       if (paymentAccounts.length === 0) {
-        toast.error('Chưa cấu hình tài khoản nhận tiền. Vui lòng thiết lập trong Cấu hình Ngân hàng.')
+        setShowAccountModal(true)
+        setShowInlineAddBank(true)
         return
       }
       setShowAccountModal(true)
@@ -306,7 +504,11 @@ export default function POS() {
             amount: activeTab.totalAmount,
             paymentAccountId: bankAccountId
           }
-        ]
+        ],
+        buyerTaxCode: requireEInvoice && buyerTaxCode.trim() ? buyerTaxCode.trim() : null,
+        buyerCompanyName: requireEInvoice && buyerCompanyName.trim() ? buyerCompanyName.trim() : null,
+        buyerAddress: requireEInvoice && buyerAddress.trim() ? buyerAddress.trim() : null,
+        buyerEmail: requireEInvoice && buyerEmail.trim() ? buyerEmail.trim() : null
       })
 
       if (res.success) {
@@ -318,14 +520,16 @@ export default function POS() {
           setShowAwaitingOverlay(true)
           setShowAccountModal(false)
         } else {
-          // Cash/Card completed immediately
-          toast.success('Thanh toán đơn hàng thành công!')
+          // Cash/Card completed immediately. Fetch fresh order details to get e-invoice fields if any
+          const detail = await getOrderById(orderId)
           setSuccessOrderCode(activeTab.code)
           setSuccessAmount(activeTab.totalAmount)
-          setSuccessInvoiceNumber(res.data?.invoiceNumber || null)
+          setSuccessInvoiceNumber(detail.data?.invoiceNumber || null)
+          setSuccessOfficialPdfUrl(detail.data?.officialPdfUrl || null)
+          setSuccessOfficialXmlUrl(detail.data?.officialXmlUrl || null)
+          setSuccessInvoiceStatus(detail.data?.invoiceStatus || null)
+          setSuccessTaxAuthorityCode(detail.data?.taxAuthorityCode || null)
           setShowSuccessOverlay(true)
-
-          // Remove completed tab and create new one
           await removeFinishedTab(tabId)
         }
       }
@@ -349,54 +553,47 @@ export default function POS() {
     }
   }
 
-  // 7. Polling for SePay payment webhook success while waiting
-  useEffect(() => {
-    if (!showAwaitingOverlay || !awaitingOrderId) return
+  // Helper delay function
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-    const interval = setInterval(async () => {
-      try {
-        const detail = await getOrderById(awaitingOrderId)
-        if (detail.success && detail.data.status === 'Completed') {
-          clearInterval(interval)
-          toast.success('Nhận được tiền thanh toán thành công!')
-          setShowAwaitingOverlay(false)
-
-          setSuccessOrderCode(awaitingOrderCode)
-          setSuccessAmount(awaitingAmount)
-          setSuccessInvoiceNumber(detail.data.invoiceNumber || null)
-          setShowSuccessOverlay(true)
-
-          if (activeTab) {
-            await removeFinishedTab(activeTab.tabId)
-          }
-        }
-      } catch (err) {
-        console.error('Polling status error:', err)
-      }
-    }, 3000)
-
-    return () => clearInterval(interval)
-  }, [showAwaitingOverlay, awaitingOrderId])
-
-  // 8. Sandbox Mock SePay Webhook Trigger
+  // 8. VietQR & Webhook Handlers
   const handleSimulatePayment = async () => {
-    if (!awaitingOrderId || !selectedAccount) return
+    if (!awaitingOrderId || !awaitingOrderCode || awaitingAmount <= 0) return
     try {
       setSimulatingSePay(true)
-      await createSePayMockPayment(awaitingOrderId, selectedAccount.paymentAccountId)
-      toast.info('Đã gửi giả lập webhook thành công. Đang chờ kết nối hoàn tất...')
+      const res = await createSePayMockPayment(awaitingOrderId, selectedAccount?.paymentAccountId || '')
+
+      if (res.success) {
+        toast.success('Đã gửi Webhook SePay thành công!')
+        setShowAwaitingOverlay(false)
+
+        // Đợi 500ms để backend xử lý webhook cập nhật trạng thái đơn hàng & hóa đơn đỏ
+        await delay(600)
+
+        // Gọi API lấy dữ liệu mới nhất
+        const detail = await getOrderById(awaitingOrderId)
+        setSuccessOrderCode(awaitingOrderCode)
+        setSuccessAmount(awaitingAmount)
+        setSuccessInvoiceNumber(detail.data?.invoiceNumber || null)
+        setSuccessOfficialPdfUrl(detail.data?.officialPdfUrl || null)
+        setSuccessOfficialXmlUrl(detail.data?.officialXmlUrl || null)
+        setSuccessInvoiceStatus(detail.data?.invoiceStatus || null)
+        setSuccessTaxAuthorityCode(detail.data?.taxAuthorityCode || null)
+        setShowSuccessOverlay(true)
+
+        if (activeTab) {
+          await removeFinishedTab(activeTab.tabId)
+        }
+      }
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Giả lập webhook thất bại.')
+      toast.error(err?.response?.data?.message || 'Giả lập SePay thất bại.')
     } finally {
       setSimulatingSePay(false)
     }
   }
 
-  // 9. Manual Confirm payment (fallback)
   const handleManualConfirm = async () => {
     if (!awaitingOrderId) return
-    if (!confirm('Bạn có chắc chắn muốn xác nhận đã nhận đủ tiền của đơn hàng này không?')) return
-
     try {
       setCheckingOut(true)
       const res = await confirmPayment(awaitingOrderId)
@@ -404,9 +601,17 @@ export default function POS() {
         toast.success('Xác nhận thanh toán thủ công thành công!')
         setShowAwaitingOverlay(false)
 
+        // Đợi 300ms để backend tạo hóa đơn điện tử
+        await delay(400)
+
+        const detail = await getOrderById(awaitingOrderId)
         setSuccessOrderCode(awaitingOrderCode)
         setSuccessAmount(awaitingAmount)
-        setSuccessInvoiceNumber(res.data?.invoiceNumber || null)
+        setSuccessInvoiceNumber(detail.data?.invoiceNumber || null)
+        setSuccessOfficialPdfUrl(detail.data?.officialPdfUrl || null)
+        setSuccessOfficialXmlUrl(detail.data?.officialXmlUrl || null)
+        setSuccessInvoiceStatus(detail.data?.invoiceStatus || null)
+        setSuccessTaxAuthorityCode(detail.data?.taxAuthorityCode || null)
         setShowSuccessOverlay(true)
 
         if (activeTab) {
@@ -425,7 +630,7 @@ export default function POS() {
     return products.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesCategory =
-        selectedCategoryId === 'all' || p.productCategory === selectedCategoryId
+        selectedCategoryId === 'all' || p.category === selectedCategoryId
       return matchesSearch && matchesCategory
     })
   }, [products, searchQuery, selectedCategoryId])
@@ -439,7 +644,8 @@ export default function POS() {
       toast.warn('Hóa đơn chưa được phát hành.')
       return
     }
-    const url = `http://localhost:5086/api/Invoice/${successInvoiceNumber}/pdf`
+    const apiBaseUrl = (http.defaults.baseURL || '').replace(/\/api$/, '')
+    const url = `${apiBaseUrl}/api/Invoice/${successInvoiceNumber}/pdf`
     window.open(url, '_blank')
   }
 
@@ -459,9 +665,17 @@ export default function POS() {
                 placeholder='Tìm sản phẩm...'
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className='bg-white border-0 text-slate-800 text-xs pl-9 pr-4 py-2 w-64 rounded-md shadow-inner outline-hidden focus:ring-1 focus:ring-[#004795]/20 font-medium'
+                className='bg-white border-0 text-slate-800 text-xs pl-9 pr-4 py-2 w-56 rounded-md shadow-inner outline-hidden focus:ring-1 focus:ring-[#004795]/20 font-medium'
               />
             </div>
+            <button
+              onClick={() => setShowQuickAddModal(true)}
+              className='bg-[#b90a0a] hover:bg-[#a00909] text-white px-3 py-2 rounded-md text-xs font-bold transition-colors flex items-center gap-1 shrink-0 shadow-xs cursor-pointer'
+              title='Tạo nhanh sản phẩm mới'
+            >
+              <Plus size={14} className='stroke-3' />
+              Tạo nhanh
+            </button>
           </div>
         </div>
 
@@ -682,6 +896,69 @@ export default function POS() {
               </div>
             </div>
 
+            {/* Công tắc Xuất Hóa đơn đỏ (VAT) */}
+            <div className='pt-2 border-t border-slate-100 flex flex-col gap-2'>
+              <div className='flex items-center justify-between text-xs select-none'>
+                <span className='text-slate-700 font-bold flex items-center gap-1.5'>
+                  <FileText className='text-[#b90a0a] size-4' />
+                  Xuất hóa đơn đỏ (VAT)
+                </span>
+                <input
+                  type='checkbox'
+                  checked={requireEInvoice}
+                  onChange={e => setRequireEInvoice(e.target.checked)}
+                  className='accent-[#b90a0a] size-4 rounded-xs cursor-pointer'
+                />
+              </div>
+
+              {requireEInvoice && (
+                <div className='bg-slate-100/70 p-3 rounded-md border border-slate-200/60 flex flex-col gap-2 text-xs animate-in fade-in duration-200'>
+                  <div className='grid grid-cols-2 gap-2'>
+                    <div>
+                      <label className='text-[10px] font-bold text-slate-500 block mb-0.5'>Mã số thuế</label>
+                      <input
+                        type='text'
+                        placeholder='MST (tùy chọn)...'
+                        value={buyerTaxCode}
+                        onChange={e => setBuyerTaxCode(e.target.value)}
+                        className='w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-mono font-medium outline-hidden focus:border-[#b90a0a]'
+                      />
+                    </div>
+                    <div>
+                      <label className='text-[10px] font-bold text-slate-500 block mb-0.5'>Email nhận HĐ</label>
+                      <input
+                        type='email'
+                        placeholder='Email...'
+                        value={buyerEmail}
+                        onChange={e => setBuyerEmail(e.target.value)}
+                        className='w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-medium outline-hidden focus:border-[#b90a0a]'
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className='text-[10px] font-bold text-slate-500 block mb-0.5'>Tên công ty / đơn vị</label>
+                    <input
+                      type='text'
+                      placeholder='Tên công ty / đơn vị mua hàng...'
+                      value={buyerCompanyName}
+                      onChange={e => setBuyerCompanyName(e.target.value)}
+                      className='w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-medium outline-hidden focus:border-[#b90a0a]'
+                    />
+                  </div>
+                  <div>
+                    <label className='text-[10px] font-bold text-slate-500 block mb-0.5'>Địa chỉ công ty</label>
+                    <input
+                      type='text'
+                      placeholder='Địa chỉ đăng ký thuế...'
+                      value={buyerAddress}
+                      onChange={e => setBuyerAddress(e.target.value)}
+                      className='w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-medium outline-hidden focus:border-[#b90a0a]'
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Nút checkout */}
             <div className='pt-1'>
               <button
@@ -718,42 +995,143 @@ export default function POS() {
               </button>
             </div>
 
-            <div className='p-6 flex flex-col gap-4 max-h-96 overflow-y-auto'>
-              <p className='text-xs text-gray-500 font-medium leading-relaxed'>
-                Chọn một trong các tài khoản ngân hàng dưới đây để sinh mã QR thanh toán động cho đơn hàng này.
-              </p>
-
-              {paymentAccounts.map(acc => (
-                <div
-                  key={acc.paymentAccountId}
-                  onClick={() => setSelectedAccount(acc)}
-                  className={`border rounded-[12px] p-4 cursor-pointer transition-all flex items-center justify-between ${
-                    selectedAccount?.paymentAccountId === acc.paymentAccountId
-                      ? 'border-[#b90a0a] bg-red-50/50 shadow-xs'
-                      : 'border-gray-200 hover:border-gray-300 bg-white'
-                  }`}
+            <div className='p-6 flex flex-col gap-4 max-h-[85vh] overflow-y-auto'>
+              <div className='flex items-center justify-between'>
+                <p className='text-xs text-gray-500 font-medium leading-relaxed'>
+                  Chọn một trong các tài khoản ngân hàng dưới đây để sinh mã QR thanh toán động.
+                </p>
+                <button
+                  type='button'
+                  onClick={() => setShowInlineAddBank(!showInlineAddBank)}
+                  className='text-xs text-[#b90a0a] font-bold hover:underline shrink-0 ml-2 cursor-pointer'
                 >
-                  <div className='flex items-center gap-3'>
-                    <div className='bg-[#ffd6d8] text-[#9b0000] size-9 rounded-[8px] flex items-center justify-center font-black text-xs'>
-                      {acc.bankShortName}
-                    </div>
-                    <div>
-                      <h4 className='font-bold text-slate-800 text-[13.5px]'>{acc.bankShortName}</h4>
-                      <p className='text-slate-500 text-[11px] font-medium mt-0.5'>{acc.accountNumber} - {acc.accountName}</p>
-                    </div>
+                  {showInlineAddBank ? '← Danh sách STK' : '+ Thêm STK mới'}
+                </button>
+              </div>
+
+              {showInlineAddBank ? (
+                <form onSubmit={handleAddInlineBank} className='bg-slate-50 p-4 rounded-[12px] border border-slate-200 flex flex-col gap-3 text-xs'>
+                  <h4 className='font-bold text-slate-800 text-[13px]'>Thêm tài khoản ngân hàng nhanh</h4>
+                  <div>
+                    <label className='font-bold text-slate-600 block mb-1'>Ngân hàng</label>
+                    <select
+                      value={inlineBankShortName}
+                      onChange={e => {
+                        const selected = BANK_OPTIONS.find(b => b.shortName === e.target.value)
+                        if (selected) {
+                          setInlineBankShortName(selected.shortName)
+                          setInlineBankFullName(selected.fullName)
+                        }
+                      }}
+                      className='w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-xs font-semibold outline-hidden focus:border-[#b90a0a]'
+                    >
+                      {BANK_OPTIONS.map(b => (
+                        <option key={b.shortName} value={b.shortName}>
+                          {b.shortName} - {b.fullName}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  {acc.isDefault && (
-                    <span className='bg-emerald-50 text-emerald-600 text-[9.5px] font-bold px-2 py-0.5 rounded-full border border-emerald-100'>
-                      Default
-                    </span>
+                  <div>
+                    <label className='font-bold text-slate-600 block mb-1'>Số tài khoản</label>
+                    <input
+                      type='text'
+                      required
+                      placeholder='Nhập số tài khoản...'
+                      value={inlineAccountNumber}
+                      onChange={e => setInlineAccountNumber(e.target.value.replace(/\s+/g, ''))}
+                      className='w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-xs font-mono font-bold outline-hidden focus:border-[#b90a0a]'
+                    />
+                  </div>
+                  <div>
+                    <label className='font-bold text-slate-600 block mb-1'>Tên chủ tài khoản</label>
+                    <input
+                      type='text'
+                      required
+                      placeholder='Ví dụ: NGUYEN VAN A...'
+                      value={inlineAccountName}
+                      onChange={e => setInlineAccountName(e.target.value)}
+                      className='w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-xs uppercase font-bold outline-hidden focus:border-[#b90a0a]'
+                    />
+                  </div>
+                  <div className='flex justify-end gap-2 pt-2'>
+                    <button
+                      type='button'
+                      onClick={() => setShowInlineAddBank(false)}
+                      className='px-4 py-1.5 border border-slate-300 text-slate-600 rounded-md font-bold hover:bg-slate-100'
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type='submit'
+                      disabled={submittingInlineBank}
+                      className='px-4 py-1.5 bg-[#b90a0a] hover:bg-[#a00909] text-white rounded-md font-bold flex items-center gap-1 shadow-xs'
+                    >
+                      {submittingInlineBank && <Loader2 size={12} className='animate-spin' />}
+                      Lưu tài khoản
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <>
+                  {paymentAccounts.map(acc => (
+                    <div
+                      key={acc.paymentAccountId}
+                      onClick={() => setSelectedAccount(acc)}
+                      className={`border rounded-[12px] p-4 cursor-pointer transition-all flex items-center justify-between ${
+                        selectedAccount?.paymentAccountId === acc.paymentAccountId
+                          ? 'border-[#b90a0a] bg-red-50/50 shadow-xs'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                    >
+                      <div className='flex items-center gap-3'>
+                        <div className='bg-[#ffd6d8] text-[#9b0000] size-9 rounded-[8px] flex items-center justify-center font-black text-xs'>
+                          {acc.bankShortName}
+                        </div>
+                        <div>
+                          <h4 className='font-bold text-slate-800 text-[13.5px]'>{acc.bankShortName}</h4>
+                          <p className='text-slate-500 text-[11px] font-medium mt-0.5'>{acc.accountNumber} - {acc.accountName}</p>
+                        </div>
+                      </div>
+                      <div className='flex items-center gap-2'>
+                        {acc.sePayBankAccountXid && (
+                          <span className='bg-blue-50 text-blue-600 text-[9.5px] font-bold px-2 py-0.5 rounded-full border border-blue-100 shadow-3xs'>
+                            SePay Hub
+                          </span>
+                        )}
+                        {acc.isDefault && (
+                          <span className='bg-emerald-50 text-emerald-600 text-[9.5px] font-bold px-2 py-0.5 rounded-full border border-emerald-100'>
+                            Default
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+
+                  {paymentAccounts.length === 0 && (
+                    <div className='py-8 text-center bg-slate-50 rounded-[12px] border border-dashed border-slate-200 text-slate-400 text-xs font-semibold'>
+                      Chưa có tài khoản ngân hàng nào. Bấm nút "+ Thêm STK mới" phía trên để tạo nhanh.
+                    </div>
                   )}
-                </div>
-              ))}
+
+                  {paymentAccounts.length > 0 && (
+                    <p className='text-[11px] text-gray-400 font-semibold mt-3 text-center'>
+                      Muốn tự động đối soát thanh toán? 
+                      <a href='/business/bank-config' className='text-[#b90a0a] hover:underline ml-1 font-bold'>
+                        Liên kết SePay Bank Hub
+                      </a>
+                    </p>
+                  )}
+                </>
+              )}
 
               <div className='flex items-center justify-end gap-3 mt-2 pt-4 border-t border-gray-100 select-none'>
                 <button
                   type='button'
-                  onClick={() => setShowAccountModal(false)}
+                  onClick={() => {
+                    setShowAccountModal(false)
+                    setShowInlineAddBank(false)
+                  }}
                   className='px-6 py-2 border border-gray-300 text-gray-600 text-[12px] font-bold rounded-[8px] hover:bg-gray-50 transition-colors'
                 >
                   Hủy
@@ -877,8 +1255,22 @@ export default function POS() {
               </div>
               {successInvoiceNumber && (
                 <div className='flex justify-between'>
-                  <span>Số hóa đơn điện tử:</span>
+                  <span>Số hóa đơn bán lẻ:</span>
                   <span className='font-bold text-slate-800 font-mono'>{successInvoiceNumber}</span>
+                </div>
+              )}
+              {successInvoiceStatus === 'Issued' && successTaxAuthorityCode && (
+                <div className='flex justify-between'>
+                  <span>Mã cơ quan thuế:</span>
+                  <span className='font-bold text-blue-600 font-mono'>{successTaxAuthorityCode}</span>
+                </div>
+              )}
+              {successInvoiceStatus && (
+                <div className='flex justify-between'>
+                  <span>Trạng thái HĐĐT:</span>
+                  <span className={`font-bold ${successInvoiceStatus === 'Issued' ? 'text-emerald-600' : 'text-slate-500'}`}>
+                    {successInvoiceStatus === 'Issued' ? 'Đã phát hành hóa đơn đỏ' : 'Chờ xử lý'}
+                  </span>
                 </div>
               )}
               <div className='flex justify-between'>
@@ -887,21 +1279,128 @@ export default function POS() {
               </div>
             </div>
 
-            <div className='w-full flex gap-3 select-none'>
+            {/* Hóa đơn actions */}
+            <div className='w-full flex flex-col gap-2.5 mb-6 select-none'>
+              <div className='flex gap-3'>
+                <button
+                  onClick={handlePrint}
+                  className='flex-1 border-2 border-slate-300 hover:border-slate-400 text-slate-700 hover:bg-slate-50 py-2 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs'
+                >
+                  <Printer size={15} />
+                  In hóa đơn bán lẻ
+                </button>
+                {successInvoiceStatus === 'Issued' && successOfficialPdfUrl && (
+                  <button
+                    onClick={() => {
+                      const pdfUrl = successOfficialPdfUrl.includes('mock.com.vn')
+                        ? `${(http.defaults.baseURL || '').replace(/\/api$/, '')}/api/Invoice/${successInvoiceNumber}/pdf`
+                        : successOfficialPdfUrl
+                      window.open(pdfUrl, '_blank')
+                    }}
+                    className='flex-1 border-2 border-[#b90a0a] text-[#b90a0a] hover:bg-[#ffebeb] py-2 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs'
+                  >
+                    <FileText size={15} />
+                    Xem HĐ đỏ (PDF)
+                  </button>
+                )}
+              </div>
+              {successInvoiceStatus === 'Issued' && successOfficialXmlUrl && (
+                <button
+                  onClick={() => window.open(successOfficialXmlUrl, '_blank')}
+                  className='w-full border-2 border-blue-200 hover:border-blue-300 text-blue-700 bg-blue-50/50 hover:bg-blue-50 py-2 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs'
+                >
+                  <Sparkles size={15} />
+                  Tải tệp XML gốc hóa đơn đỏ
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                setShowSuccessOverlay(false)
+                setSuccessOfficialPdfUrl(null)
+                setSuccessOfficialXmlUrl(null)
+                setSuccessInvoiceStatus(null)
+                setSuccessTaxAuthorityCode(null)
+              }}
+              className='w-full bg-[#b90a0a] hover:bg-[#a00909] text-white py-2.5 rounded-md text-xs font-bold transition-all cursor-pointer shadow-xs select-none'
+            >
+              Đơn hàng mới
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* OVERLAY 4 - MODAL TẠO SẢN PHẨM NHANH */}
+      {showQuickAddModal && (
+        <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
+          <div className='bg-white rounded-[16px] shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200'>
+            <div className='flex items-center justify-between px-6 py-4 bg-[#fef2f2] border-b border-red-100'>
+              <h3 className='text-[15px] font-bold text-gray-900 flex items-center gap-2'>
+                <Utensils className='text-[#b90a0a] size-5' />
+                Tạo nhanh sản phẩm mới
+              </h3>
               <button
-                onClick={handlePrint}
-                className='flex-1 border-2 border-[#b90a0a] text-[#b90a0a] hover:bg-[#ffebeb] py-2.5 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs'
+                type='button'
+                onClick={() => setShowQuickAddModal(false)}
+                className='p-1 text-gray-400 hover:text-gray-700 transition-colors cursor-pointer'
               >
-                <Printer size={16} />
-                In HĐ đỏ (PDF)
-              </button>
-              <button
-                onClick={() => setShowSuccessOverlay(false)}
-                className='flex-1 bg-[#b90a0a] hover:bg-[#a00909] text-white py-2.5 rounded-md text-xs font-bold transition-all cursor-pointer shadow-xs'
-              >
-                Đơn hàng mới
+                <X size={18} />
               </button>
             </div>
+
+            <form onSubmit={handleQuickAddProduct} className='p-6 flex flex-col gap-4 text-xs'>
+              <p className='text-gray-500 font-medium leading-relaxed'>
+                Tạo nhanh sản phẩm mới vào danh mục và tự động thêm vào đơn hàng hiện tại.
+              </p>
+
+              <div>
+                <label className='font-bold text-gray-700 block mb-1'>
+                  Tên sản phẩm <span className='text-red-500'>*</span>
+                </label>
+                <input
+                  type='text'
+                  required
+                  placeholder='Ví dụ: Oishi Snack cay, Nước ngọt...'
+                  value={quickName}
+                  onChange={e => setQuickName(e.target.value)}
+                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-[#b90a0a] font-semibold text-gray-800'
+                />
+              </div>
+
+              <div>
+                <label className='font-bold text-gray-700 block mb-1'>
+                  Giá bán (VND) <span className='text-red-500'>*</span>
+                </label>
+                <input
+                  type='text'
+                  required
+                  placeholder='0'
+                  value={quickPrice}
+                  onChange={e => setQuickPrice(e.target.value)}
+                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-[#b90a0a] font-mono font-bold text-gray-800'
+                />
+              </div>
+
+              <div className='flex items-center justify-end gap-3 mt-3 pt-4 border-t border-gray-100 select-none'>
+                <button
+                  type='button'
+                  onClick={() => setShowQuickAddModal(false)}
+                  className='px-6 py-2 border border-gray-300 text-gray-600 text-[13px] font-bold rounded-[8px] hover:bg-gray-50 transition-colors cursor-pointer'
+                  disabled={quickSubmitting}
+                >
+                  Hủy
+                </button>
+                <button
+                  type='submit'
+                  disabled={quickSubmitting}
+                  className='px-6 py-2 bg-[#b90a0a] hover:bg-[#a00909] text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs flex items-center gap-1.5 cursor-pointer'
+                >
+                  {quickSubmitting && <Loader2 size={14} className='animate-spin' />}
+                  Tạo & Thêm vào đơn
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

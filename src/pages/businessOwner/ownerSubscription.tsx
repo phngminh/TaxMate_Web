@@ -54,7 +54,9 @@ export default function OwnerSubscription() {
       const res = await subscribe(userId, {
         subscriptionPlanId: planId,
         billingCycle: isAnnual ? 'Annual' : 'Monthly',
-        autoRenew: true
+        autoRenew: true,
+        returnUrl: window.location.origin + '/business-owner/subscription',
+        cancelUrl: window.location.origin + '/business-owner/subscription'
       })
 
       if (res.success && res.data.checkoutUrl) {
@@ -217,7 +219,7 @@ export default function OwnerSubscription() {
             <div className='grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch'>
               {plans.map((plan) => {
                 const isCurrentPlan = currentSub?.status === 'Active' && currentSub.subscriptionPlanId === plan.id
-                const price = isAnnual ? plan.AnnualPrice : plan.MonthlyPrice
+                const price = isAnnual ? plan.annualPrice : plan.monthlyPrice
                 const priceFormatted = price === 0 ? 'Miễn phí' : `${formatPrice(price)} đ`
                 const cycleText = price === 0 ? '' : (isAnnual ? '/năm' : '/tháng')
 

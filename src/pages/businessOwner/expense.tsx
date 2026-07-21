@@ -38,39 +38,6 @@ import type { IngredientPurchaseResponse } from '../../types/ingredientPurchase.
 
 interface PurchaseLineItem {
   itemId: string // Product or Ingredient ID
-  'Thuê nhà, mặt bằng',
-  'Điện, nước, Internet',
-  'Thiết bị, dụng cụ',
-  'Chi phí nhập hàng',
-  'Chi phí bán hàng',
-  'Lương nhân viên',
-  'Chưa phân loại',
-]
-
-const TIME_OPTIONS = ['Hôm nay', '7 ngày qua', 'Tháng này', 'Năm nay', 'Tùy chọn']
-
-function CategoryBadge({ label, color }: { label: string; color: string }) {
-  const styles =
-    color === 'orange'
-      ? 'bg-orange-50 text-orange-500 border border-orange-200'
-      : 'bg-emerald-50 text-emerald-600 border border-emerald-200'
-  return (
-    <span className={`inline-block text-[11.5px] font-bold px-2.5 py-0.5 rounded-full ${styles}`}>
-      {label}
-    </span>
-  )
-}
-
-function FilterGroup({
-  title,
-  options,
-  name,
-  value,
-  onChange,
-}: {
-  title: string
-  options: { val: string; label: string }[]
->>>>>>> origin/main
   name: string
   quantity: number
   costPrice: number
@@ -553,109 +520,98 @@ export default function ExpensePage() {
   }, [materialPurchases, expenses])
 
   return (
-    <div className='bg-[#f8f9fa] pt-6 pb-12 min-h-[calc(100vh-51px)] px-6 overflow-hidden flex flex-col'>
-      <div className='max-w-6xl mx-auto w-full grow flex flex-col gap-6'>
-        {/* HEADER */}
-        <div className='flex items-center justify-between select-none shrink-0'>
-          <div>
-            <h1 className='text-[22px] font-black text-gray-900 flex items-center gap-2'>
-              <Coins className='text-[#D32F2F] size-6' />
-              Quản lý Chi phí & Nhập kho
-            </h1>
-            <p className='text-gray-500 text-xs mt-1 font-medium'>
-              Quản lý dòng tiền chi tiêu vận hành và nhập nguyên vật liệu đầu vào của cửa hàng
-            </p>
-          </div>
+    <div className='flex flex-col bg-[#f8f9fa] min-h-[calc(100vh-51px)] w-full'>
+      <div className='flex items-center justify-between px-8 py-4 gap-4 bg-white border-b border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.02)]'>
+        <div className='ml-72 flex-1'>
+          <h1 className='text-[20px] font-black text-gray-900 flex items-center gap-2'>
+            <Coins className='text-[#D32F2F] size-5' />
+            Quản lý Chi phí & Nhập kho
+          </h1>
+          <p className='text-gray-400 text-xs mt-0.5 font-medium'>
+            Quản lý dòng tiền chi tiêu vận hành và nhập nguyên vật liệu đầu vào của cửa hàng
+          </p>
+        </div>
 
-          {/* Action buttons depending on tab */}
-          <div className='flex gap-3'>
-            {activeTab === 'ledger' && (
+        {/* Action buttons depending on tab */}
+        <div className='flex gap-3'>
+          {activeTab === 'ledger' && (
+            <div className='flex items-center bg-[#D32F2F] text-white rounded-[10px] overflow-hidden shadow-[0px_4px_10px_rgba(211,47,47,0.2)] hover:shadow-[0px_6px_14px_rgba(211,47,47,0.3)] transition-all'>
               <button
                 onClick={() => {
                   setLedgerCategoryId(categories[0]?.expenseCategoryId || '')
                   setShowAddLedgerModal(true)
                 }}
-                className='flex items-center gap-2 bg-[#D32F2F] hover:bg-[#B71C1C] text-white px-5 py-2.5 rounded-[8px] text-[13px] font-bold transition-colors shadow-xs cursor-pointer'
+                className='px-5 py-2.5 text-[14px] font-bold hover:bg-[#B71C1C] active:bg-[#991B1B] transition-colors flex items-center gap-2'
               >
-                <Plus size={16} className='stroke-3' />
-                Thêm khoản chi
+                <Plus size={16} strokeWidth={2.5} /> Thêm khoản chi
               </button>
-            )}
-            {activeTab === 'purchases' && (
+            </div>
+          )}
+          {activeTab === 'purchases' && (
+            <div className='flex items-center bg-[#D32F2F] text-white rounded-[10px] overflow-hidden shadow-[0px_4px_10px_rgba(211,47,47,0.2)] hover:shadow-[0px_6px_14px_rgba(211,47,47,0.3)] transition-all'>
               <button
                 onClick={() => {
                   resetPurchaseForm()
                   setShowAddPurchaseModal(true)
                 }}
-                className='flex items-center gap-2 bg-[#D32F2F] hover:bg-[#B71C1C] text-white px-5 py-2.5 rounded-[8px] text-[13px] font-bold transition-colors shadow-xs cursor-pointer'
+                className='px-5 py-2.5 text-[14px] font-bold hover:bg-[#B71C1C] active:bg-[#991B1B] transition-colors flex items-center gap-2'
               >
-                <Plus size={16} className='stroke-3' />
-                Nhập kho mới
+                <Plus size={16} strokeWidth={2.5} /> Nhập kho mới
               </button>
-            )}
-            {activeTab === 'suppliers' && (
+            </div>
+          )}
+          {activeTab === 'suppliers' && (
+            <div className='flex items-center bg-[#D32F2F] text-white rounded-[10px] overflow-hidden shadow-[0px_4px_10px_rgba(211,47,47,0.2)] hover:shadow-[0px_6px_14px_rgba(211,47,47,0.3)] transition-all'>
               <button
                 onClick={() => {
                   resetSupplierForm()
                   setShowSupplierModal(true)
                 }}
-                className='flex items-center gap-2 bg-[#D32F2F] hover:bg-[#B71C1C] text-white px-5 py-2.5 rounded-[8px] text-[13px] font-bold transition-colors shadow-xs cursor-pointer'
+                className='px-5 py-2.5 text-[14px] font-bold hover:bg-[#B71C1C] active:bg-[#991B1B] transition-colors flex items-center gap-2'
               >
-                <UserPlus size={16} className='stroke-3' />
-                Thêm nhà cung cấp
+                <UserPlus size={16} strokeWidth={2.5} /> Thêm nhà cung cấp
               </button>
-            )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* MAIN BODY */}
+      <div className='flex grow w-full'>
+        {/* SIDEBAR */}
+        <div className='w-72 bg-white border-r border-[#ffe5e5] p-6 flex flex-col gap-4 shrink-0'>
+          <span className='text-[13px] font-bold text-gray-500 uppercase tracking-wide'>Danh mục</span>
+          <div className='flex flex-col gap-1'>
+            {[
+              { val: 'ledger', label: 'Sổ quỹ thu chi', icon: Coins },
+              { val: 'purchases', label: 'Hóa đơn Nhập kho', icon: Package },
+              { val: 'suppliers', label: 'Đối tác Nhà cung cấp', icon: Building2 }
+            ].map(t => {
+              const Icon = t.icon
+              const isActive = activeTab === t.val
+              return (
+                <button
+                  key={t.val}
+                  onClick={() => setActiveTab(t.val as any)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-[10px] text-[13.5px] font-semibold transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-[#eef2ff] text-[#4c51bf]'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                >
+                  <Icon size={17} className={isActive ? 'text-[#4c51bf]' : 'text-gray-400'} />
+                  {t.label}
+                </button>
+              )
+            })}
           </div>
         </div>
 
-        {/* TABS SELECTOR */}
-        <div className='flex border-b border-gray-200 select-none shrink-0 gap-1'>
-          {[
-            { val: 'ledger', label: 'Sổ quỹ thu chi' },
-            { val: 'purchases', label: 'Hóa đơn Nhập kho' },
-            { val: 'suppliers', label: 'Đối tác Nhà cung cấp' }
-          ].map(t => (
-            <button
-              key={t.val}
-              onClick={() => setActiveTab(t.val as any)}
-              className={`px-6 py-3 text-xs font-extrabold transition-all border-b-2 cursor-pointer ${
-                activeTab === t.val
-                  ? 'border-[#D32F2F] text-[#D32F2F]'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
         {/* TAB CONTENTS */}
-        <div className='grow overflow-y-auto min-h-0 bg-white rounded-[16px] border border-gray-200 shadow-xs p-6'>
+        <div className='grow p-8 overflow-x-auto'>
           {loading ? (
             <div className='flex justify-center items-center py-20'>
               <Loader2 className='animate-spin text-[#D32F2F] size-10' />
-=======
-        <div className='grow p-6 overflow-y-auto flex flex-col gap-5'>
-          <div className='grid grid-cols-2 gap-5'>
-            <div className='bg-white rounded-[14px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.03)] px-7 py-5'>
-              <div className='flex items-start justify-between'>
-                <div>
-                  <div className='flex items-center gap-2 mb-1'>
-                    <ArrowUpCircle size={20} className='text-orange-500' strokeWidth={2.2} />
-                    <span className='text-[13px] font-semibold text-gray-500'>Tổng Chi</span>
-                  </div>
-                  <p className='text-[28px] font-extrabold text-orange-500 tracking-tight leading-none mt-2'>
-                    {fmt(totalExpense)}
-                  </p>
-                  <p className='text-[12.5px] text-gray-400 mt-2 flex items-center gap-1.5'>
-                    <TrendingUp size={13} className='text-orange-400' />
-                    So với tháng trước{' '}
-                    <span className='text-orange-500 font-bold'>↑ 8.5%</span>{' '}
-                    <span className='text-gray-400'>(922.000)</span>
-                  </p>
-                </div>
-              </div>
->>>>>>> origin/main
             </div>
           ) : (
             <>

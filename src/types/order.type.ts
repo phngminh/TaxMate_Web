@@ -15,6 +15,10 @@ export interface OrderDetail {
   status: string
   note?: string
   invoiceNumber?: string
+  taxAuthorityCode?: string
+  officialPdfUrl?: string
+  officialXmlUrl?: string
+  invoiceStatus?: string
 
   subTotal: number
 

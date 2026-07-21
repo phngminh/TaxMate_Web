@@ -11,13 +11,13 @@ import { createBusinessProfile } from '../../apis/profile.api'
 
 const categories = [
   {
-    businessCategoryId: '60a42842-9fba-406c-8282-fc88ee0ccd24',
+    businessCategoryId: '11111111-1111-1111-1111-111111111111',
     name: 'Ăn uống (F&B)',
     icon: UtensilsCrossed,
     color: 'text-green-500'
   },
   {
-    businessCategoryId: 'cafbdef3-e1d5-467c-8e60-355995d8e70a',
+    businessCategoryId: '22222222-2222-2222-2222-222222222222',
     name: 'Dịch vụ',
     icon: Handshake,
     color: 'text-purple-500'
