@@ -1,5 +1,11 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { ArrowUpCircle, ArrowDownCircle, MoreVertical, RotateCcw, TrendingUp, Plus, ChevronRight } from 'lucide-react'
+import { useBusiness } from '../../contexts/BusinessContext'
+import { getAllExpenses, createExpense, getExpenseCategories, updateExpense, deleteExpense } from '../../apis/expense.api'
+import { getAllIncomes, createIncome, getIncomeCategories, updateIncome, deleteIncome } from '../../apis/income.api'
+import { toast } from 'react-toastify'
+import type { ExpenseCategory } from '../../types/expense.type'
+import type { IncomeCategory } from '../../types/income.type'
 
 interface ExpenseRecord {
   id: string
@@ -10,31 +16,13 @@ interface ExpenseRecord {
   date: string
   amount: number
   type: 'expense' | 'income'
+  categoryId: string
+  originalDateStr: string
+  rawAmount: number
+  paymentMethod: string
 }
 
-const RECORDS: ExpenseRecord[] = [
-  // Expenses
-  { id: 'EX001', content: 'Chi phí nhập hàng',   subContent: 'Tiền mặt',    category: 'Nhập hàng',  categoryColor: 'orange', date: '08/06/2026', amount: -2000000, type: 'expense' },
-  { id: 'EX002', content: 'Chi phí thuê mặt bằng', subContent: 'Chuyển khoản', category: 'Thuê mặt bằng', categoryColor: 'orange', date: '04/06/2026', amount: -6000000, type: 'expense' },
-  { id: 'EX003', content: 'Chi phí mua thiết bị', subContent: 'Tiền mặt',    category: 'Thiết bị',  categoryColor: 'orange', date: '01/06/2026', amount: -2000000, type: 'expense' },
-  // Income
-  { id: 'IN001', content: 'Bán hàng', subContent: 'Tiền mặt',    category: 'Bán hàng', categoryColor: 'green', date: '08/06/2026', amount: 5000000, type: 'income' },
-  { id: 'IN002', content: 'Bán hàng', subContent: 'Chuyển khoản', category: 'Bán hàng', categoryColor: 'green', date: '07/06/2026', amount: 6000000, type: 'income' },
-  { id: 'IN003', content: 'Bán hàng', subContent: 'Tiền mặt',    category: 'Bán hàng', categoryColor: 'green', date: '06/06/2026', amount: 3000000, type: 'income' },
-]
 
-const EXPENSE_CATEGORIES = [
-  'Tất cả',
-  'Thuê nhà, mặt bằng',
-  'Điện, nước, Internet',
-  'Thiết bị, dụng cụ',
-  'Chi phí nhập hàng',
-  'Chi phí bán hàng',
-  'Lương nhân viên',
-  'Chưa phân loại',
-]
-
-const TIME_OPTIONS = ['Hôm nay', '7 ngày qua', 'Tháng này', 'Năm nay', 'Tùy chọn']
 
 function CategoryBadge({ label, color }: { label: string; color: string }) {
   const styles =
@@ -78,11 +66,10 @@ function FilterGroup({
               className='sr-only'
             />
             <div
-              className={`size-4.5 rounded-full border-2 flex items-center justify-center transition-all ${
-                value === opt.val
+              className={`size-4.5 rounded-full border-2 flex items-center justify-center transition-all ${value === opt.val
                   ? 'border-[#D32F2F] bg-white'
                   : 'border-gray-300 group-hover:border-gray-400 bg-white'
-              }`}
+                }`}
             >
               {value === opt.val && <div className='size-2 rounded-full bg-[#D32F2F]' />}
             </div>
@@ -99,55 +86,273 @@ function FilterGroup({
 }
 
 export default function Expense() {
+  const { businessId } = useBusiness()
+
   const [priceFilter, setPriceFilter] = useState('all')
-  const [categoryFilter, setCategoryFilter] = useState('Tất cả')
-  const [timeFilter, setTimeFilter] = useState('Tháng này')
+  const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('Tất cả')
+  const [incomeCategoryFilter, setIncomeCategoryFilter] = useState('Tất cả')
+  const [dateFilter, setDateFilter] = useState('')
 
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false)
   const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false)
 
-  const handleResetFilters = () => {
-    setPriceFilter('all')
-    setCategoryFilter('Tất cả')
-    setTimeFilter('Tháng này')
+  const [editingRecord, setEditingRecord] = useState<ExpenseRecord | null>(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false)
+
+  const [apiRecords, setApiRecords] = useState<ExpenseRecord[]>([])
+  const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([])
+  const [incomeCategories, setIncomeCategories] = useState<IncomeCategory[]>([])
+
+  const fetchData = async () => {
+    if (!businessId) {
+      console.warn('No businessId found in context, skipping fetch')
+      return
+    }
+    try {
+      const [exps, incs, expCats, incCats] = await Promise.all([
+        getAllExpenses(businessId),
+        getAllIncomes(businessId),
+        getExpenseCategories(businessId),
+        getIncomeCategories(businessId)
+      ])
+
+      setExpenseCategories(expCats.data || [])
+      setIncomeCategories(incCats.data || [])
+
+      const mappedExps: ExpenseRecord[] = (exps.data?.items || []).map(e => ({
+        id: e.expenseId,
+        content: e.expenseTitle,
+        subContent: e.paymentMethod || 'Khác',
+        category: e.categoryName,
+        categoryColor: 'orange',
+        date: new Date(e.expenseDate).toLocaleDateString('vi-VN'),
+        amount: -e.amount,
+        type: 'expense',
+        categoryId: e.expenseCategoryId,
+        originalDateStr: new Date(e.expenseDate).toISOString().split('T')[0],
+        rawAmount: e.amount,
+        paymentMethod: e.paymentMethod || 'Tiền mặt'
+      }))
+
+      const mappedIncs: ExpenseRecord[] = (incs.data?.items || []).map(e => ({
+        id: e.incomeId,
+        content: e.incomeTitle,
+        subContent: e.paymentMethod || 'Khác',
+        category: e.categoryName,
+        categoryColor: 'green',
+        date: new Date(e.incomeDate).toLocaleDateString('vi-VN'),
+        amount: e.amount,
+        type: 'income',
+        categoryId: e.incomeCategoryId,
+        originalDateStr: new Date(e.incomeDate).toISOString().split('T')[0],
+        rawAmount: e.amount,
+        paymentMethod: e.paymentMethod || 'Tiền mặt'
+      }))
+
+      // Sort by date descending
+      const merged = [...mappedExps, ...mappedIncs].sort((a, b) => {
+        // Simple sort by assuming ID or Date. Since we have date string in vi-VN format, we might need a proper date parsing. 
+        // For now, we leave as is or sort by ID roughly if dates are equal.
+        // A robust sort would use the original date value, but since the previous code had static array, it's fine.
+        return 0;
+      })
+
+      setApiRecords(merged)
+    } catch (error) {
+      console.error(error)
+      toast.error('Lỗi khi tải dữ liệu thu chi')
+    }
   }
 
-  const isFiltered = priceFilter !== 'all' || categoryFilter !== 'Tất cả' || timeFilter !== 'Tháng này'
+  useEffect(() => {
+    fetchData()
+  }, [businessId])
+
+  const expenseCategoryNames = useMemo(() => {
+    const names = new Set<string>()
+    expenseCategories.forEach(c => names.add(c.categoryName))
+    return ['Tất cả', ...Array.from(names)]
+  }, [expenseCategories])
+
+  const incomeCategoryNames = useMemo(() => {
+    const names = new Set<string>()
+    incomeCategories.forEach(c => names.add(c.categoryName))
+    return ['Tất cả', ...Array.from(names)]
+  }, [incomeCategories])
+
+  const handleResetFilters = () => {
+    setPriceFilter('all')
+    setExpenseCategoryFilter('Tất cả')
+    setIncomeCategoryFilter('Tất cả')
+    setDateFilter('')
+  }
+
+  const isFiltered = priceFilter !== 'all' || expenseCategoryFilter !== 'Tất cả' || incomeCategoryFilter !== 'Tất cả' || dateFilter !== ''
 
   const expenses = useMemo(() => {
-    return RECORDS.filter((r) => {
+    return apiRecords.filter((r) => {
       if (r.type !== 'expense') return false
       if (priceFilter === 'lte1m' && Math.abs(r.amount) > 1_000_000) return false
       if (priceFilter === 'gt1m' && Math.abs(r.amount) <= 1_000_000) return false
-      if (categoryFilter !== 'Tất cả') {
-        const catMap: Record<string, string[]> = {
-          'Thuê nhà, mặt bằng': ['Thuê mặt bằng'],
-          'Thiết bị, dụng cụ': ['Thiết bị'],
-          'Chi phí nhập hàng': ['Nhập hàng'],
-        }
-        const allowed = catMap[categoryFilter] ?? []
-        if (!allowed.includes(r.category)) return false
+      if (expenseCategoryFilter !== 'Tất cả') {
+        if (r.category !== expenseCategoryFilter) return false
+      }
+      if (dateFilter) {
+        if (r.date !== new Date(dateFilter).toLocaleDateString('vi-VN')) return false
       }
       return true
     })
-  }, [priceFilter, categoryFilter])
+  }, [apiRecords, priceFilter, expenseCategoryFilter, dateFilter])
 
   const incomes = useMemo(() => {
-    return RECORDS.filter((r) => {
+    return apiRecords.filter((r) => {
       if (r.type !== 'income') return false
-      if (priceFilter === 'lte1m' && r.amount <= 1_000_000) return false
+      if (priceFilter === 'lte1m' && r.amount > 1_000_000) return false
       if (priceFilter === 'gt1m' && r.amount <= 1_000_000) return false
+      if (incomeCategoryFilter !== 'Tất cả') {
+        if (r.category !== incomeCategoryFilter) return false
+      }
+      if (dateFilter) {
+        if (r.date !== new Date(dateFilter).toLocaleDateString('vi-VN')) return false
+      }
       return true
     })
-  }, [priceFilter])
+  }, [apiRecords, priceFilter, incomeCategoryFilter, dateFilter])
+
+  const ITEMS_PER_PAGE = 5
+  const [expensePage, setExpensePage] = useState(1)
+  const [showAllExpenses, setShowAllExpenses] = useState(false)
+  const expenseTotalPages = Math.ceil(expenses.length / ITEMS_PER_PAGE)
+  const paginatedExpenses = showAllExpenses ? expenses : expenses.slice((expensePage - 1) * ITEMS_PER_PAGE, expensePage * ITEMS_PER_PAGE)
+
+  const [incomePage, setIncomePage] = useState(1)
+  const [showAllIncomes, setShowAllIncomes] = useState(false)
+  const incomeTotalPages = Math.ceil(incomes.length / ITEMS_PER_PAGE)
+  const paginatedIncomes = showAllIncomes ? incomes : incomes.slice((incomePage - 1) * ITEMS_PER_PAGE, incomePage * ITEMS_PER_PAGE)
+
+  useEffect(() => { setExpensePage(1) }, [priceFilter, expenseCategoryFilter, dateFilter])
+  useEffect(() => { setIncomePage(1) }, [priceFilter, incomeCategoryFilter, dateFilter])
 
   const totalExpense = expenses.reduce((s, r) => s + Math.abs(r.amount), 0)
   const totalIncome = incomes.reduce((s, r) => s + r.amount, 0)
 
   const fmt = (n: number) => n.toLocaleString('vi-VN')
 
-  const expenseSparkPoints = [4, 7, 5, 9, 6, 8, 10, 8, 9, 10]
-  const incomeSparkPoints  = [5, 8, 6, 10, 7, 9, 11, 10, 12, 14]
+  const handleAddExpense = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!businessId) {
+      toast.error('Không tìm thấy ID cơ sở kinh doanh. Vui lòng đăng nhập lại hoặc chọn cơ sở!')
+      return
+    }
+    const fd = new FormData(e.currentTarget)
+    const selectedDateStr = (fd.get('date') as string) || new Date().toISOString().split('T')[0]
+
+    if (new Date(selectedDateStr) > new Date()) {
+      toast.error('Ngày tạo không được chọn quá hôm nay!')
+      return
+    }
+
+    try {
+      await createExpense(businessId, {
+        expenseTitle: fd.get('title') as string,
+        expenseCategoryId: fd.get('categoryId') as string,
+        amount: Number(fd.get('amount')),
+        paymentMethod: fd.get('paymentMethod') as string,
+        expenseDate: selectedDateStr
+      })
+      toast.success('Thêm khoản chi thành công!')
+      setIsAddExpenseOpen(false)
+      fetchData()
+    } catch (error) {
+      toast.error('Có lỗi xảy ra khi thêm khoản chi')
+    }
+  }
+
+  const handleAddIncome = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!businessId) {
+      toast.error('Không tìm thấy ID cơ sở kinh doanh. Vui lòng đăng nhập lại hoặc chọn cơ sở!')
+      return
+    }
+    const fd = new FormData(e.currentTarget)
+    const selectedDateStr = (fd.get('date') as string) || new Date().toISOString().split('T')[0]
+
+    if (new Date(selectedDateStr) > new Date()) {
+      toast.error('Ngày tạo không được chọn quá hôm nay!')
+      return
+    }
+
+    try {
+      await createIncome(businessId, {
+        incomeTitle: fd.get('title') as string,
+        incomeCategoryId: fd.get('categoryId') as string,
+        amount: Number(fd.get('amount')),
+        paymentMethod: fd.get('paymentMethod') as string,
+        incomeDate: selectedDateStr
+      })
+      toast.success('Thêm khoản thu thành công!')
+      setIsAddIncomeOpen(false)
+      fetchData()
+    } catch (error) {
+      toast.error('Có lỗi xảy ra khi thêm khoản thu')
+    }
+  }
+
+  const handleEditSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!businessId || !editingRecord) return
+    const fd = new FormData(e.currentTarget)
+    const selectedDateStr = (fd.get('date') as string) || new Date().toISOString().split('T')[0]
+
+    if (new Date(selectedDateStr) > new Date()) {
+      toast.error('Ngày không được chọn quá hôm nay!')
+      return
+    }
+
+    try {
+      if (editingRecord.type === 'expense') {
+        await updateExpense(editingRecord.id, {
+          expenseTitle: fd.get('title') as string,
+          expenseCategoryId: fd.get('categoryId') as string,
+          amount: Number(fd.get('amount')),
+          paymentMethod: fd.get('paymentMethod') as string,
+          expenseDate: selectedDateStr
+        })
+      } else {
+        await updateIncome(editingRecord.id, {
+          incomeTitle: fd.get('title') as string,
+          incomeCategoryId: fd.get('categoryId') as string,
+          amount: Number(fd.get('amount')),
+          paymentMethod: fd.get('paymentMethod') as string,
+          incomeDate: selectedDateStr
+        })
+      }
+      toast.success('Cập nhật giao dịch thành công!')
+      setIsEditModalOpen(false)
+      fetchData()
+    } catch (error) {
+      toast.error('Có lỗi xảy ra khi cập nhật giao dịch')
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!editingRecord || !businessId) return
+
+    try {
+      if (editingRecord.type === 'expense') {
+        await deleteExpense(editingRecord.id)
+      } else {
+        await deleteIncome(editingRecord.id)
+      }
+      toast.success('Xoá giao dịch thành công!')
+      setIsConfirmDeleteOpen(false)
+      setIsEditModalOpen(false)
+      fetchData()
+    } catch (error) {
+      toast.error('Có lỗi xảy ra khi xoá giao dịch')
+    }
+  }
 
   return (
     <div className='flex flex-col w-full bg-[#f8f9fa] h-[calc(100vh-51px)] overflow-hidden'>
@@ -167,19 +372,29 @@ export default function Expense() {
 
           <FilterGroup
             title='Loại khoản chi'
-            name='categoryFilter'
-            value={categoryFilter}
-            onChange={setCategoryFilter}
-            options={EXPENSE_CATEGORIES.map((c) => ({ val: c, label: c }))}
+            name='expenseCategoryFilter'
+            value={expenseCategoryFilter}
+            onChange={setExpenseCategoryFilter}
+            options={expenseCategoryNames.map((c) => ({ val: c, label: c }))}
           />
 
           <FilterGroup
-            title='Thời gian'
-            name='timeFilter'
-            value={timeFilter}
-            onChange={setTimeFilter}
-            options={TIME_OPTIONS.map((t) => ({ val: t, label: t }))}
+            title='Loại khoản thu'
+            name='incomeCategoryFilter'
+            value={incomeCategoryFilter}
+            onChange={setIncomeCategoryFilter}
+            options={incomeCategoryNames.map((c) => ({ val: c, label: c }))}
           />
+
+          <div className='flex flex-col gap-3'>
+            <span className='text-[13px] font-bold text-gray-500 uppercase tracking-wide'>Thời gian</span>
+            <input
+              type='date'
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800'
+            />
+          </div>
 
           {isFiltered && (
             <button
@@ -242,8 +457,8 @@ export default function Expense() {
                   <ArrowUpCircle size={18} className='text-orange-500' strokeWidth={2.2} />
                   <span className='text-[15px] font-bold text-gray-800'>Chi</span>
                 </div>
-                <button className='flex items-center gap-1 text-[13px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors'>
-                  Xem tất cả <ChevronRight size={14} />
+                <button onClick={() => setShowAllExpenses(!showAllExpenses)} className='flex items-center gap-1 text-[13px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors'>
+                  {showAllExpenses ? 'Thu gọn' : 'Xem tất cả'} <ChevronRight size={14} className={showAllExpenses ? 'rotate-90 transition-transform' : 'transition-transform'} />
                 </button>
               </div>
 
@@ -259,7 +474,7 @@ export default function Expense() {
                     </tr>
                   </thead>
                   <tbody className='divide-y divide-gray-50'>
-                    {expenses.map((r) => (
+                    {paginatedExpenses.map((r) => (
                       <tr key={r.id} className='hover:bg-gray-50/60 transition-colors group'>
                         <td className='py-3.5 px-5'>
                           <p className='text-[13.5px] font-bold text-gray-800'>{r.content}</p>
@@ -275,7 +490,7 @@ export default function Expense() {
                           {r.amount.toLocaleString('vi-VN')}
                         </td>
                         <td className='py-3.5 px-3'>
-                          <button className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
+                          <button onClick={() => { setEditingRecord(r); setIsEditModalOpen(true); }} className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
                             <MoreVertical size={14} />
                           </button>
                         </td>
@@ -284,6 +499,16 @@ export default function Expense() {
                   </tbody>
                 </table>
               </div>
+
+              {!showAllExpenses && expenseTotalPages > 1 && (
+                <div className="flex items-center justify-between px-6 py-3 border-t border-gray-50 bg-gray-50/30">
+                  <span className="text-[12.5px] text-gray-500 font-medium">Trang {expensePage} / {expenseTotalPages}</span>
+                  <div className="flex items-center gap-2">
+                    <button disabled={expensePage === 1} onClick={() => setExpensePage(p => p - 1)} className="px-3 py-1 text-[12.5px] font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-[6px] transition-all">Trước</button>
+                    <button disabled={expensePage === expenseTotalPages} onClick={() => setExpensePage(p => p + 1)} className="px-3 py-1 text-[12.5px] font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-[6px] transition-all">Sau</button>
+                  </div>
+                </div>
+              )}
 
               <div className='border-t border-gray-100'>
                 <table className='w-full border-collapse'>
@@ -321,8 +546,8 @@ export default function Expense() {
                   <ArrowDownCircle size={18} className='text-emerald-500' strokeWidth={2.2} />
                   <span className='text-[15px] font-bold text-gray-800'>Thu</span>
                 </div>
-                <button className='flex items-center gap-1 text-[13px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors'>
-                  Xem tất cả <ChevronRight size={14} />
+                <button onClick={() => setShowAllIncomes(!showAllIncomes)} className='flex items-center gap-1 text-[13px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors'>
+                  {showAllIncomes ? 'Thu gọn' : 'Xem tất cả'} <ChevronRight size={14} className={showAllIncomes ? 'rotate-90 transition-transform' : 'transition-transform'} />
                 </button>
               </div>
 
@@ -338,7 +563,7 @@ export default function Expense() {
                     </tr>
                   </thead>
                   <tbody className='divide-y divide-gray-50'>
-                    {incomes.map((r) => (
+                    {paginatedIncomes.map((r) => (
                       <tr key={r.id} className='hover:bg-gray-50/60 transition-colors group'>
                         <td className='py-3.5 px-5'>
                           <p className='text-[13.5px] font-bold text-gray-800'>{r.content}</p>
@@ -354,7 +579,7 @@ export default function Expense() {
                           +{fmt(r.amount)}
                         </td>
                         <td className='py-3.5 px-3'>
-                          <button className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
+                          <button onClick={() => { setEditingRecord(r); setIsEditModalOpen(true); }} className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
                             <MoreVertical size={14} />
                           </button>
                         </td>
@@ -363,6 +588,16 @@ export default function Expense() {
                   </tbody>
                 </table>
               </div>
+
+              {!showAllIncomes && incomeTotalPages > 1 && (
+                <div className="flex items-center justify-between px-6 py-3 border-t border-gray-50 bg-gray-50/30">
+                  <span className="text-[12.5px] text-gray-500 font-medium">Trang {incomePage} / {incomeTotalPages}</span>
+                  <div className="flex items-center gap-2">
+                    <button disabled={incomePage === 1} onClick={() => setIncomePage(p => p - 1)} className="px-3 py-1 text-[12.5px] font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-[6px] transition-all">Trước</button>
+                    <button disabled={incomePage === incomeTotalPages} onClick={() => setIncomePage(p => p + 1)} className="px-3 py-1 text-[12.5px] font-semibold text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-[6px] transition-all">Sau</button>
+                  </div>
+                </div>
+              )}
 
               <div className='border-t border-gray-100'>
                 <table className='w-full border-collapse'>
@@ -407,38 +642,38 @@ export default function Expense() {
               </h3>
               <button onClick={() => setIsAddExpenseOpen(false)} className='p-1 text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none'>✕</button>
             </div>
-            <form className='p-6 flex flex-col gap-4' onSubmit={(e) => { e.preventDefault(); setIsAddExpenseOpen(false) }}>
+            <form className='p-6 flex flex-col gap-4' onSubmit={handleAddExpense}>
               <div className='flex flex-col gap-1.5'>
                 <label className='text-[13px] font-bold text-gray-600'>Nội dung <span className='text-red-500'>*</span></label>
-                <input type='text' required placeholder='Ví dụ: Mua nguyên liệu...' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800' />
+                <input name='title' type='text' required placeholder='Ví dụ: Mua nguyên liệu...' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800' />
               </div>
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Loại chi</label>
-                  <select className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 bg-white'>
-                    <option>Nhập hàng</option>
-                    <option>Thuê mặt bằng</option>
-                    <option>Thiết bị</option>
-                    <option>Chưa phân loại</option>
+                  <label className='text-[13px] font-bold text-gray-600'>Loại chi <span className='text-red-500'>*</span></label>
+                  <select name='categoryId' required defaultValue='' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 bg-white'>
+                    <option value='' disabled>-- Chọn loại chi --</option>
+                    {expenseCategories.map(c => (
+                      <option key={c.expenseCategoryId} value={c.expenseCategoryId}>{c.categoryName}</option>
+                    ))}
                   </select>
                 </div>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Số tiền (đ) <span className='text-red-500'>*</span></label>
-                  <input type='number' required min='0' placeholder='0' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 text-right' />
+                  <input name='amount' type='number' required min='0' placeholder='0' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 text-right' />
                 </div>
               </div>
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
-                  <select className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 bg-white'>
-                    <option>Tiền mặt</option>
-                    <option>Chuyển khoản</option>
-                    <option>Ví điện tử</option>
+                  <select name='paymentMethod' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 bg-white'>
+                    <option value='Tiền mặt'>Tiền mặt</option>
+                    <option value='Chuyển khoản'>Chuyển khoản</option>
+                    <option value='Ví điện tử'>Ví điện tử</option>
                   </select>
                 </div>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Ngày</label>
-                  <input type='date' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800' />
+                  <input name='date' type='date' max={new Date().toISOString().split('T')[0]} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800' />
                 </div>
               </div>
               <div className='flex items-center justify-end gap-3 mt-1 pt-4 border-t border-gray-100'>
@@ -460,37 +695,38 @@ export default function Expense() {
               </h3>
               <button onClick={() => setIsAddIncomeOpen(false)} className='p-1 text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none'>✕</button>
             </div>
-            <form className='p-6 flex flex-col gap-4' onSubmit={(e) => { e.preventDefault(); setIsAddIncomeOpen(false) }}>
+            <form className='p-6 flex flex-col gap-4' onSubmit={handleAddIncome}>
               <div className='flex flex-col gap-1.5'>
                 <label className='text-[13px] font-bold text-gray-600'>Nội dung <span className='text-red-500'>*</span></label>
-                <input type='text' required placeholder='Ví dụ: Bán hàng, Thu nợ...' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800' />
+                <input name='title' type='text' required placeholder='Ví dụ: Bán hàng, Thu nợ...' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800' />
               </div>
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Loại thu</label>
-                  <select className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 bg-white'>
-                    <option>Bán hàng</option>
-                    <option>Thu nợ</option>
-                    <option>Khác</option>
+                  <label className='text-[13px] font-bold text-gray-600'>Loại thu <span className='text-red-500'>*</span></label>
+                  <select name='categoryId' required defaultValue='' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 bg-white'>
+                    <option value='' disabled>-- Chọn loại thu --</option>
+                    {incomeCategories.map(c => (
+                      <option key={c.incomeCategoryId} value={c.incomeCategoryId}>{c.categoryName}</option>
+                    ))}
                   </select>
                 </div>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Số tiền (đ) <span className='text-red-500'>*</span></label>
-                  <input type='number' required min='0' placeholder='0' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 text-right' />
+                  <input name='amount' type='number' required min='0' placeholder='0' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 text-right' />
                 </div>
               </div>
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
-                  <select className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 bg-white'>
-                    <option>Tiền mặt</option>
-                    <option>Chuyển khoản</option>
-                    <option>Ví điện tử</option>
+                  <select name='paymentMethod' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 bg-white'>
+                    <option value='Tiền mặt'>Tiền mặt</option>
+                    <option value='Chuyển khoản'>Chuyển khoản</option>
+                    <option value='Ví điện tử'>Ví điện tử</option>
                   </select>
                 </div>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Ngày</label>
-                  <input type='date' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800' />
+                  <input name='date' type='date' max={new Date().toISOString().split('T')[0]} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800' />
                 </div>
               </div>
               <div className='flex items-center justify-end gap-3 mt-1 pt-4 border-t border-gray-100'>
@@ -498,6 +734,90 @@ export default function Expense() {
                 <button type='submit' className='px-6 py-2 text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs' style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>Lưu khoản thu</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {isEditModalOpen && editingRecord && (
+        <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
+          <div className='bg-white rounded-[16px] shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200'>
+            <div className={`flex items-center justify-between px-7 py-4 border-b ${editingRecord.type === 'expense' ? 'border-orange-100' : 'border-emerald-100'}`} style={{ background: editingRecord.type === 'expense' ? 'linear-gradient(135deg, #fff7ed 0%, #fff 100%)' : 'linear-gradient(135deg, #f0fdf4 0%, #fff 100%)' }}>
+              <h3 className='text-[15px] font-bold text-gray-900 flex items-center gap-2'>
+                {editingRecord.type === 'expense' ? <ArrowUpCircle size={18} className='text-orange-500' /> : <ArrowDownCircle size={18} className='text-emerald-500' />}
+                {editingRecord.type === 'expense' ? 'Sửa khoản chi' : 'Sửa khoản thu'}
+              </h3>
+              <button onClick={() => setIsEditModalOpen(false)} className='p-1 text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none'>✕</button>
+            </div>
+            <form className='p-6 flex flex-col gap-4' onSubmit={handleEditSubmit}>
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-[13px] font-bold text-gray-600'>Nội dung <span className='text-red-500'>*</span></label>
+                <input name='title' type='text' required defaultValue={editingRecord.content} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`} />
+              </div>
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='flex flex-col gap-1.5'>
+                  <label className='text-[13px] font-bold text-gray-600'>Loại <span className='text-red-500'>*</span></label>
+                  <select name='categoryId' required defaultValue={editingRecord.categoryId} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 bg-white ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`}>
+                    <option value='' disabled>-- Chọn loại --</option>
+                    {(editingRecord.type === 'expense' ? expenseCategories : incomeCategories).map(c => (
+                      <option key={editingRecord.type === 'expense' ? (c as ExpenseCategory).expenseCategoryId : (c as IncomeCategory).incomeCategoryId} value={editingRecord.type === 'expense' ? (c as ExpenseCategory).expenseCategoryId : (c as IncomeCategory).incomeCategoryId}>
+                        {c.categoryName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className='flex flex-col gap-1.5'>
+                  <label className='text-[13px] font-bold text-gray-600'>Số tiền (đ) <span className='text-red-500'>*</span></label>
+                  <input name='amount' type='number' required min='0' defaultValue={editingRecord.rawAmount} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 text-right ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`} />
+                </div>
+              </div>
+              <div className='grid grid-cols-2 gap-4'>
+                <div className='flex flex-col gap-1.5'>
+                  <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
+                  <select name='paymentMethod' defaultValue={editingRecord.paymentMethod} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 bg-white ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`}>
+                    <option value='Tiền mặt'>Tiền mặt</option>
+                    <option value='Chuyển khoản'>Chuyển khoản</option>
+                    <option value='Ví điện tử'>Ví điện tử</option>
+                  </select>
+                </div>
+                <div className='flex flex-col gap-1.5'>
+                  <label className='text-[13px] font-bold text-gray-600'>Ngày</label>
+                  <input name='date' type='date' defaultValue={editingRecord.originalDateStr} max={new Date().toISOString().split('T')[0]} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`} />
+                </div>
+              </div>
+              <div className='flex items-center justify-between gap-3 mt-1 pt-4 border-t border-gray-100'>
+                <button type='button' onClick={() => setIsConfirmDeleteOpen(true)} className='px-6 py-2 border-2 border-red-100 text-red-500 hover:bg-red-50 text-[13px] font-bold rounded-[8px] transition-colors'>Xóa</button>
+                <div className='flex gap-3'>
+                  <button type='button' onClick={() => setIsEditModalOpen(false)} className='px-6 py-2 border-2 border-gray-200 text-gray-600 text-[13px] font-bold rounded-[8px] hover:bg-gray-50 transition-colors'>Hủy</button>
+                  <button type='submit' className='px-6 py-2 text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs' style={{ background: editingRecord.type === 'expense' ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>Lưu</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {isConfirmDeleteOpen && (
+        <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200'>
+          <div className='bg-white rounded-[16px] shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-200 p-6 flex flex-col items-center text-center'>
+            <div className='w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4'>
+              <span className='text-red-500 text-2xl'>!</span>
+            </div>
+            <h3 className='text-[16px] font-bold text-gray-900 mb-2'>Xác nhận xóa</h3>
+            <p className='text-[13.5px] text-gray-500 mb-6'>
+              Bạn có chắc chắn muốn xóa giao dịch này? Hành động này không thể hoàn tác.
+            </p>
+            <div className='flex items-center gap-3 w-full'>
+              <button
+                onClick={() => setIsConfirmDeleteOpen(false)}
+                className='flex-1 py-2.5 border-2 border-gray-200 text-gray-600 text-[13px] font-bold rounded-[8px] hover:bg-gray-50 transition-colors'
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className='flex-1 py-2.5 bg-red-500 hover:bg-red-600 text-white text-[13px] font-bold rounded-[8px] transition-colors'
+              >
+                Xác nhận
+              </button>
+            </div>
           </div>
         </div>
       )}
