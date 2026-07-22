@@ -38,8 +38,15 @@ export const getServicePackageDistribution = async () => {
   return response.data
 }
 
-export const getPackageRevenue = async () => {
-  const response = await http.get<ApiResponse<PackageRevenueResponse>>('/Dashboard/package-revenue')
+export const getPackageRevenue = async (year?: number, month?: number) => {
+  const params =
+    year != null && month != null
+      ? { year, month }
+      : undefined
+  const response = await http.get<ApiResponse<PackageRevenueResponse>>(
+    '/Dashboard/package-revenue',
+    { params },
+  )
   return response.data
 }
 

@@ -29,10 +29,45 @@ export interface SubscriptionPlanResponse {
   monthlyPrice: number
   annualPrice: number
   maxProducts: number | null
-  maxTransactionsPerMonth: number |null
+  maxTransactionsPerMonth: number | null
   isActive: boolean
   sortOrder: number
   features: PlanFeatureResponse[]
+}
+
+export interface CreatePlanFeatureRequest {
+  featureKey: string
+  featureName: string
+  isEnabled: boolean
+}
+
+export interface UpdatePlanFeatureRequest {
+  id?: string | null
+  featureKey: string
+  featureName: string
+  isEnabled: boolean
+}
+
+export interface CreateSubscriptionPlanRequest {
+  name: string
+  description?: string | null
+  monthlyPrice: number
+  annualPrice: number
+  maxProducts?: number | null
+  maxTransactionsPerMonth?: number | null
+  sortOrder: number
+  features: CreatePlanFeatureRequest[]
+}
+
+export interface UpdateSubscriptionPlanRequest {
+  name: string
+  description?: string | null
+  monthlyPrice: number
+  annualPrice: number
+  maxProducts?: number | null
+  maxTransactionsPerMonth?: number | null
+  sortOrder: number
+  features: UpdatePlanFeatureRequest[]
 }
 
 export interface UserSubscriptionResponse {
