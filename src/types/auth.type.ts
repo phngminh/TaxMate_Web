@@ -1,11 +1,13 @@
 export type UserRole = 'Admin' | 'Owner'
 
+export type AccountStatus = 'Active' | 'Inactive' | 'Pending'
+
 export interface User {
   id: string
   email: string
   fullName: string
   avatarUrl?: string
-  accountStatus: 'Active' | 'Inactive'
+  accountStatus: AccountStatus
   role: UserRole
   taxCode?: string
   phone?: string

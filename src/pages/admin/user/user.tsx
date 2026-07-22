@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Search, User as UserIcon, Building2, Phone, Lock, Unlock, Eye } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import path from '../../../constants/path'
+import { getUsers, toggleUserStatus } from '../../../apis/user.api'
+import type { AdminUserListItem } from '../../../types/adminUser.type'
 import {
   Table,
   TableHeader,
@@ -30,118 +32,112 @@ import {
   CardContent,
   CardFooter,
 } from '../../../components/ui/card'
-import type { User } from '../../../types/auth.type'
-
-const mockUsers = [
-  {
-    id: 1,
-    full_name: 'Nguyễn Văn An',
-    email: 'nguyenvanan@gmail.com',
-    phone: '0901234567',
-    tax_code: '0123456789',
-    role: 'Owner',
-    is_active: true,
-    total_business_profiles: 3,
-    created_at: '2024-01-15',
-  },
-  {
-    id: 2,
-    full_name: 'Trần Thị Bình',
-    email: 'binhtt@yahoo.com',
-    phone: '0912345678',
-    tax_code: '0234567890',
-    role: 'Owner',
-    is_active: true,
-    total_business_profiles: 1,
-    created_at: '2024-02-20',
-  },
-  {
-    id: 3,
-    full_name: 'Lê Văn Cường',
-    email: 'cuonglv@outlook.com',
-    phone: '0923456789',
-    tax_code: '0345678901',
-    role: 'Owner',
-    is_active: false,
-    total_business_profiles: 0,
-    created_at: '2024-03-10',
-  },
-  {
-    id: 4,
-    full_name: 'Phạm Thị Dung',
-    email: 'dungpt@gmail.com',
-    phone: '0934567890',
-    tax_code: '0456789012',
-    role: 'Admin',
-    is_active: true,
-    total_business_profiles: 5,
-    created_at: '2023-12-05',
-  },
-  {
-    id: 5,
-    full_name: 'Hoàng Văn Em',
-    email: 'emhv@email.com',
-    phone: '0945678901',
-    tax_code: '0567890123',
-    role: 'Owner',
-    is_active: true,
-    total_business_profiles: 2,
-    created_at: '2024-04-18',
-  },
-  {
-    id: 6,
-    full_name: 'Võ Thị Hoa',
-    email: 'hoavt@gmail.com',
-    phone: '0956789012',
-    tax_code: '0678901234',
-    role: 'Owner',
-    is_active: true,
-    total_business_profiles: 1,
-    created_at: '2024-05-01',
-  },
-]
 
 export default function UserList() {
   const [searchTerm, setSearchTerm] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [filterRole, setFilterRole] = useState('All')
   const [filterStatus, setFilterStatus] = useState('All')
   const [currentPage, setCurrentPage] = useState(1)
+  const [users, setUsers] = useState<AdminUserListItem[]>([])
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [loading, setLoading] = useState(false)
+  const [togglingId, setTogglingId] = useState<string | null>(null)
   const itemsPerPage = 10
 
-  const filteredUsers = mockUsers.filter((user) => {
-    const matchesSearch =
-      user.full_name
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      user.email
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      user.phone.includes(searchTerm) ||
-      user.tax_code.includes(searchTerm)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim())
+      setCurrentPage(1)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchTerm])
 
-    const matchesRole = filterRole === 'All' || user.role === filterRole
-    const matchesStatus =
-      filterStatus === 'All' ||
-      (filterStatus === 'Active' && user.is_active) ||
-      (filterStatus === 'Inactive' && !user.is_active)
+  const fetchUsers = useCallback(async () => {
+    setLoading(true)
+    try {
+      const res = await getUsers({
+        pageNumber: currentPage,
+        pageSize: itemsPerPage,
+        search: debouncedSearch || undefined,
+        role: filterRole === 'All' ? undefined : filterRole,
+        accountStatus: filterStatus === 'All' ? undefined : filterStatus,
+      })
+      setUsers(res.data.items)
+      setTotalCount(res.data.totalCount)
+      setTotalPages(res.data.totalPages)
+    } catch (err) {
+      console.error(err)
+      setUsers([])
+      setTotalCount(0)
+      setTotalPages(0)
+    } finally {
+      setLoading(false)
+    }
+  }, [currentPage, debouncedSearch, filterRole, filterStatus])
 
-    return matchesSearch && matchesRole && matchesStatus
-  })
+  useEffect(() => {
+    fetchUsers()
+  }, [fetchUsers])
 
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const paginatedUsers = filteredUsers.slice(
-    startIndex,
-    startIndex + itemsPerPage,
-  )
+  const handleFilterRoleChange = (val: string | null) => {
+    setFilterRole(val ?? 'All')
+    setCurrentPage(1)
+  }
 
-  const handleToggleStatus = (user: User) => {
-    if (user.accountStatus) {
-      // Disable user
-    } else {
-      // Enable user
+  const handleFilterStatusChange = (val: string | null) => {
+    setFilterStatus(val ?? 'All')
+    setCurrentPage(1)
+  }
+
+  const handleToggleStatus = async (user: AdminUserListItem) => {
+    if (user.accountStatus === 'Pending' || togglingId) {
+      return
+    }
+
+    setTogglingId(user.id)
+    try {
+      await toggleUserStatus(user.id)
+      await fetchUsers()
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setTogglingId(null)
     }
   }
+
+  const formatCreatedDate = (dateString: string) => {
+    const date = new Date(dateString)
+    if (Number.isNaN(date.getTime())) {
+      return dateString
+    }
+    return date.toISOString().slice(0, 10)
+  }
+
+  const getStatusBadge = (status: AdminUserListItem['accountStatus']) => {
+    if (status === 'Active') {
+      return {
+        label: 'Đang hoạt động',
+        className:
+          'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+      }
+    }
+    if (status === 'Inactive') {
+      return {
+        label: 'Ngừng hoạt động',
+        className: 'bg-red-500/10 text-red-400 border border-red-500/20',
+      }
+    }
+    return {
+      label: 'Chờ xác minh',
+      className: 'bg-amber-500/10 text-amber-500 border border-amber-500/20',
+    }
+  }
+
+  const startIndex = totalCount === 0 ? 0 : (currentPage - 1) * itemsPerPage
+  const endIndex =
+    totalCount === 0 ? 0 : Math.min(startIndex + users.length, totalCount)
 
   return (
     <div className='bg-[#f8f9fb] p-5'>
@@ -174,14 +170,14 @@ export default function UserList() {
           </div>
 
           <div className='flex gap-2'>
-            <Select value={filterRole} onValueChange={(val) => setFilterRole(val ?? 'All')}>
+            <Select value={filterRole} onValueChange={handleFilterRoleChange}>
               <SelectTrigger className='py-5 bg-white!'>
                 <SelectValue>
                   {filterRole === 'All'
                     ? 'Role'
                     : filterRole === 'Owner'
-                    ? 'Người dùng'
-                    : 'Admin'}
+                      ? 'Người dùng'
+                      : 'Admin'}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -191,14 +187,14 @@ export default function UserList() {
               </SelectContent>
             </Select>
 
-            <Select value={filterStatus} onValueChange={(val) => setFilterStatus(val ?? 'All')}>
+            <Select value={filterStatus} onValueChange={handleFilterStatusChange}>
               <SelectTrigger className='py-5 bg-white!'>
                 <SelectValue>
                   {filterStatus === 'All'
                     ? 'Trạng thái'
                     : filterStatus === 'Active'
-                    ? 'Đang hoạt động'
-                    : 'Ngừng hoạt động'}
+                      ? 'Đang hoạt động'
+                      : 'Ngừng hoạt động'}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -258,119 +254,133 @@ export default function UserList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className='py-3'>
-                      <div className='flex items-center gap-3'>
-                        <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10'>
-                          <UserIcon className='h-4 w-4 text-muted-foreground' />
-                        </div>
-                        <div className='min-w-0 text-left'>
-                          <p className='truncate text-sm font-medium text-foreground'>
-                            {user.full_name}
-                          </p>
-                          <p className='truncate text-xs text-muted-foreground'>
-                            {user.email}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className='flex items-center justify-center gap-1.5 text-xs text-muted-foreground'>
-                        <Phone className='h-3 w-3' />
-                        <span>{user.phone}</span>
-                      </div>
-                    </TableCell>
-
-                    <TableCell className='text-center'>
-                      <span className='text-sm font-mono text-foreground'>
-                        {user.tax_code}
-                      </span>
-                    </TableCell>
-
-                    <TableCell className='text-center'>
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          user.role === 'Admin'
-                            ? 'bg-violet-500/10 text-violet-400 border border-violet-500/20'
-                            : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
-                        }`}
-                      >
-                        {user.role === 'Admin' ? 'Admin' : 'Business Owner'}
-                      </span>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className='flex items-center justify-center gap-1.5'>
-                        <Building2 className='w-3.5 h-3.5 text-muted-foreground' />
-                        <span
-                          className='inline-flex items-center justify-center min-w-2 h-5 rounded text-xs font-medium text-slate-600'
-                        >
-                          {user.total_business_profiles}
-                        </span>
-                      </div>
-                    </TableCell>
-
-                    <TableCell className='text-center'>
-                      <span
-                        className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                          user.is_active
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                        }`}
-                      >
-                        {user.is_active ? 'Đang hoạt động' : 'Ngừng hoạt động'}
-                      </span>
-                    </TableCell>
-
-                    <TableCell className='text-center'>
-                      <span className='text-xs text-muted-foreground'>
-                        {user.created_at}
-                      </span>
-                    </TableCell>
-
-                    <TableCell>
-                      <div className='flex items-center justify-end gap-2 opacity-60 transition-opacity group-hover:opacity-100'>
-                        {user.role === 'Owner' && (
-                          <Link
-                            to={`${path.BASE_ADMIN}/users/${user.id}`}
-                            className='rounded-md p-1.5 text-gray-500 transition-colors hover:bg-blue-50 hover:text-blue-600'
-                            title='Xem chi tiết'
-                          >
-                            <Eye size={16} />
-                          </Link>
-                        )}
-
-                        <button
-                          onClick={() =>
-                            handleToggleStatus({
-                              id: user.id,
-                              fullName: user.full_name,
-                              email: user.email,
-                              phone: user.phone,
-                              tax_code: user.tax_code,
-                              role: user.role,
-                              accountStatus: user.is_active ? 'Active' : 'Inactive',
-                              hasProfileInfo: user.total_business_profiles > 0,
-                              is_active: user.is_active,
-                              total_business_profiles: user.total_business_profiles,
-                              created_at: user.created_at,
-                            } as any)
-                          }
-                          className={`rounded-md p-1.5 transition-colors ${
-                            user.is_active
-                              ? 'text-red-500 hover:bg-red-100 hover:text-red-600'
-                              : 'text-emerald-500 hover:bg-emerald-100 hover:text-emerald-600'
-                          }`}
-                          title={user.is_active ? 'Vô hiệu hóa' : 'Kích hoạt'}
-                        >
-                          {user.is_active ? <Lock size={16} /> : <Unlock size={16} />}
-                        </button>
-                      </div>
+                {loading && users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className='py-10 text-center text-sm text-muted-foreground'>
+                      Đang tải...
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className='py-10 text-center text-sm text-muted-foreground'>
+                      Không tìm thấy người dùng
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  users.map((user) => {
+                    const statusBadge = getStatusBadge(user.accountStatus)
+                    const isActive = user.accountStatus === 'Active'
+                    const canToggle =
+                      user.accountStatus === 'Active' ||
+                      user.accountStatus === 'Inactive'
+
+                    return (
+                      <TableRow key={user.id}>
+                        <TableCell className='py-3'>
+                          <div className='flex items-center gap-3'>
+                            <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10'>
+                              {user.avatarUrl ? (
+                                <img
+                                  src={user.avatarUrl}
+                                  alt={user.fullName}
+                                  className='h-full w-full rounded-full object-cover'
+                                />
+                              ) : (
+                                <UserIcon className='h-4 w-4 text-muted-foreground' />
+                              )}
+                            </div>
+                            <div className='min-w-0 text-left'>
+                              <p className='truncate text-sm font-medium text-foreground'>
+                                {user.fullName}
+                              </p>
+                              <p className='truncate text-xs text-muted-foreground'>
+                                {user.email}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className='flex items-center justify-center gap-1.5 text-xs text-muted-foreground'>
+                            <Phone className='h-3 w-3' />
+                            <span>{user.phone || '—'}</span>
+                          </div>
+                        </TableCell>
+
+                        <TableCell className='text-center'>
+                          <span className='text-sm font-mono text-foreground'>
+                            {user.taxCode || '—'}
+                          </span>
+                        </TableCell>
+
+                        <TableCell className='text-center'>
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                              user.role === 'Admin'
+                                ? 'bg-violet-500/10 text-violet-400 border border-violet-500/20'
+                                : 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+                            }`}
+                          >
+                            {user.role === 'Admin' ? 'Admin' : 'Business Owner'}
+                          </span>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className='flex items-center justify-center gap-1.5'>
+                            <Building2 className='w-3.5 h-3.5 text-muted-foreground' />
+                            <span className='inline-flex items-center justify-center min-w-2 h-5 rounded text-xs font-medium text-slate-600'>
+                              {user.businessProfileCount}
+                            </span>
+                          </div>
+                        </TableCell>
+
+                        <TableCell className='text-center'>
+                          <span
+                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${statusBadge.className}`}
+                          >
+                            {statusBadge.label}
+                          </span>
+                        </TableCell>
+
+                        <TableCell className='text-center'>
+                          <span className='text-xs text-muted-foreground'>
+                            {formatCreatedDate(user.createdAt)}
+                          </span>
+                        </TableCell>
+
+                        <TableCell>
+                          <div className='flex items-center justify-end gap-2 opacity-60 transition-opacity group-hover:opacity-100'>
+                            {user.role === 'Owner' && (
+                              <Link
+                                to={`${path.BASE_ADMIN}/users/${user.id}`}
+                                className='rounded-md p-1.5 text-gray-500 transition-colors hover:bg-blue-50 hover:text-blue-600'
+                                title='Xem chi tiết'
+                              >
+                                <Eye size={16} />
+                              </Link>
+                            )}
+
+                            {canToggle && (
+                              <button
+                                type='button'
+                                disabled={togglingId === user.id}
+                                onClick={() => handleToggleStatus(user)}
+                                className={`rounded-md p-1.5 transition-colors disabled:opacity-40 ${
+                                  isActive
+                                    ? 'text-red-500 hover:bg-red-100 hover:text-red-600'
+                                    : 'text-emerald-500 hover:bg-emerald-100 hover:text-emerald-600'
+                                }`}
+                                title={isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                              >
+                                {isActive ? <Lock size={16} /> : <Unlock size={16} />}
+                              </button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -393,29 +403,30 @@ export default function UserList() {
                   />
                 </PaginationItem>
 
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                  <PaginationItem key={page}>
-                    <PaginationLink
-                      isActive={currentPage === page}
-                      onClick={() => setCurrentPage(page)}
-                      className='cursor-pointer'
-                    >
-                      {page}
-                    </PaginationLink>
-                  </PaginationItem>
-                ))}
+                {totalPages > 0 &&
+                  Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <PaginationItem key={page}>
+                      <PaginationLink
+                        isActive={currentPage === page}
+                        onClick={() => setCurrentPage(page)}
+                        className='cursor-pointer'
+                      >
+                        {page}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
 
                 <PaginationItem>
                   <PaginationNext
                     text=''
                     onClick={() =>
                       setCurrentPage((prev) =>
-                        Math.min(prev + 1, totalPages),
+                        totalPages === 0 ? prev : Math.min(prev + 1, totalPages),
                       )
                     }
-                    aria-disabled={currentPage === totalPages}
+                    aria-disabled={totalPages === 0 || currentPage === totalPages}
                     className={
-                      currentPage === totalPages
+                      totalPages === 0 || currentPage === totalPages
                         ? 'pointer-events-none opacity-40'
                         : 'cursor-pointer'
                     }
@@ -425,10 +436,8 @@ export default function UserList() {
             </Pagination>
 
             <span className='text-sm text-[#9ca3af]'>
-              Hiển thị{' '}
-              {filteredUsers.length === 0 ? 0 : startIndex + 1} đến{' '}
-              {Math.min(startIndex + itemsPerPage, filteredUsers.length)} trong tổng số{' '}
-              {filteredUsers.length} người dùng
+              Hiển thị {startIndex === 0 && totalCount === 0 ? 0 : startIndex + 1} đến{' '}
+              {endIndex} trong tổng số {totalCount} người dùng
             </span>
           </CardFooter>
         </Card>
