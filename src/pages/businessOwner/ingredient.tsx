@@ -2,8 +2,8 @@ import { useState, useMemo, useRef, useEffect } from 'react'
 import { Search, Plus, Scan, Trash2, Edit2, Package, BookOpen, RotateCcw, FlaskConical, ShoppingBag, Eye, X } from 'lucide-react'
 import type { Ingredient } from '../../types/ingredient.type'
 import { getAllIngredients } from '../../apis/ingredient.api'
-import { getProductIngredients } from '../../apis/productIngredient.api'
-import type { ProductIngredient } from '../../types/productIngredient.type'
+import { getProductIngredients } from '../../apis/product.ingredient.api'
+import type { ProductIngredient } from '../../types/product.ingredient.type'
 
 interface Recipe {
   productId: string

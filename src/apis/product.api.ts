@@ -8,7 +8,7 @@ export const getAllProducts = async (
   pageSize = 10,
   search?: string,
   status?: string,
-  category?: string
+  productCategoryId?: string
 ) => {
   const response = await http.get<ApiResponse<PagedResult<Product>>>(`/Product/business/${businessId}`,
     {
@@ -17,7 +17,7 @@ export const getAllProducts = async (
         pageSize,
         search,
         status,
-        category
+        productCategoryId
       }
     }
   )
@@ -36,5 +36,15 @@ export const createProduct = async (businessId: string, body: CreateProductReque
 
 export const updateProduct = async (id: string, body: UpdateProductRequest) => {
   const response = await http.put<ApiResponse<Product>>(`/Product/${id}`, body)
+  return response.data
+}
+
+export const toggleProductStatus = async (id: string) => {
+  const response = await http.patch<ApiResponse<Product>>(`/Product/${id}/toggle-status`)
+  return response.data
+}
+
+export const deleteProduct = async (id: string) => {
+  const response = await http.delete<ApiResponse<object>>(`/Product/${id}`)
   return response.data
 }
