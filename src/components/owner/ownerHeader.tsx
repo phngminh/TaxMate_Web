@@ -7,22 +7,8 @@ import { Bell, User, HeadphonesIcon, Heart, Store, Settings, LogOut, Plus, Utens
 import { useBusiness } from '../../contexts/BusinessContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
-import { createBusinessProfile } from '../../apis/profile.api'
-
-const categories = [
-  {
-    businessCategoryId: '60a42842-9fba-406c-8282-fc88ee0ccd24',
-    name: 'Ăn uống (F&B)',
-    icon: UtensilsCrossed,
-    color: 'text-green-500'
-  },
-  {
-    businessCategoryId: 'cafbdef3-e1d5-467c-8e60-355995d8e70a',
-    name: 'Dịch vụ',
-    icon: Handshake,
-    color: 'text-purple-500'
-  }
-]
+import { createBusinessProfile, getBusinessProfiles } from '../../apis/profile.api'
+import BusinessModal from './addBusinessModal'
 
 function NavItem({ label, isActive }: {
   label: string
@@ -52,17 +38,40 @@ const menuItems = [
 
 export default function OwnerHeader() {
   const [profileOpen, setProfileOpen] = useState(false)
+  const [showBusinessModal, setShowBusinessModal] = useState(false)
   const [showAddBusinessModal, setShowAddBusinessModal] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
   const { businesses, currentBusiness, setCurrentBusiness, clearBusiness, setBusinesses } = useBusiness()
-  const [businessName, setBusinessName] = useState('')
-  const [address, setAddress] = useState('')
-  const [provinceCode, setProvinceCode] = useState('')
-  const [wardCode, setWardCode] = useState('')
-  const [categoryId, setCategoryId] = useState('')
+  const emptyBusinessForm = {
+    businessName: '',
+    address: '',
+    provinceCode: '',
+    wardCode: '',
+    categoryId: ''
+  }
+
+  const [form, setForm] = useState(emptyBusinessForm)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+
+  const checkBusinessProfile = async () => {
+    if (!user) return
+
+    try {
+      const res = await getBusinessProfiles(user.id)
+      console.log('Business profiles:', res.data.items)
+      if (res.data.items.length === 0) {
+        setShowBusinessModal(true)
+      }
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
+  useEffect(() => {
+      checkBusinessProfile()
+  }, [])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -75,12 +84,12 @@ export default function OwnerHeader() {
   }, [profileOpen])
 
   const handleCreateBusiness = async () => {
-    if (!businessName.trim()) {
+    if (!form.businessName.trim()) {
       toast.error('Vui lòng nhập tên cửa hàng')
       return
     }
 
-    if (!categoryId) {
+    if (!form.categoryId) {
       toast.error('Vui lòng chọn danh mục cửa hàng')
       return
     }
@@ -89,11 +98,11 @@ export default function OwnerHeader() {
       setLoading(true)
       const res = await createBusinessProfile({
         ownerId: user!.id,
-        businessName: businessName.trim(),
-        provinceCode: provinceCode.trim() || undefined,
-        wardCode: wardCode.trim() || undefined,
-        address: address.trim() || undefined,
-        mainCategoryId: categoryId,
+        businessName: form.businessName.trim(),
+        provinceCode: form.provinceCode.trim() || undefined,
+        wardCode: form.wardCode.trim() || undefined,
+        address: form.address.trim() || undefined,
+        mainCategoryId: form.categoryId,
         preferElectronicInvoice: false
       })
 
@@ -101,8 +110,10 @@ export default function OwnerHeader() {
       setBusinesses([...businesses, newBusiness])
       setCurrentBusiness(newBusiness)
 
+      setForm(emptyBusinessForm)
       toast.success('Tạo hồ sơ cửa hàng thành công')
-      setShowAddBusinessModal(false)
+      
+      handleCloseBusinessModal()
     } catch (error) {
       toast.error('Failed to create business profile')
     } finally {
@@ -116,14 +127,10 @@ export default function OwnerHeader() {
     navigate(path.home)
   }
 
-  const handleCloseAddBusinessModal = () => {
+  const handleCloseBusinessModal = () => {
+    setShowBusinessModal(false)
     setShowAddBusinessModal(false)
-
-    setBusinessName('')
-    setAddress('')
-    setProvinceCode('')
-    setWardCode('')
-    setCategoryId('')
+    setForm(emptyBusinessForm)
   }
 
   return (
@@ -223,8 +230,8 @@ export default function OwnerHeader() {
           >
             <div className='flex-1 flex flex-col border-r border-gray-100'>
               <div className='bg-[#9b0000] px-5 py-6 text-white h-35 flex flex-col justify-center'>
-                <h2 className='text-[22px] font-bold leading-tight mb-1'>{currentBusiness?.businessName}</h2>
-                <p className='text-[14px] text-white/90 mb-3'>{currentBusiness?.mainCategoryName}</p>
+                <h2 className='text-[22px] font-bold leading-tight mb-1'>{currentBusiness?.businessName ?? 'Chưa có cửa hàng'}</h2>
+                <p className='text-[14px] text-white/90 mb-3'>{currentBusiness?.mainCategoryName ?? 'Hãy tạo hồ sơ cửa hàng'}</p>
                 <div className='bg-white inline-flex items-center px-2.5 py-1 rounded-md self-start shadow-xs'>
                   <span className='text-[#1d1d1d] text-[12px] font-semibold mr-1.5'>Gói Hộ Kinh Doanh</span>
                   <div className='bg-yellow-400 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] leading-none'>★</div>
@@ -294,6 +301,7 @@ export default function OwnerHeader() {
               <button 
                 className='flex flex-col items-center gap-1.5 cursor-pointer group'
                 onClick={() => {
+                  setForm(emptyBusinessForm)
                   setShowAddBusinessModal(true)
                 }}
               >
@@ -310,142 +318,25 @@ export default function OwnerHeader() {
         </div>
       )}
 
-      {showAddBusinessModal && (
-        <div className='fixed inset-0 z-60 flex items-center justify-center bg-black/60 p-4' onClick={handleCloseAddBusinessModal}>
-          <div
-            className='relative w-full max-w-160 overflow-hidden rounded-2xl bg-white shadow-2xl'
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className='max-h-[90vh] overflow-y-auto'>
-              <div className='mx-auto w-full max-w-130 px-8 py-6'>
-                <div className='flex justify-center'>
-                  <img
-                    src={storeImage}
-                    alt='Store'
-                    className='w-44'
-                  />
-                </div>
+      <BusinessModal
+        open={showBusinessModal}
+        mode="initial"
+        loading={loading}
+        form={form}
+        setForm={setForm}
+        onClose={handleCloseBusinessModal}
+        onSubmit={handleCreateBusiness}
+      />
 
-                <div className='mt-2 text-center'>
-                  <p className='text-2xl font-bold text-blue-500'>
-                    Tạo hồ sơ cửa hàng mới
-                  </p>
-                </div>
-
-                <div className='mt-8 space-y-5'>
-                  <div>
-                    <label className='mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
-                      Tên cửa hàng <span className='text-taxmate-red'>*</span>
-                    </label>
-
-                    <input
-                      type='text'
-                      value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
-                      placeholder='Nhập tên cửa hàng'
-                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
-                    />
-                  </div>
-
-                  <div>
-                    <label className='mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
-                      Địa chỉ cửa hàng
-                    </label>
-
-                    <input
-                      type='text'
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder='Nhập địa chỉ cửa hàng'
-                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
-                    />
-                  </div>
-
-                  <div>
-                    <label className='mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
-                      Mã tỉnh/thành phố
-                    </label>
-
-                    <input
-                      type='text'
-                      value={provinceCode}
-                      onChange={(e) => setProvinceCode(e.target.value)}
-                      placeholder='Ví dụ: 79'
-                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
-                    />
-                  </div>
-
-                  <div>
-                    <label className='mb-2 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
-                      Mã quận/huyện
-                    </label>
-
-                    <input
-                      type='text'
-                      value={wardCode}
-                      onChange={(e) => setWardCode(e.target.value)}
-                      placeholder='Ví dụ: 26734'
-                      className='h-12 w-full rounded-xl border border-gray-300 bg-white py-3 pl-5 pr-5 text-sm text-gray-900 outline-hidden transition-colors placeholder:text-gray-400 focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
-                    />
-                  </div>
-
-                  <div>
-                    <label className='mb-3 block text-sm font-semibold uppercase tracking-wide text-gray-500'>
-                      Loại cửa hàng <span className='text-taxmate-red'>*</span>
-                    </label>
-
-                    <div className='space-y-3 mb-2'>
-                      {categories.map((category) => {
-                        const selected = categoryId === category.businessCategoryId
-                        const Icon = category.icon
-                        return (
-                          <button
-                            key={category.businessCategoryId}
-                            type='button'
-                            onClick={() => setCategoryId(category.businessCategoryId)}
-                            className={`flex h-12 w-full items-center justify-between rounded-xl border px-5 py-6 transition-all ${
-                              selected
-                                ? 'border-taxmate-red bg-taxmate-red/10'
-                                : 'border-gray-300 hover:border-taxmate-red'
-                            }`}
-                          >
-                            <div className='flex items-center gap-4'>
-                              <Icon className={`h-6 w-6 ${category.color}`} />
-
-                              <span>{category.name}</span>
-                            </div>
-
-                            <div
-                              className={`flex h-6 w-6 items-center justify-center rounded-full border-2 transition ${
-                                selected
-                                  ? 'border-taxmate-red'
-                                  : 'border-gray-400'
-                              }`}
-                            >
-                              {selected && (
-                                <div className='h-3 w-3 rounded-full bg-taxmate-red' />
-                              )}
-                            </div>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-
-                  <button
-                    type='button'
-                    disabled={loading}
-                    onClick={handleCreateBusiness}
-                    className='h-14 w-full rounded-xl bg-red-600 py-3 text-lg font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60'
-                  >
-                    {loading ? 'Đang tạo...' : 'Tạo mới'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <BusinessModal
+        open={showAddBusinessModal}
+        mode="add"
+        loading={loading}
+        form={form}
+        setForm={setForm}
+        onClose={handleCloseBusinessModal}
+        onSubmit={handleCreateBusiness}
+      />
 
       <style>{`
         @keyframes slideInRight {

@@ -325,20 +325,20 @@ export default function BusinessOwnerLoginPage() {
                 <X size={20} />
               </button>
 
-              <div className="flex justify-center">
-                <div className="flex h-24 w-24 items-center justify-center rounded-full bg-green-100 animate-in zoom-in duration-300">
+              <div className='flex justify-center'>
+                <div className='flex h-24 w-24 items-center justify-center rounded-full bg-green-100 animate-in zoom-in duration-300'>
                   <CircleCheckBig
-                    className="h-14 w-14 text-green-500 animate-pulse"
+                    className='h-14 w-14 text-green-500 animate-pulse'
                     strokeWidth={2.5}
                   />
                 </div>
               </div>
 
-              <h2 className='mt-2 text-center text-2xl font-bold text-green-500'>
+              <h2 className='mt-7 text-center text-2xl font-bold text-green-500'>
                 Xác thực email thành công!
               </h2>
 
-              <p className='px-5 mt-4 text-center text-gray-600'>
+              <p className='px-5 mt-2 text-center text-gray-600'>
                 Vui lòng đăng nhập để bắt đầu sử dụng TaxMate.
               </p>
 

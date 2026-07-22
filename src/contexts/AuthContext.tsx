@@ -40,6 +40,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setToken(null)
 
     localStorage.removeItem('token')
+    localStorage.removeItem('businesses')
+    localStorage.removeItem('currentBusiness')
   }, [])
 
   useEffect(() => {

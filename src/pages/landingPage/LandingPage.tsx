@@ -13,6 +13,55 @@ import LandingHeader from '../../components/landingPage/landingHeader'
 import HeroSection from '../../components/landingPage/heroSection'
 import LandingFooter from '../../components/landingPage/landingFooter'
 
+type FeatureProps = {
+  icon: React.ReactNode
+  title: string
+  description: string
+  color: 'orange' | 'rose' | 'amber' | 'emerald'
+}
+
+const styles = {
+  orange: {
+    bg: 'bg-orange-100',
+    text: 'text-orange-600',
+  },
+  rose: {
+    bg: 'bg-rose-100',
+    text: 'text-rose-600',
+  },
+  amber: {
+    bg: 'bg-amber-100',
+    text: 'text-amber-600',
+  },
+  emerald: {
+    bg: 'bg-emerald-100',
+    text: 'text-emerald-600',
+  },
+}
+
+function Feature({ icon, title, description, color }: FeatureProps) {
+  const s = styles[color]
+
+  return (
+    <div className="group flex items-start gap-5">
+      <div
+        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${s.bg} ${s.text}
+        transition-all duration-300 group-hover:scale-110`}
+      >
+        {icon}
+      </div>
+      <div>
+        <h3 className="mb-2 text-xl font-bold text-slate-900">
+          {title}
+        </h3>
+        <p className="leading-7 text-slate-600">
+          {description}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 export default function LandingPage() {
   return (
     <div className='min-h-screen bg-slate-50/50 text-slate-800 font-sans antialiased overflow-x-hidden selection:bg-orange-500 selection:text-white'>
@@ -20,77 +69,68 @@ export default function LandingPage() {
       <HeroSection />
 
       {/* PROBLEMS SECTION */}
-      <section id='problems' className='py-16 sm:py-24 bg-[#FCF7F3] border-y border-slate-100 overflow-hidden'>
-        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-          <div className='text-center max-w-3xl mx-auto mb-16' data-aos='fade-up'>
-            <span className='text-[#FF4E11] text-sm sm:text-base font-bold uppercase tracking-widest block mb-2'>
+      <section
+        id='problems'
+        className='overflow-hidden border-y border-slate-100 bg-[#FCF7F3] py-16 sm:py-24'
+      >
+        <div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8'>
+          <div
+            className='mx-auto mb-16 max-w-3xl text-center'
+            data-aos='fade-up'
+          >
+            <span className='mb-2 block text-sm font-bold uppercase tracking-widest text-[#FF4E11] sm:text-base'>
               Bạn có đang gặp những vấn đề này?
             </span>
-            <h2 className='text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight'>
+            <h2 className='text-3xl font-extrabold leading-tight text-slate-900 sm:text-4xl'>
               Quản lý thủ công khiến bạn mất thời gian và khó kiểm soát
             </h2>
           </div>
 
-          <div className='grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-start'>
-            <div className='lg:col-span-5 flex justify-center' data-aos='fade-right'>
+          <div className='grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-16'>
+            <div
+              className='flex justify-center lg:col-span-5'
+              data-aos='fade-right'
+            >
               <div className='relative w-full max-w-lg'>
-                <div className='absolute inset-0 rounded-full blur-3xl opacity-80 scale-90' />
                 <img
                   src={stressedWoman}
-                  alt='Quản lý thủ công tốn thời gian'
-                  className='relative z-10 w-full h-auto object-contain'
+                  alt='Quản lý thủ công'
+                  className='w-full object-contain'
                 />
               </div>
             </div>
 
-            <div className='lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-6' data-aos='fade-left'>
-              <div className='group rounded-3xl border border-orange-100 bg-white p-7 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-orange-200 hover:shadow-lg'>
-                <div className='mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-orange-100 text-orange-600'>
-                  <FileX size={20} strokeWidth={2.2} />
-                </div>
-                <h3 className='mb-2 text-lg font-bold text-slate-900'>
-                  Ghi chép rời rạc
-                </h3>
-                <p className='text-sm leading-relaxed text-slate-600'>
-                  Ghi sổ tay, Excel, tin nhắn... dễ thất lạc và khó tổng hợp dữ liệu.
-                </p>
-              </div>
+            <div
+              className='grid gap-x-12 gap-y-10 md:grid-cols-2 lg:col-span-7'
+              data-aos='fade-left'
+            >
+              <Feature
+                icon={<FileX size={22} />}
+                title='Ghi chép rời rạc'
+                description='Ghi sổ tay, Excel, tin nhắn... dễ thất lạc và khó tổng hợp dữ liệu.'
+                color='orange'
+              />
 
-              <div className='group rounded-3xl border border-rose-100 bg-white p-7 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-rose-200 hover:shadow-lg'>
-                <div className='mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-rose-100 text-rose-600'>
-                  <PieChart size={20} strokeWidth={2.2} />
-                </div>
-                <h3 className='mb-2 text-lg font-bold text-slate-900'>
-                  Không biết lời hay lỗ
-                </h3>
-                <p className='text-sm leading-relaxed text-slate-600'>
-                  Không theo dõi được chi phí và lợi nhuận theo thời gian thực.
-                </p>
-              </div>
+              <Feature
+                icon={<PieChart size={22} />}
+                title='Không biết lời hay lỗ'
+                description='Không theo dõi được chi phí và lợi nhuận theo thời gian thực.'
+                color='rose'
+              />
 
-              <div className='group rounded-3xl border border-amber-100 bg-white p-7 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-amber-200 hover:shadow-lg'>
-                <div className='mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-amber-100 text-amber-600'>
-                  <Clock size={20} strokeWidth={2.2} />
-                </div>
-                <h3 className='mb-2 text-lg font-bold text-slate-900'>
-                  Tốn thời gian tổng hợp
-                </h3>
-                <p className='text-sm leading-relaxed text-slate-600'>
-                  Cuối tháng mới tổng hợp số liệu, mất nhiều giờ xử lý thủ công.
-                </p>
-              </div>
+              <Feature
+                icon={<Clock size={22} />}
+                title='Tốn thời gian tổng hợp'
+                description='Cuối tháng mới tổng hợp số liệu, mất nhiều giờ xử lý thủ công.'
+                color='amber'
+              />
 
-              <div className='group rounded-3xl border border-emerald-100 bg-white p-7 shadow-xs transition-all duration-300 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg'>
-                <div className='mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600'>
-                  <ShieldQuestion size={20} strokeWidth={2.2} />
-                </div>
-                <h3 className='mb-2 text-lg font-bold text-slate-900'>
-                  Khó đáp ứng yêu cầu
-                </h3>
-                <p className='text-sm leading-relaxed text-slate-600'>
-                  Thiếu dữ liệu rõ ràng và khó chuẩn bị hồ sơ khi cần đối chiếu.
-                </p>
-              </div>
+              <Feature
+                icon={<ShieldQuestion size={22} />}
+                title='Khó đáp ứng yêu cầu'
+                description='Thiếu dữ liệu rõ ràng và khó chuẩn bị hồ sơ khi cần đối chiếu.'
+                color='emerald'
+              />
             </div>
           </div>
         </div>
@@ -100,7 +140,7 @@ export default function LandingPage() {
       <section id='features' className='py-16 sm:py-24 bg-white overflow-hidden'>
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
           <div className='text-center max-w-3xl mx-auto mb-16' data-aos='fade-up'>
-            <span className='text-slate-500 text-sm sm:text-base font-semibold block mb-2'>
+            <span className='text-slate-500 text-sm sm:text-xl font-semibold block mb-2'>
               TaxMate giúp bạn
             </span>
             <h2 className='text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight'>
@@ -231,13 +271,6 @@ export default function LandingPage() {
                     <button className='w-full py-1.5 bg-[#3B82F6] text-white rounded-lg text-[9px] font-extrabold shadow-xs shadow-blue-500/10'>
                       Lưu chi phí
                     </button>
-                    <div className='w-7 h-7 bg-blue-50 rounded-lg flex items-center justify-center text-blue-500 border border-blue-100 shrink-0'>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4" />
-                        <path d="M4 6v12a2 2 0 0 0 2 2h14v-4" />
-                        <path d="M18 12a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h4v-6z" />
-                      </svg>
-                    </div>
                   </div>
                 </div>
               </div>
