@@ -1,9 +1,18 @@
 import { useState, useMemo, useRef, useEffect, type ChangeEvent } from 'react'
-import { Search, Plus, ChevronDown, Scan, X, Trash2, Edit2, ShoppingBag, RotateCcw, ImagePlus, Package, AlertTriangle, Lock, Unlock } from 'lucide-react'
+import { useLocation, useSearchParams } from 'react-router-dom'
+import { Search, Plus, ChevronDown, Scan, Trash2, Edit2, ShoppingBag, RotateCcw, Package, AlertTriangle, Lock, Unlock, ArrowUp, ArrowDown } from 'lucide-react'
 import type { Product, ProductForm } from '../../../types/product.type'
 import { createProduct, deleteProduct, getAllProducts, toggleProductStatus, updateProduct } from '../../../apis/product.api'
 import { useBusiness } from '../../../contexts/BusinessContext'
 import { uploadImage } from '../../../apis/image.api'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '../../../components/ui/pagination'
 import type { ProductCategory } from '../../../types/product.category.type'
 import { getProductCategories, createProductCategory } from '../../../apis/product.category.api'
 import ProductModal from './productModal'
@@ -20,6 +29,11 @@ export default function Product() {
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'Active' | 'Inactive'>('all')
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const page = Number(searchParams.get('page') ?? '1')
+  const [totalPages, setTotalPages] = useState(1)
+  const pageSize = 5
+  const [sortConfig, setSortConfig] = useState<{ key: 'price' | 'createdAt', direction: 'asc' | 'desc' } | null>(null)
 
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
   const [addNewDropdownOpen, setAddNewDropdownOpen] = useState(false)
@@ -42,6 +56,8 @@ export default function Product() {
   const isEditing = isEditProductModalOpen || isEditServiceModalOpen
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const isFirstRender = useRef(true)
+
   const [isCreateCategoryModalOpen, setIsCreateCategoryModalOpen] = useState(false)
   const [categoryForm, setCategoryForm] = useState({
     name: '',
@@ -55,6 +71,12 @@ export default function Product() {
     price: '',
     description: ''
   })
+
+  const location = useLocation()
+
+  useEffect(() => {
+    console.log(location.pathname + location.search)
+  }, [location])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -90,9 +112,20 @@ export default function Product() {
     }
 
     try {
-      const res = await getAllProducts(businessId)
+      const statusParam = selectedStatus === 'all' ? undefined : selectedStatus
+      const categoryParam = selectedCategory === 'all' ? undefined : selectedCategory
+      
+      const res = await getAllProducts(
+        businessId,
+        page,
+        pageSize,
+        searchQuery || undefined,
+        statusParam,
+        categoryParam
+      )
+
       setProducts(res.data.items)
-      console.log(res)
+      setTotalPages(res.data.totalPages)
     } catch (err) {
       console.error(err)
     }
@@ -100,20 +133,51 @@ export default function Product() {
 
   useEffect(() => {
     if (!businessId) return
-
     fetchProducts()
+  }, [businessId, page, searchQuery, selectedStatus, selectedCategory])
+
+  useEffect(() => {
+    if (!businessId) return
     fetchCategories()
   }, [businessId])
 
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || product.id.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesCategory = selectedCategory === 'all' || product.productCategoryId === selectedCategory
-      const matchesStatus = selectedStatus === 'all' || product.status === selectedStatus
+  const changePage = (newPage: number) => {
+    const params = new URLSearchParams(searchParams)
 
-      return matchesSearch && matchesCategory && matchesStatus
+    if (newPage === 1) {
+      params.delete('page')
+    } else {
+      params.set('page', newPage.toString())
+    }
+
+    setSearchParams(params, { replace: true })
+  }
+
+  const sortedProducts = useMemo(() => {
+    if (!sortConfig) return products
+    return [...products].sort((a, b) => {
+      if (sortConfig.key === 'price') {
+        const priceA = a.currentPrice ?? 0
+        const priceB = b.currentPrice ?? 0
+        return sortConfig.direction === 'asc' ? priceA - priceB : priceB - priceA
+      }
+      if (sortConfig.key === 'createdAt') {
+        const dateA = new Date(a.createdAt).getTime()
+        const dateB = new Date(b.createdAt).getTime()
+        return sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA
+      }
+      return 0
     })
-  }, [products, searchQuery, selectedCategory, selectedStatus])
+  }, [products, sortConfig])
+
+  const handleSort = (key: 'price' | 'createdAt') => {
+    setSortConfig(prev => {
+      if (prev?.key === key) {
+        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+      }
+      return { key, direction: 'desc' }
+    })
+  }
 
   const handleOpenAddProductModal = () => {
     setProductForm({
@@ -532,7 +596,7 @@ export default function Product() {
         </div>
 
         <div className='grow p-8 overflow-x-auto'>
-          {filteredProducts.length > 0 ? (
+          {products.length > 0 ? (
             <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-175'>
               <table className='w-full text-left border-collapse'>
                 <thead>
@@ -541,13 +605,48 @@ export default function Product() {
                     <th className='w-48 px-6 py-4'>Tên sản phẩm</th>
                     <th className='w-48 px-6 py-4'>Danh mục</th>
                     <th className='w-28 px-6 py-4 text-center'>Đơn vị tính</th>
-                    <th className='w-40 px-6 py-4 text-right'>Giá bán</th>
-                    <th className='w-32 px-6 py-4 text-center'>Ngày tạo</th>
+                    <th 
+                      className='w-40 px-6 py-4 text-right cursor-pointer hover:bg-[#d0e3f5] transition-colors select-none'
+                      onClick={() => handleSort('price')}
+                    >
+                      <div className='flex items-center justify-end gap-1'>
+                        Giá bán
+                        <span className='w-4 h-4 flex items-center justify-center text-blue-900'>
+                          {sortConfig?.key === 'price' ? (
+                            sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                          ) : (
+                            <div className='flex flex-col opacity-40'>
+                              <ArrowUp size={10} className='-mb-1' />
+                              <ArrowDown size={10} />
+                            </div>
+                          )}
+                        </span>
+                      </div>
+                    </th>
+                    <th className='w-32 px-6 py-4 text-center'>Trạng thái</th>
+                    <th 
+                      className='w-32 px-6 py-4 text-center cursor-pointer hover:bg-[#d0e3f5] transition-colors select-none'
+                      onClick={() => handleSort('createdAt')}
+                    >
+                      <div className='flex items-center justify-center gap-1'>
+                        Ngày tạo
+                        <span className='w-4 h-4 flex items-center justify-center text-blue-900'>
+                          {sortConfig?.key === 'createdAt' ? (
+                            sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                          ) : (
+                            <div className='flex flex-col opacity-40'>
+                              <ArrowUp size={10} className='-mb-1' />
+                              <ArrowDown size={10} />
+                            </div>
+                          )}
+                        </span>
+                      </div>
+                    </th>
                     <th className='w-36 px-6 py-4 text-center'>Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className='divide-y divide-gray-100'>
-                  {filteredProducts.map((product) => (
+                  {sortedProducts.map((product) => (
                     <tr 
                       key={product.id} 
                       className='hover:bg-[#fcfdfe] transition-colors group'
@@ -572,12 +671,12 @@ export default function Product() {
                         {product.name}
                       </td>
                       <td className='py-4 px-6 text-[13.5px] text-gray-600 font-medium'>
-                        {categories.find(c => c.id === product.productCategoryId)?.name ?? 'N/A'}
+                        <span className='inline-block bg-[#f3f4f6] text-gray-600 text-[12.5px] px-3.5 py-1 rounded-full font-bold border border-gray-200/40'>
+                          {categories.find(c => c.id === product.productCategoryId)?.name ?? 'N/A'}
+                        </span>
                       </td>
                       <td className='py-4 px-6 text-center'>
-                        <span className='inline-block bg-[#f3f4f6] text-gray-600 text-[12.5px] px-3.5 py-1 rounded-full font-bold border border-gray-200/40'>
-                          {product.unit ?? 'N/A'}
-                        </span>
+                        {product.unit ?? 'N/A'}
                       </td>
                       <td className='py-4 px-6 text-right text-[14.5px] font-bold text-gray-900 whitespace-nowrap'>
                         {
@@ -585,6 +684,17 @@ export default function Product() {
                             ? product.currentPrice.toLocaleString('vi-VN')
                             : 'N/A'
                         }
+                      </td>
+                      <td className='py-4 px-6 text-center'>
+                        <span
+                          className={`inline-block text-[12px] px-3 py-1 rounded-full font-bold border whitespace-nowrap ${
+                            product.status === 'Active'
+                              ? 'bg-emerald-50 text-emerald-600 border-emerald-200/60'
+                              : 'bg-red-50 text-red-500 border-red-200/60'
+                          }`}
+                        >
+                          {product.status === 'Active' ? 'Đang kinh doanh' : 'Ngừng kinh doanh'}
+                        </span>
                       </td>
                       <td className='py-4 px-6 text-center text-[13.5px] text-gray-600 font-medium'>
                         {new Date(product.createdAt).toLocaleDateString('vi-VN')}
@@ -644,6 +754,52 @@ export default function Product() {
               >
                 Đặt lại bộ lọc
               </button>
+            </div>
+          )}
+
+          {products.length > 0 && totalPages > 1 && (
+            <div className='mt-4'>
+              <Pagination className='mt-6'>
+                <PaginationContent className='gap-2'>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => changePage(Math.max(1, page - 1))}
+                      className={`h-10 px-4 rounded-lg border transition-all ${
+                        page === 1
+                          ? 'pointer-events-none opacity-40'
+                          : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                      }`}
+                    />
+                  </PaginationItem>
+
+                  {[...Array(totalPages)].map((_, i) => (
+                    <PaginationItem key={i + 1}>
+                      <PaginationLink
+                        isActive={page === i + 1}
+                        onClick={() => changePage(i + 1)}
+                        className={`h-10 w-10 rounded-lg font-semibold transition-all cursor-pointer ${
+                          page === i + 1
+                            ? 'bg-[#D32F2F] text-white border-[#D32F2F] hover:bg-[#B71C1C]'
+                            : 'border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                        }`}
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => changePage(Math.min(totalPages, page + 1))}
+                      className={`h-10 px-4 rounded-lg border transition-all ${
+                        page === totalPages
+                          ? 'pointer-events-none opacity-40'
+                          : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                      }`}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
         </div>

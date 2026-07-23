@@ -5,7 +5,7 @@ import http from '../utils/http'
 export const getAllProducts = async (
   businessId: string,
   pageNumber = 1,
-  pageSize = 10,
+  pageSize = 5,
   search?: string,
   status?: string,
   productCategoryId?: string
