@@ -61,7 +61,12 @@ export default function useRouteElements() {
     //================ Admin routes ================
     {
       path: path.BASE_ADMIN,
-      // element: <ProtectedRoute allowedRoles={['Admin']} />,
+      element: (
+        <ProtectedRoute
+          allowedRoles={['Admin']}
+          redirectTo={path.BUSINESS_OWNER_LOGIN}
+        />
+      ),
       children: [
         {
           element: <AdminLayout />,

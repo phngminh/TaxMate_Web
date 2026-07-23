@@ -38,8 +38,13 @@ class Http {
   }
 
   private handleResponseError(error: any) {
+    // Only clear the session when the token is missing/invalid/expired,
+    // not on every Authorization failure path.
     if (error?.response?.status === 401) {
-      localStorage.removeItem('token')
+      const hasToken = !!localStorage.getItem('token')
+      if (hasToken) {
+        localStorage.removeItem('token')
+      }
     }
 
     return Promise.reject(error)

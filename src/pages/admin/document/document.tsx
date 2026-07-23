@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   Search,
   FileText,
@@ -12,21 +12,18 @@ import {
   ToggleLeft,
   ToggleRight,
   FileSearch,
-  Download,
   AlertTriangle,
   CheckCircle2,
   Clock,
   Layers,
-  Hash,
   Tag,
-  Zap,
   FileUp,
-  BarChart2,
-  Activity,
   TrendingUp,
   Plus,
 } from 'lucide-react'
-import type { DocumentChunk, DocumentKeyword, LegalDocument } from '../../../types/document.type'
+import { toast } from 'react-toastify'
+import type { LegalDocument } from '../../../types/document.type'
+import { mapLegalDocumentResponse } from '../../../types/document.type'
 import { Button } from '../../../components/ui/button'
 import {
   Select,
@@ -51,317 +48,50 @@ import {
   PaginationPrevious,
   PaginationNext,
 } from '../../../components/ui/pagination'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '../../../components/ui/dropdown-menu'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../../../components/ui/dropdown-menu'
+import {
+  activateLegalDocument,
+  deactivateLegalDocument,
+  deleteLegalDocument,
+  getLegalDocuments,
+  updateLegalDocumentPdf,
+  uploadLegalDocument,
+} from '../../../apis/document.api'
 
-const mockChunks: DocumentChunk[] = [
-  {
-    chunk_index: 1,
-    dieu: 'Điều 1',
-    khoan: null,
-    diem: null,
-    tieu_de_dieu: 'Phạm vi điều chỉnh',
-    token_count: 312,
-    character_count: 1248,
-  },
-  {
-    chunk_index: 2,
-    dieu: 'Điều 2',
-    khoan: 'Khoản 1',
-    diem: null,
-    tieu_de_dieu: 'Đối tượng áp dụng',
-    token_count: 287,
-    character_count: 1148,
-  },
-  {
-    chunk_index: 3,
-    dieu: 'Điều 2',
-    khoan: 'Khoản 2',
-    diem: 'Điểm a',
-    tieu_de_dieu: 'Đối tượng áp dụng',
-    token_count: 198,
-    character_count: 792,
-  },
-  {
-    chunk_index: 4,
-    dieu: 'Điều 2',
-    khoan: 'Khoản 2',
-    diem: 'Điểm b',
-    tieu_de_dieu: 'Đối tượng áp dụng',
-    token_count: 205,
-    character_count: 820,
-  },
-  {
-    chunk_index: 5,
-    dieu: 'Điều 3',
-    khoan: null,
-    diem: null,
-    tieu_de_dieu: 'Giải thích từ ngữ',
-    token_count: 445,
-    character_count: 1780,
-  },
-  {
-    chunk_index: 6,
-    dieu: 'Điều 4',
-    khoan: 'Khoản 1',
-    diem: null,
-    tieu_de_dieu: 'Thu nhập chịu thuế',
-    token_count: 389,
-    character_count: 1556,
-  },
-  {
-    chunk_index: 7,
-    dieu: 'Điều 4',
-    khoan: 'Khoản 2',
-    diem: null,
-    tieu_de_dieu: 'Thu nhập chịu thuế',
-    token_count: 356,
-    character_count: 1424,
-  },
-  {
-    chunk_index: 8,
-    dieu: 'Điều 5',
-    khoan: null,
-    diem: null,
-    tieu_de_dieu: 'Thu nhập được miễn thuế',
-    token_count: 412,
-    character_count: 1648,
-  },
-  {
-    chunk_index: 9,
-    dieu: 'Điều 6',
-    khoan: 'Khoản 1',
-    diem: 'Điểm a',
-    tieu_de_dieu: 'Kỳ tính thuế',
-    token_count: 178,
-    character_count: 712,
-  },
-  {
-    chunk_index: 10,
-    dieu: 'Điều 6',
-    khoan: 'Khoản 1',
-    diem: 'Điểm b',
-    tieu_de_dieu: 'Kỳ tính thuế',
-    token_count: 162,
-    character_count: 648,
-  },
-]
+const DOC_TYPES = ['All', 'Luật', 'Thông Tư', 'Nghị Định', 'Nghị Quyết'] as const
 
-const mockKeywords: DocumentKeyword[] = [
-  {
-    keyword_text: 'thu nhập chịu thuế',
-    keyword_type: 'Legal_term',
-    embedding_model: 'text-embedding-3-large',
-    vector_dimension: 3072,
-  },
-  {
-    keyword_text: 'miễn thuế',
-    keyword_type: 'Legal_term',
-    embedding_model: 'text-embedding-3-large',
-    vector_dimension: 3072,
-  },
-  {
-    keyword_text: 'thuế thu nhập cá nhân',
-    keyword_type: 'Concept',
-    embedding_model: 'text-embedding-3-large',
-    vector_dimension: 3072,
-  },
-  {
-    keyword_text: 'Bộ Tài Chính',
-    keyword_type: 'Entity',
-    embedding_model: 'text-embedding-3-large',
-    vector_dimension: 3072,
-  },
-  {
-    keyword_text: '20%',
-    keyword_type: 'Numeric',
-    embedding_model: 'text-embedding-3-large',
-    vector_dimension: 3072,
-  },
-  {
-    keyword_text: 'khấu trừ thuế',
-    keyword_type: 'Legal_term',
-    embedding_model: 'text-embedding-3-large',
-    vector_dimension: 3072,
-  },
-  {
-    keyword_text: 'cư trú',
-    keyword_type: 'Concept',
-    embedding_model: 'text-embedding-3-large',
-    vector_dimension: 3072,
-  },
-  {
-    keyword_text: 'Tổng Cục Thuế',
-    keyword_type: 'Entity',
-    embedding_model: 'text-embedding-3-large',
-    vector_dimension: 3072,
-  },
-  {
-    keyword_text: 'giảm trừ gia cảnh',
-    keyword_type: 'Legal_term',
-    embedding_model: 'text-embedding-3-large',
-    vector_dimension: 3072,
-  },
-  {
-    keyword_text: '11 triệu đồng/tháng',
-    keyword_type: 'Numeric',
-    embedding_model: 'text-embedding-3-large',
-    vector_dimension: 3072,
-  },
-]
+function getErrorMessage(error: unknown, fallback: string) {
+  const err = error as {
+    response?: { status?: number; data?: { message?: string } }
+    message?: string
+  }
+  if (err?.response?.status === 401) {
+    return 'Phiên đăng nhập hết hạn hoặc chưa đăng nhập. Vui lòng đăng nhập lại bằng tài khoản Admin.'
+  }
+  if (err?.response?.status === 403) {
+    return 'Bạn không có quyền thực hiện thao tác này (cần tài khoản Admin).'
+  }
+  return err?.response?.data?.message || err?.message || fallback
+}
 
-const mockDocuments: LegalDocument[] = [
-  {
-    id: 'doc-001',
-    document_name: 'Luật Thuế Thu Nhập Cá Nhân 2024',
-    document_code: '38/2024/QH15',
-    document_type: 'Luật',
-    effective_date: '2024-07-01',
-    expired_date: null,
-    status: 'Active',
-    requires_ocr: false,
-    total_pages: 48,
-    total_chunks: 247,
-    created_at: '2024-01-15T09:30:00Z',
-    updated_at: '2024-05-10T14:22:00Z',
-    source_file_name: 'luat_thue_tncn_2024_38_2024_QH15.pdf',
-    source_file_path: '/storage/legal/laws/luat_thue_tncn_2024_38_2024_QH15.pdf',
-    ocr_status: 'Not_required',
-    embedding_status: 'Completed',
-    token_count: 94328,
-    embedding_model: 'text-embedding-3-large',
-    vector_dimension: 3072,
-  },
-  {
-    id: 'doc-002',
-    document_name: 'Thông Tư Hướng Dẫn Về Quản Lý Thuế',
-    document_code: '78/2023/TT-BTC',
-    document_type: 'Thông Tư',
-    effective_date: '2023-10-01',
-    expired_date: null,
-    status: 'Active',
-    requires_ocr: false,
-    total_pages: 64,
-    total_chunks: 389,
-    created_at: '2023-09-20T11:00:00Z',
-    updated_at: '2024-04-15T09:45:00Z',
-    source_file_name: 'TT_78_2023_TT_BTC.pdf',
-    source_file_path: '/storage/legal/circulars/TT_78_2023_TT_BTC.pdf',
-    ocr_status: 'Not_required',
-    embedding_status: 'Completed',
-    token_count: 148752,
-    embedding_model: 'text-embedding-3-large',
-    vector_dimension: 3072,
-  },
-  {
-    id: 'doc-003',
-    document_name:
-      'Nghị Định Quy Định Chi Tiết Một Số Điều Của Luật Quản Lý Thuế',
-    document_code: '126/2023/NĐ-CP',
-    document_type: 'Nghị Định',
-    effective_date: '2023-11-15',
-    expired_date: null,
-    status: 'Processing',
-    requires_ocr: true,
-    total_pages: 82,
-    total_chunks: 0,
-    created_at: '2024-05-20T08:00:00Z',
-    updated_at: '2024-05-22T10:30:00Z',
-    source_file_name: 'ND_126_2023_ND_CP_scan.pdf',
-    source_file_path: '/storage/legal/decrees/ND_126_2023_ND_CP_scan.pdf',
-    ocr_status: 'Pending',
-    embedding_status: 'Pending',
-    token_count: 0,
-    embedding_model: 'text-embedding-3-large',
-    vector_dimension: 3072,
-  },
-  {
-    id: 'doc-005',
-    document_name: 'Thông Tư Hướng Dẫn Thuế Giá Trị Gia Tăng',
-    document_code: '219/2013/TT-BTC',
-    document_type: 'Thông Tư',
-    effective_date: '2014-01-01',
-    expired_date: '2023-12-31',
-    status: 'Inactive',
-    requires_ocr: false,
-    total_pages: 56,
-    total_chunks: 298,
-    created_at: '2021-03-12T10:00:00Z',
-    updated_at: '2024-01-05T08:00:00Z',
-    source_file_name: 'TT_219_2013_TT_BTC.pdf',
-    source_file_path: '/storage/legal/circulars/TT_219_2013_TT_BTC.pdf',
-    ocr_status: 'Not_required',
-    embedding_status: 'Completed',
-    token_count: 112360,
-    embedding_model: 'text-embedding-ada-002',
-    vector_dimension: 1536,
-  },
-  {
-    id: 'doc-006',
-    document_name: 'Quyết Định Về Hệ Thống Mã Số Thuế',
-    document_code: '15/2024/QĐ-BTC',
-    document_type: 'Nghị Quyết',
-    effective_date: '2024-04-01',
-    expired_date: null,
-    status: 'Error',
-    requires_ocr: true,
-    total_pages: 28,
-    total_chunks: 0,
-    created_at: '2024-04-10T14:00:00Z',
-    updated_at: '2024-04-12T16:45:00Z',
-    source_file_name: 'QD_15_2024_BTC_scan_corrupt.pdf',
-    source_file_path: '/storage/legal/decisions/QD_15_2024_BTC_scan_corrupt.pdf',
-    ocr_status: 'Failed',
-    embedding_status: 'Failed',
-    token_count: 0,
-    embedding_model: 'text-embedding-3-large',
-    vector_dimension: 3072,
-  },
-  {
-    id: 'doc-007',
-    document_name: 'Nghị Định Hướng Dẫn Luật Thuế TNCN',
-    document_code: '65/2013/NĐ-CP',
-    document_type: 'Nghị Định',
-    effective_date: '2013-08-01',
-    expired_date: null,
-    status: 'Active',
-    requires_ocr: false,
-    total_pages: 44,
-    total_chunks: 218,
-    created_at: '2021-08-15T09:00:00Z',
-    updated_at: '2023-11-20T10:30:00Z',
-    source_file_name: 'ND_65_2013_ND_CP.pdf',
-    source_file_path: '/storage/legal/decrees/ND_65_2013_ND_CP.pdf',
-    ocr_status: 'Not_required',
-    embedding_status: 'Completed',
-    token_count: 82744,
-    embedding_model: 'text-embedding-ada-002',
-    vector_dimension: 1536,
-  },
-  {
-    id: 'doc-008',
-    document_name: 'Thông Tư Quy Định Về Hóa Đơn Điện Tử',
-    document_code: '78/2021/TT-BTC',
-    document_type: 'Thông Tư',
-    effective_date: '2022-07-01',
-    expired_date: null,
-    status: 'Active',
-    requires_ocr: false,
-    total_pages: 38,
-    total_chunks: 176,
-    created_at: '2021-09-12T11:00:00Z',
-    updated_at: '2024-02-18T14:20:00Z',
-    source_file_name: 'TT_78_2021_TT_BTC_hoadon.pdf',
-    source_file_path: '/storage/legal/circulars/TT_78_2021_TT_BTC_hoadon.pdf',
-    ocr_status: 'Not_required',
-    embedding_status: 'Completed',
-    token_count: 66528,
-    embedding_model: 'text-embedding-3-large',
-    vector_dimension: 3072,
-  },
-]
+function formatDateOnly(value: string | null) {
+  if (!value) return '—'
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return value.slice(0, 10)
+  return d.toLocaleDateString('vi-VN')
+}
 
-function StatusBadge({ status }: { status: LegalDocument['status'] }) {
-  const configs = {
+function StatusBadge({ status }: { status: string }) {
+  const configs: Record<
+    string,
+    { label: string; className: string; dot: string }
+  > = {
     Active: {
       label: 'Hoạt động',
       className: 'bg-[#ecfdf5] text-[#059669]',
@@ -372,55 +102,36 @@ function StatusBadge({ status }: { status: LegalDocument['status'] }) {
       className: 'bg-[#f3f4f6] text-[#6b7280]',
       dot: 'bg-[#9ca3af]',
     },
-    Processing: {
-      label: 'Đang xử lý',
-      className: 'bg-[#fef9c3] text-[#ca8a04] animate-pulse',
-      dot: 'bg-[#f59e0b]',
-    },
-    Error: {
-      label: 'Lỗi',
-      className: 'bg-red-100 text-[#dc2626]',
-      dot: 'bg-[#ef4444]',
-    },
-    Pending: {
-      label: 'Chờ xử lý',
-      className: 'bg-[#fff7ed] text-[#ea580c]',
-      dot: 'bg-[#f97316]',
-    },
   }
 
-  const { label, className, dot } = configs[status]
+  const config = configs[status] ?? {
+    label: status,
+    className: 'bg-[#f3f4f6] text-[#6b7280]',
+    dot: 'bg-[#9ca3af]',
+  }
+
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-sm font-medium ${config.className}`}
     >
-      <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
-      {label}
+      <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
+      {config.label}
     </span>
   )
 }
 
-function OcrBadge({ status }: { status: LegalDocument['ocr_status'] }) {
+function IndexBadge({ badge }: { badge: LegalDocument['index_badge'] }) {
   const configs = {
-    Completed: {
-      label: 'COMPLETED',
+    INDEXED: {
+      label: 'INDEXED',
       className: 'bg-[#ecfdf5] text-[#10b981]',
     },
-    Pending: {
+    PENDING: {
       label: 'PENDING',
       className: 'bg-[#fff7ed] text-[#f59e0b]',
     },
-    Failed: {
-      label: 'FAILED',
-      className: 'bg-[#fef2f2] text-[#ef4444]',
-    },
-    Not_required: {
-      label: 'NATIVE PDF',
-      className: 'bg-[#f3f4f6] text-[#9ca3af]',
-    },
   }
-
-  const { label, className } = configs[status]
+  const { label, className } = configs[badge]
   return (
     <span
       className={`inline-flex items-center px-2 py-1 rounded-sm text-[10px] font-bold uppercase tracking-wide ${className}`}
@@ -430,53 +141,26 @@ function OcrBadge({ status }: { status: LegalDocument['ocr_status'] }) {
   )
 }
 
-function KeywordTypeBadge({ type }: { type: DocumentKeyword['keyword_type'] }) {
-  const configs = {
-    Entity: {
-      label: 'Entity',
-      cls: 'bg-[#eff6ff] text-[#3b82f6]',
-    },
-    Concept: {
-      label: 'Concept',
-      cls: 'bg-[#f5f3ff] text-[#8b5cf6]',
-    },
-    Legal_term: {
-      label: 'Legal Term',
-      cls: 'bg-[#ecfdf5] text-[#10b981]',
-    },
-    Numeric: {
-      label: 'Numeric',
-      cls: 'bg-[#fef3c7] text-[#f59e0b]',
-    },
-  }
-
-  const { label, cls } = configs[type]
-  return (
-    <span
-      className={`inline-flex px-2 py-0.5 rounded-sm text-sm font-medium ${cls}`}
-    >
-      {label}
-    </span>
-  )
-}
-
 function ActionsMenu({
   doc,
   onView,
+  onUpdatePdf,
   onDelete,
   onToggle,
 }: {
   doc: LegalDocument
   onView: () => void
+  onUpdatePdf: () => void
   onDelete: () => void
   onToggle: () => void
 }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger {...({ asChild: true } as any)}>
+      <DropdownMenuTrigger {...({ asChild: true } as object)}>
         <button
+          type='button'
           onClick={(e) => e.stopPropagation()}
-          className="p-1.5 rounded-md text-[#9ca3af] hover:text-[#1a1a1a] hover:bg-[#f9fafb] transition-colors"
+          className='p-1.5 rounded-md text-[#9ca3af] hover:text-[#1a1a1a] hover:bg-[#f9fafb] transition-colors'
         >
           <MoreHorizontal className='w-3.5 h-3.5' />
         </button>
@@ -493,14 +177,9 @@ function ActionsMenu({
           Xem chi tiết
         </DropdownMenuItem>
 
-        <DropdownMenuItem>
+        <DropdownMenuItem onClick={onUpdatePdf}>
           <FileUp className='mr-2 h-4 w-4' />
           Cập nhật PDF
-        </DropdownMenuItem>
-
-        <DropdownMenuItem>
-          <RefreshCw className='mr-2 h-4 w-4' />
-          Re-index
         </DropdownMenuItem>
 
         <DropdownMenuSeparator />
@@ -511,10 +190,7 @@ function ActionsMenu({
           ) : (
             <ToggleRight className='mr-2 h-4 w-4' />
           )}
-
-          {doc.status === 'Active'
-            ? 'Vô hiệu hóa'
-            : 'Kích hoạt'}
+          {doc.status === 'Active' ? 'Vô hiệu hóa' : 'Kích hoạt'}
         </DropdownMenuItem>
 
         <DropdownMenuItem
@@ -529,8 +205,11 @@ function ActionsMenu({
   )
 }
 
-function DocumentDrawer({ doc, onClose }: {
-  doc: LegalDocument,
+function DocumentDrawer({
+  doc,
+  onClose,
+}: {
+  doc: LegalDocument
   onClose: () => void
 }) {
   const [activeTab, setActiveTab] = useState<'pdf' | 'ai' | 'chunks' | 'keywords'>('pdf')
@@ -567,11 +246,11 @@ function DocumentDrawer({ doc, onClose }: {
           </Button>
         </div>
 
-        {/* Tabs */}
         <div className='flex border-b border-[#e5e7eb] px-6 shrink-0'>
           {tabs.map((tab) => (
             <button
               key={tab.id}
+              type='button'
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-1.5 px-3 py-3.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
                 activeTab === tab.id
@@ -585,7 +264,6 @@ function DocumentDrawer({ doc, onClose }: {
           ))}
         </div>
 
-        {/* Tab Content */}
         <div className='flex-1 overflow-y-auto p-6 space-y-5'>
           {activeTab === 'pdf' && (
             <div className='space-y-4'>
@@ -594,40 +272,24 @@ function DocumentDrawer({ doc, onClose }: {
               </h3>
               <div className='bg-card border border-border rounded-xl overflow-hidden'>
                 {[
-                  {
-                    label: 'Source File Name',
-                    value: doc.source_file_name,
-                    mono: true,
-                  },
-                  {
-                    label: 'Storage Path',
-                    value: doc.source_file_path,
-                    mono: true,
-                  },
+                  { label: 'Source File Name', value: doc.source_file_name, mono: true },
+                  { label: 'Storage Path', value: doc.source_file_path, mono: true },
+                  { label: 'File Size', value: `${(doc.file_size / 1024).toFixed(1)} KB` },
                   {
                     label: 'Total Pages',
-                    value: `${doc.total_pages} pages`,
+                    value: doc.total_pages != null ? `${doc.total_pages} pages` : '—',
                   },
                   {
                     label: 'Created At',
-                    value: new Date(
-                      doc.created_at,
-                    ).toLocaleString('vi-VN'),
+                    value: new Date(doc.created_at).toLocaleString('vi-VN'),
                   },
                   {
                     label: 'Updated At',
-                    value: new Date(
-                      doc.updated_at,
-                    ).toLocaleString('vi-VN'),
+                    value: new Date(doc.updated_at).toLocaleString('vi-VN'),
                   },
-                  {
-                    label: 'Effective Date',
-                    value: doc.effective_date,
-                  },
-                  {
-                    label: 'Expired Date',
-                    value: doc.expired_date ?? '—',
-                  },
+                  { label: 'Effective Date', value: formatDateOnly(doc.effective_date) },
+                  { label: 'Expired Date', value: formatDateOnly(doc.expired_date) },
+                  { label: 'Authority', value: doc.authority_level ?? '—' },
                 ].map(({ label, value, mono }) => (
                   <div
                     key={label}
@@ -644,16 +306,6 @@ function DocumentDrawer({ doc, onClose }: {
                   </div>
                 ))}
               </div>
-
-              <div className='flex items-center gap-2 p-3 bg-[#f9fafb] border border-[#e5e7eb] rounded-lg'>
-                <Download className='w-4 h-4 text-[#9ca3af] shrink-0' />
-                <span className='text-sm text-[#9ca3af] flex-1 truncate'>
-                  {doc.source_file_name}
-                </span>
-                <Button variant='link' size='sm' className='text-[#5d2ec0] hover:text-[#4c25a0] p-0 h-auto'>
-                  Download
-                </Button>
-              </div>
             </div>
           )}
 
@@ -662,313 +314,44 @@ function DocumentDrawer({ doc, onClose }: {
               <h3 className='text-sm font-semibold text-[#9ca3af] uppercase tracking-wider'>
                 AI Processing Status
               </h3>
-
               <div className='grid grid-cols-2 gap-3'>
                 <div className='bg-card border border-border rounded-xl p-4'>
                   <div className='flex items-center justify-between mb-3'>
-                    <span className='text-sm text-[#9ca3af]'>
-                      OCR Status
-                    </span>
+                    <span className='text-sm text-[#9ca3af]'>Index Status</span>
                     <FileSearch className='w-3.5 h-3.5 text-[#9ca3af]' />
                   </div>
-                  <OcrBadge status={doc.ocr_status} />
+                  <IndexBadge badge={doc.index_badge} />
                   <p className='text-sm text-[#9ca3af] mt-2'>
-                    {doc.requires_ocr
-                      ? 'Scanned PDF — OCR required'
-                      : 'Digital PDF — no OCR needed'}
+                    {doc.is_indexed
+                      ? 'Document marked as indexed'
+                      : 'Awaiting RAG index'}
                   </p>
                 </div>
                 <div className='bg-card border border-border rounded-xl p-4'>
                   <div className='flex items-center justify-between mb-3'>
-                    <span className='text-sm text-[#9ca3af]'>
-                      Embedding Status
-                    </span>
+                    <span className='text-sm text-[#9ca3af]'>Chunks</span>
                     <Database className='w-3.5 h-3.5 text-[#9ca3af]' />
                   </div>
-                  <span
-                    className={`inline-flex items-center gap-1.5 text-sm font-medium ${
-                      doc.embedding_status === 'Completed'
-                        ? 'text-[#10b981]'
-                        : doc.embedding_status === 'Pending'
-                          ? 'text-[#f59e0b]'
-                          : doc.embedding_status === 'Failed'
-                            ? 'text-[#ef4444]'
-                            : 'text-[#3b82f6]'
-                    }`}
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        doc.embedding_status === 'Completed'
-                          ? 'bg-[#10b981]'
-                          : doc.embedding_status === 'Pending'
-                            ? 'bg-[#f59e0b]'
-                            : doc.embedding_status === 'Failed'
-                              ? 'bg-[#ef4444]'
-                              : 'bg-[#3b82f6] animate-pulse'
-                      }`}
-                    />
-                    {doc.embedding_status === 'Completed'
-                      ? 'Indexed'
-                      : doc.embedding_status === 'Pending'
-                        ? 'Pending'
-                        : doc.embedding_status === 'Failed'
-                          ? 'Failed'
-                          : 'Indexing…'}
-                  </span>
+                  <p className='text-lg font-semibold text-[#1a1a1a]'>
+                    {doc.total_chunks > 0 ? doc.total_chunks.toLocaleString('vi-VN') : '—'}
+                  </p>
                   <p className='text-sm text-[#9ca3af] mt-2'>
-                    {doc.embedding_model}
+                    Stored on TaxMate document record
                   </p>
                 </div>
               </div>
-
-              {/* Token stats */}
-              <div className='bg-card border border-border rounded-xl overflow-hidden'>
-                <div className='px-4 py-3 border-b border-[#e5e7eb]'>
-                  <span className='text-sm font-medium text-[#1a1a1a]'>
-                    Token &amp; Chunk Statistics
-                  </span>
-                </div>
-                {[
-                  {
-                    label: 'Total Chunks',
-                    value: doc.total_chunks.toLocaleString(),
-                    icon: Layers,
-                  },
-                  {
-                    label: 'Total Tokens',
-                    value:
-                      doc.token_count > 0
-                        ? doc.token_count.toLocaleString()
-                        : '—',
-                    icon: Hash,
-                  },
-                  {
-                    label: 'Avg Tokens/Chunk',
-                    value:
-                      doc.total_chunks > 0
-                        ? Math.round(
-                            doc.token_count / doc.total_chunks,
-                          ).toLocaleString()
-                        : '—',
-                    icon: BarChart2,
-                  },
-                  {
-                    label: 'Embedding Model',
-                    value: doc.embedding_model,
-                    icon: Cpu,
-                  },
-                  {
-                    label: 'Vector Dimension',
-                    value:
-                      doc.vector_dimension.toLocaleString(),
-                    icon: Activity,
-                  },
-                ].map(({ label, value, icon: Icon }) => (
-                  <div
-                    key={label}
-                    className='flex items-center justify-between px-4 py-3 border-b border-[#e5e7eb] last:border-0'
-                  >
-                    <div className='flex items-center gap-2'>
-                      <Icon className='w-3.5 h-3.5 text-[#9ca3af]' />
-                      <span className='text-sm text-[#9ca3af]'>
-                        {label}
-                      </span>
-                    </div>
-                    <span className='text-sm font-medium text-[#1a1a1a] font-mono'>
-                      {value}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Processing actions */}
-              <div className='flex gap-2'>
-                <Button
-                  variant='outline'
-                  className='flex-1 text-[#1a1a1a]'
-                >
-                  <FileSearch className='w-3.5 h-3.5' />
-                  Reprocess OCR
-                </Button>
-                <Button
-                  variant='outline'
-                  className='flex-1 border-[#e9d5ff] bg-[#faf5ff] hover:bg-[#f5f0ff] text-[#5d2ec0]'
-                >
-                  <RefreshCw className='w-3.5 h-3.5' />
-                  Re-index Embeddings
-                </Button>
-              </div>
             </div>
           )}
 
-          {/* ── Chunk Explorer ── */}
           {activeTab === 'chunks' && (
-            <div className='space-y-3'>
-              <div className='flex items-center justify-between'>
-                <h3 className='text-sm font-semibold text-[#9ca3af] uppercase tracking-wider'>
-                  Chunk Explorer
-                </h3>
-                <span className='text-sm text-[#9ca3af]'>
-                  {mockChunks.length} / {doc.total_chunks}{' '}
-                  chunks shown
-                </span>
-              </div>
-              <div className='bg-card border border-border rounded-xl overflow-hidden'>
-                <Table>
-                  <TableHeader>
-                    <TableRow className='border-b border-[#e5e7eb] bg-[#f9fafb]'>
-                      <TableHead className='px-3 py-2.5 text-[#9ca3af] font-medium w-10'>
-                        #
-                      </TableHead>
-                      <TableHead className='px-3 py-2.5 text-[#9ca3af] font-medium'>
-                        Điều / Khoản / Điểm
-                      </TableHead>
-                      <TableHead className='px-3 py-2.5 text-[#9ca3af] font-medium'>
-                        Tiêu đề
-                      </TableHead>
-                      <TableHead className='px-3 py-2.5 text-right text-[#9ca3af] font-medium'>
-                        Tokens
-                      </TableHead>
-                      <TableHead className='px-3 py-2.5 text-right text-[#9ca3af] font-medium'>
-                        Chars
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody className='divide-y divide-[#e5e7eb]'>
-                    {mockChunks.map((chunk) => (
-                      <TableRow
-                        key={chunk.chunk_index}
-                        className='hover:bg-[#f9fafb] transition-colors group'
-                      >
-                        <TableCell className='px-3 py-2.5 font-mono text-[#9ca3af]'>
-                          {chunk.chunk_index}
-                        </TableCell>
-                        <TableCell className='px-3 py-2.5'>
-                          <div className='space-y-0.5'>
-                            <span className='text-[#5d2ec0] font-medium'>
-                              {chunk.dieu}
-                            </span>
-                            {chunk.khoan && (
-                              <span className='block text-[#9ca3af]'>
-                                {chunk.khoan}
-                              </span>
-                            )}
-                            {chunk.diem && (
-                              <span className='block text-[#9ca3af]'>
-                                {chunk.diem}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className='px-3 py-2.5 text-[#1a1a1a] max-w-40'>
-                          <span
-                            className='truncate block'
-                            title={chunk.tieu_de_dieu}
-                          >
-                            {chunk.tieu_de_dieu}
-                          </span>
-                        </TableCell>
-                        <TableCell className='px-3 py-2.5 text-right font-mono text-[#9ca3af]'>
-                          {chunk.token_count}
-                        </TableCell>
-                        <TableCell className='px-3 py-2.5 text-right font-mono text-[#9ca3af]'>
-                          {chunk.character_count.toLocaleString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-              {doc.total_chunks > mockChunks.length && (
-                <Button
-                  variant='ghost'
-                  className='w-full text-[#9ca3af] hover:text-[#1a1a1a]'
-                >
-                  Load more chunks (
-                  {doc.total_chunks - mockChunks.length}{' '}
-                  remaining)
-                </Button>
-              )}
+            <div className='py-12 text-center text-sm text-[#9ca3af]'>
+              Chưa có dữ liệu index (chunks).
             </div>
           )}
 
-          {/* ── Keywords & Embeddings ── */}
           {activeTab === 'keywords' && (
-            <div className='space-y-3'>
-              <div className='flex items-center justify-between'>
-                <h3 className='text-sm font-semibold text-[#9ca3af] uppercase tracking-wider'>
-                  Keywords &amp; Embeddings
-                </h3>
-                <span className='text-sm text-[#9ca3af]'>
-                  {mockKeywords.length} extracted
-                </span>
-              </div>
-              <div className='bg-card border border-border rounded-xl overflow-hidden'>
-                <Table>
-                  <TableHeader>
-                    <TableRow className='border-b border-[#e5e7eb] bg-[#f9fafb]'>
-                      <TableHead className='px-3 py-2.5 text-[#9ca3af] font-medium'>
-                        Keyword
-                      </TableHead>
-                      <TableHead className='px-3 py-2.5 text-[#9ca3af] font-medium'>
-                        Type
-                      </TableHead>
-                      <TableHead className='px-3 py-2.5 text-[#9ca3af] font-medium'>
-                        Model
-                      </TableHead>
-                      <TableHead className='px-3 py-2.5 text-right text-[#9ca3af] font-medium'>
-                        Dim
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody className='divide-y divide-[#e5e7eb]'>
-                    {mockKeywords.map((kw, i) => (
-                      <TableRow
-                        key={i}
-                        className='hover:bg-[#f9fafb] transition-colors'
-                      >
-                        <TableCell className='px-3 py-2.5 text-[#1a1a1a] font-medium'>
-                          {kw.keyword_text}
-                        </TableCell>
-                        <TableCell className='px-3 py-2.5'>
-                          <KeywordTypeBadge
-                            type={kw.keyword_type}
-                          />
-                        </TableCell>
-                        <TableCell className='px-3 py-2.5 text-[#9ca3af] font-mono text-[11px] truncate max-w-30'>
-                          {kw.embedding_model}
-                        </TableCell>
-                        <TableCell className='px-3 py-2.5 text-right font-mono text-[#9ca3af]'>
-                          {kw.vector_dimension}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-
-              <div className='bg-[#faf5ff] border border-[#e9d5ff] rounded-lg p-4'>
-                <div className='flex items-start gap-3'>
-                  <Zap className='w-4 h-4 text-[#5d2ec0] mt-0.5 shrink-0' />
-                  <div>
-                    <p className='text-sm font-medium text-[#1a1a1a] mb-1'>
-                      Embedding Model Details
-                    </p>
-                    <p className='text-sm text-[#6b7280]'>
-                      Model:{' '}
-                      <span className='font-mono text-[#1a1a1a]'>
-                        {doc.embedding_model}
-                      </span>
-                    </p>
-                    <p className='text-sm text-[#6b7280]'>
-                      Dimensions:{' '}
-                      <span className='font-mono text-[#1a1a1a]'>
-                        {doc.vector_dimension.toLocaleString()}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <div className='py-12 text-center text-sm text-[#9ca3af]'>
+              Chưa có dữ liệu index (keywords).
             </div>
           )}
         </div>
@@ -977,29 +360,344 @@ function DocumentDrawer({ doc, onClose }: {
   )
 }
 
+type UploadFormState = {
+  documentCode: string
+  documentName: string
+  documentType: string
+  authorityLevel: string
+  effectiveDate: string
+  file: File | null
+}
+
+const emptyUploadForm = (): UploadFormState => ({
+  documentCode: '',
+  documentName: '',
+  documentType: 'Luật',
+  authorityLevel: '',
+  effectiveDate: '',
+  file: null,
+})
+
+function UploadDocumentModal({
+  open,
+  saving,
+  form,
+  onChange,
+  onClose,
+  onSubmit,
+}: {
+  open: boolean
+  saving: boolean
+  form: UploadFormState
+  onChange: (form: UploadFormState) => void
+  onClose: () => void
+  onSubmit: () => void
+}) {
+  if (!open) return null
+
+  return (
+    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4'>
+      <div className='bg-white rounded-xl shadow-lg w-full max-w-lg max-h-[90vh] overflow-y-auto'>
+        <div className='px-6 py-4 border-b border-[#f3f4f6] flex items-center justify-between'>
+          <h2 className='text-lg font-bold text-[#0a0a0a]'>Thêm tài liệu</h2>
+          <button
+            type='button'
+            onClick={onClose}
+            disabled={saving}
+            className='p-1.5 hover:bg-[#f9fafb] rounded-sm'
+          >
+            <X className='w-4 h-4 text-[#6b7280]' />
+          </button>
+        </div>
+
+        <div className='px-6 py-4 space-y-4'>
+          <div>
+            <label className='block text-sm font-medium text-[#374151] mb-1'>
+              Mã tài liệu
+            </label>
+            <input
+              value={form.documentCode}
+              onChange={(e) => onChange({ ...form, documentCode: e.target.value })}
+              className='w-full px-3 py-2 text-sm border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5d2ec0]/30'
+              placeholder='38/2024/QH15'
+            />
+          </div>
+          <div>
+            <label className='block text-sm font-medium text-[#374151] mb-1'>
+              Tên tài liệu
+            </label>
+            <input
+              value={form.documentName}
+              onChange={(e) => onChange({ ...form, documentName: e.target.value })}
+              className='w-full px-3 py-2 text-sm border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5d2ec0]/30'
+              placeholder='Luật Thuế Thu Nhập Cá Nhân 2024'
+            />
+          </div>
+          <div className='grid grid-cols-2 gap-4'>
+            <div>
+              <label className='block text-sm font-medium text-[#374151] mb-1'>
+                Loại tài liệu
+              </label>
+              <select
+                value={form.documentType}
+                onChange={(e) => onChange({ ...form, documentType: e.target.value })}
+                className='w-full px-3 py-2 text-sm border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5d2ec0]/30'
+              >
+                {DOC_TYPES.filter((t) => t !== 'All').map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className='block text-sm font-medium text-[#374151] mb-1'>
+                Ngày hiệu lực
+              </label>
+              <input
+                type='date'
+                value={form.effectiveDate}
+                onChange={(e) => onChange({ ...form, effectiveDate: e.target.value })}
+                className='w-full px-3 py-2 text-sm border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5d2ec0]/30'
+              />
+            </div>
+          </div>
+          <div>
+            <label className='block text-sm font-medium text-[#374151] mb-1'>
+              Cấp ban hành
+            </label>
+            <input
+              value={form.authorityLevel}
+              onChange={(e) => onChange({ ...form, authorityLevel: e.target.value })}
+              className='w-full px-3 py-2 text-sm border border-[#e5e7eb] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#5d2ec0]/30'
+              placeholder='Quốc hội / Bộ Tài chính...'
+            />
+          </div>
+          <div>
+            <label className='block text-sm font-medium text-[#374151] mb-1'>
+              File PDF
+            </label>
+            <input
+              type='file'
+              accept='.pdf,application/pdf'
+              onChange={(e) =>
+                onChange({ ...form, file: e.target.files?.[0] ?? null })
+              }
+              className='w-full text-sm text-[#374151]'
+            />
+          </div>
+        </div>
+
+        <div className='px-6 py-4 border-t border-[#f3f4f6] flex justify-end gap-2'>
+          <Button type='button' variant='outline' onClick={onClose} disabled={saving}>
+            Hủy
+          </Button>
+          <Button
+            type='button'
+            onClick={onSubmit}
+            disabled={saving}
+            className='bg-[#5d2ec0] text-white hover:bg-[#4c25a0]'
+          >
+            {saving ? 'Đang tải lên...' : 'Tải lên'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function LegalDocumentManagement() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('All')
   const [statusFilter, setStatusFilter] = useState<string>('All')
   const [selectedDoc, setSelectedDoc] = useState<LegalDocument | null>(null)
-  const [documents, setDocuments] = useState(mockDocuments)
-  const docTypes = [
-    'All',
-    'Luật',
-    'Thông Tư',
-    'Nghị Định',
-    'Nghị Quyết'
-  ]
+  const [documents, setDocuments] = useState<LegalDocument[]>([])
+  const [loading, setLoading] = useState(true)
+  const [syncing, setSyncing] = useState(false)
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [uploadForm, setUploadForm] = useState<UploadFormState>(emptyUploadForm())
+  const [saving, setSaving] = useState(false)
+  const [actionId, setActionId] = useState<string | null>(null)
+  const pdfInputRef = useRef<HTMLInputElement>(null)
+  const updatePdfDocIdRef = useRef<string | null>(null)
+
+  const fetchDocuments = useCallback(async (opts?: { silent?: boolean }) => {
+    try {
+      const response = await getLegalDocuments()
+      if (!response.success) {
+        throw new Error(response.message || 'Không thể tải danh sách tài liệu')
+      }
+      const mapped = (response.data ?? []).map(mapLegalDocumentResponse)
+      setDocuments(mapped)
+      setSelectedDoc((prev) => {
+        if (!prev) return null
+        return mapped.find((d) => d.id === prev.id) ?? null
+      })
+      return true
+    } catch (error) {
+      if (!opts?.silent) {
+        toast.error(getErrorMessage(error, 'Không thể tải danh sách tài liệu'))
+      }
+      return false
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      setLoading(true)
+      await fetchDocuments()
+      if (!cancelled) setLoading(false)
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [fetchDocuments])
+
+  const handleSync = async () => {
+    setSyncing(true)
+    const ok = await fetchDocuments({ silent: true })
+    setSyncing(false)
+    if (ok) {
+      toast.success('Đã đồng bộ danh sách tài liệu')
+    } else {
+      toast.error('Đồng bộ thất bại')
+    }
+  }
+
+  const handleUpload = async () => {
+    if (!uploadForm.documentCode.trim() || !uploadForm.documentName.trim()) {
+      toast.error('Vui lòng nhập mã và tên tài liệu')
+      return
+    }
+    if (!uploadForm.file) {
+      toast.error('Vui lòng chọn file PDF')
+      return
+    }
+    if (!window.confirm('Bạn có chắc chắn muốn tải lên tài liệu này?')) {
+      return
+    }
+
+    const formData = new FormData()
+    formData.append('DocumentCode', uploadForm.documentCode.trim())
+    formData.append('DocumentName', uploadForm.documentName.trim())
+    formData.append('DocumentType', uploadForm.documentType)
+    if (uploadForm.authorityLevel.trim()) {
+      formData.append('AuthorityLevel', uploadForm.authorityLevel.trim())
+    }
+    if (uploadForm.effectiveDate) {
+      formData.append('EffectiveDate', uploadForm.effectiveDate)
+    }
+    formData.append('File', uploadForm.file)
+
+    setSaving(true)
+    try {
+      const response = await uploadLegalDocument(formData)
+      if (!response.success) {
+        throw new Error(response.message || 'Upload thất bại')
+      }
+      toast.success('Tải lên tài liệu thành công')
+      setUploadOpen(false)
+      setUploadForm(emptyUploadForm())
+      await fetchDocuments({ silent: true })
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Không thể tải lên tài liệu'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleToggle = async (doc: LegalDocument) => {
+    const nextLabel = doc.status === 'Active' ? 'vô hiệu hóa' : 'kích hoạt'
+    if (!window.confirm(`Bạn có chắc chắn muốn ${nextLabel} "${doc.document_name}"?`)) {
+      return
+    }
+
+    setActionId(doc.id)
+    try {
+      const response =
+        doc.status === 'Active'
+          ? await deactivateLegalDocument(doc.id)
+          : await activateLegalDocument(doc.id)
+      if (!response.success) {
+        throw new Error(response.message || 'Cập nhật trạng thái thất bại')
+      }
+      toast.success(
+        doc.status === 'Active' ? 'Đã vô hiệu hóa tài liệu' : 'Đã kích hoạt tài liệu',
+      )
+      await fetchDocuments({ silent: true })
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Không thể cập nhật trạng thái'))
+    } finally {
+      setActionId(null)
+    }
+  }
+
+  const handleDelete = async (doc: LegalDocument) => {
+    if (
+      !window.confirm(
+        `Bạn có chắc chắn muốn xóa "${doc.document_name}"? Hành động này không thể hoàn tác.`,
+      )
+    ) {
+      return
+    }
+
+    setActionId(doc.id)
+    try {
+      const response = await deleteLegalDocument(doc.id)
+      if (!response.success) {
+        throw new Error(response.message || 'Xóa thất bại')
+      }
+      toast.success('Đã xóa tài liệu')
+      if (selectedDoc?.id === doc.id) setSelectedDoc(null)
+      await fetchDocuments({ silent: true })
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Không thể xóa tài liệu'))
+    } finally {
+      setActionId(null)
+    }
+  }
+
+  const startUpdatePdf = (doc: LegalDocument) => {
+    updatePdfDocIdRef.current = doc.id
+    pdfInputRef.current?.click()
+  }
+
+  const handlePdfFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    const docId = updatePdfDocIdRef.current
+    e.target.value = ''
+    updatePdfDocIdRef.current = null
+
+    if (!file || !docId) return
+
+    if (!window.confirm('Bạn có chắc chắn muốn cập nhật file PDF cho tài liệu này?')) {
+      return
+    }
+
+    const formData = new FormData()
+    formData.append('File', file)
+
+    setActionId(docId)
+    try {
+      const response = await updateLegalDocumentPdf(docId, formData)
+      if (!response.success) {
+        throw new Error(response.message || 'Cập nhật PDF thất bại')
+      }
+      toast.success('Cập nhật PDF thành công')
+      await fetchDocuments({ silent: true })
+    } catch (error) {
+      toast.error(getErrorMessage(error, 'Không thể cập nhật PDF'))
+    } finally {
+      setActionId(null)
+    }
+  }
 
   const filtered = documents.filter((doc) => {
     const matchSearch =
-      doc.document_name
-        .toLowerCase()
-        .includes(search.toLowerCase()) ||
-      doc.document_code
-        .toLowerCase()
-        .includes(search.toLowerCase())
-
+      doc.document_name.toLowerCase().includes(search.toLowerCase()) ||
+      doc.document_code.toLowerCase().includes(search.toLowerCase())
     const matchType = typeFilter === 'All' || doc.document_type === typeFilter
     const matchStatus = statusFilter === 'All' || doc.status === statusFilter
     return matchSearch && matchType && matchStatus
@@ -1007,64 +705,97 @@ export default function LegalDocumentManagement() {
 
   const itemsPerPage = 6
   const [currentPage, setCurrentPage] = useState(1)
-  const totalPages = Math.ceil(filtered.length / itemsPerPage)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / itemsPerPage))
   const startIndex = (currentPage - 1) * itemsPerPage
+  const paginatedDocuments = filtered.slice(startIndex, startIndex + itemsPerPage)
 
-  const paginatedDocuments = filtered.slice(
-    startIndex,
-    startIndex + itemsPerPage,
-  )
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, typeFilter, statusFilter])
 
-  const handleToggle = (id: string) => {
-    setDocuments((prev) =>
-      prev.map((d) =>
-        d.id === id
-          ? {
-              ...d,
-              status:
-                d.status === 'Active' ? 'Inactive' : 'Active',
-            }
-          : d,
-      ),
-    )
-  }
-  const handleDelete = (id: string) => {
-    setDocuments((prev) => prev.filter((d) => d.id !== id))
-    if (selectedDoc?.id === id) setSelectedDoc(null)
-  }
+  const now = Date.now()
+  const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
+  const newIn7Days = documents.filter(
+    (d) => now - new Date(d.created_at).getTime() <= sevenDaysMs,
+  ).length
+  const indexedCount = documents.filter((d) => d.is_indexed).length
+  const pendingCount = documents.filter((d) => !d.is_indexed).length
+  const activeCount = documents.filter((d) => d.status === 'Active').length
+  const totalChunks = documents.reduce((s, d) => s + d.total_chunks, 0)
+  const activePercent =
+    documents.length === 0
+      ? 0
+      : Math.round((activeCount / documents.length) * 1000) / 10
 
-  const stats = {
-    total: documents.length,
-    active: documents.filter((d) => d.status === 'Active')
-      .length,
-    totalChunks: documents.reduce(
-      (s, d) => s + d.total_chunks,
-      0,
-    ),
-    processing: documents.filter(
-      (d) =>
-        d.status === 'Processing' || d.status === 'Pending',
-    ).length,
-    errors: documents.filter((d) => d.status === 'Error')
-      .length,
-  }
+  const statsCards = [
+    {
+      label: 'Tổng tài liệu',
+      value: documents.length,
+      icon: FileText,
+      iconColor: '#5d2ec0',
+      iconBg: '#faf5ff',
+      subtext: `${newIn7Days} tài liệu mới trong 7 ngày`,
+    },
+    {
+      label: 'Đang hoạt động',
+      value: activeCount,
+      icon: CheckCircle2,
+      iconColor: '#10b981',
+      iconBg: '#ecfdf5',
+      subtext: `${activePercent}% tổng tài liệu`,
+    },
+    {
+      label: 'Tổng chunks',
+      value: totalChunks.toLocaleString('vi-VN'),
+      icon: Layers,
+      iconColor: '#3b82f6',
+      iconBg: '#eff6ff',
+      subtext: `${indexedCount} đã Indexed`,
+    },
+    {
+      label: 'Chờ xử lý',
+      value: pendingCount,
+      icon: Clock,
+      iconColor: '#f59e0b',
+      iconBg: '#fff7ed',
+      subtext: 'Đang trong hàng đợi',
+    },
+    {
+      label: 'Lỗi',
+      value: 0,
+      icon: AlertTriangle,
+      iconColor: '#ef4444',
+      iconBg: '#fef2f2',
+      subtext: 'Không có lỗi',
+    },
+  ]
 
   return (
     <div className='min-h-screen bg-[#f8f9fb] p-5'>
+      <input
+        ref={pdfInputRef}
+        type='file'
+        accept='.pdf,application/pdf'
+        className='hidden'
+        onChange={handlePdfFileSelected}
+      />
+
       <div className='space-y-6'>
         <div className='flex items-start justify-between'>
           <div>
-            <h1 className='text-2xl font-bold text-[#0a0a0a]'>
-              Tài liệu pháp lý
-            </h1>
+            <h1 className='text-2xl font-bold text-[#0a0a0a]'>Tài liệu pháp lý</h1>
             <p className='text-sm text-[#6b7280] mt-1'>
-              Quản lý toàn bộ tài liệu pháp luật, quyết định và
-              hướng dẫn thuế trong hệ thống TaxMate.
+              Quản lý toàn bộ tài liệu pháp luật, quyết định và hướng dẫn thuế trong
+              hệ thống TaxMate.
             </p>
           </div>
           <div className='flex shrink-0 items-center gap-3'>
             <Button
               type='button'
+              onClick={() => {
+                setUploadForm(emptyUploadForm())
+                setUploadOpen(true)
+              }}
               className='h-9.5 rounded-[10px] bg-[#6226c1] hover:bg-[#5224a8] text-white px-4'
             >
               <Plus className='h-4 w-4' strokeWidth={2} />
@@ -1073,109 +804,52 @@ export default function LegalDocumentManagement() {
             <Button
               type='button'
               variant='outline'
+              disabled={syncing || loading}
+              onClick={handleSync}
               className='h-9.5 rounded-[10px] px-4 text-[#374151]'
             >
-              <RefreshCw className='h-4 w-4' strokeWidth={2} />
+              <RefreshCw
+                className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`}
+                strokeWidth={2}
+              />
               Đồng bộ dữ liệu
             </Button>
           </div>
         </div>
 
-        {/* Stats Bar */}
-        <div className='grid grid-cols-5 gap-[15.8px]'>
-          {[
-            {
-              label: 'Tổng tài liệu',
-              value: stats.total,
-              icon: FileText,
-              iconColor: '#5d2ec0',
-              iconBg: '#faf5ff',
-              subtext: '2 tài liệu mới trong 7 ngày',
-            },
-            {
-              label: 'Đang hoạt động',
-              value: stats.active,
-              icon: CheckCircle2,
-              iconColor: '#10b981',
-              iconBg: '#ecfdf5',
-              subtext: '62.5% tổng tài liệu',
-            },
-            {
-              label: 'Tổng chunks',
-              value: '1.940',
-              icon: Layers,
-              iconColor: '#3b82f6',
-              iconBg: '#eff6ff',
-              subtext: 'Đã Indexed',
-            },
-            {
-              label: 'Chờ xử lý',
-              value: stats.processing,
-              icon: Clock,
-              iconColor: '#f59e0b',
-              iconBg: '#fff7ed',
-              subtext: 'Đang trong hàng đợi',
-            },
-            {
-              label: 'Lỗi',
-              value: stats.errors,
-              icon: AlertTriangle,
-              iconColor: '#ef4444',
-              iconBg: '#fef2f2',
-              subtext: 'Cần kiểm tra tháng này',
-            },
-          ].map(
-            ({
-              label,
-              value,
-              icon: Icon,
-              iconColor,
-              iconBg,
-              subtext,
-            }) => (
-              <div
-                key={label}
-                className='bg-white border border-[#f3f4f6] rounded-xl p-5.25 shadow-xs flex items-start justify-between'
-              >
-                <div>
-                  <p className='text-base font-medium text-[#6b7280] mb-2'>
-                    {label}
-                  </p>
-                  <p
-                    className='text-[30px] font-bold leading-9'
-                    style={{
-                      color:
-                        label === 'Tổng tài liệu'
-                          ? '#0a0a0a'
-                          : iconColor,
-                    }}
-                  >
-                    {value}
-                  </p>
-                  {subtext && (
-                    <div className='flex items-center gap-1 mt-2.5'>
-                      <TrendingUp className='w-3.25 h-2.75 text-green-500' />
-                      <p className='text-[13px] text-green-500'>
-                        {subtext}
-                      </p>
-                    </div>
-                  )}
-                </div>
-                <div
-                  className='w-10 h-10 rounded-lg flex items-center justify-center'
-                  style={{ backgroundColor: iconBg }}
+        <div className='grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-[15.8px]'>
+          {statsCards.map(({ label, value, icon: Icon, iconColor, iconBg, subtext }) => (
+            <div
+              key={label}
+              className='bg-white border border-[#f3f4f6] rounded-xl p-5.25 shadow-xs flex items-start justify-between'
+            >
+              <div>
+                <p className='text-base font-medium text-[#6b7280] mb-2'>{label}</p>
+                <p
+                  className='text-[30px] font-bold leading-9'
+                  style={{
+                    color: label === 'Tổng tài liệu' ? '#0a0a0a' : iconColor,
+                  }}
                 >
-                  <Icon
-                    className='w-5 h-5'
-                    style={{ color: iconColor }}
-                  />
-                </div>
+                  {value}
+                </p>
+                {subtext && (
+                  <div className='flex items-center gap-1 mt-2.5'>
+                    <TrendingUp className='w-3.25 h-2.75 text-green-500' />
+                    <p className='text-[13px] text-green-500'>{subtext}</p>
+                  </div>
+                )}
               </div>
-            ),
-          )}
+              <div
+                className='w-10 h-10 rounded-lg flex items-center justify-center'
+                style={{ backgroundColor: iconBg }}
+              >
+                <Icon className='w-5 h-5' style={{ color: iconColor }} />
+              </div>
+            </div>
+          ))}
         </div>
 
-        {/* Toolbar */}
         <div className='flex items-center gap-3 flex-wrap'>
           <div className='flex-1 max-w-5xl flex items-center bg-white border border-gray-300 rounded-lg px-5 py-2.5 shadow-xs focus-within:border-sidebar-primary focus-within:ring-1 focus-within:ring-[#D32F2F]/20 transition-all'>
             <Search
@@ -1193,7 +867,10 @@ export default function LegalDocumentManagement() {
           </div>
 
           <div className='flex gap-2'>
-            <Select value={typeFilter} onValueChange={(val) => setTypeFilter(val ?? 'All')}>
+            <Select
+              value={typeFilter}
+              onValueChange={(val) => setTypeFilter(val ?? 'All')}
+            >
               <SelectTrigger className='py-5 bg-white!'>
                 <SelectValue>
                   {typeFilter === 'All' ? 'Loại tài liệu' : typeFilter}
@@ -1201,42 +878,36 @@ export default function LegalDocumentManagement() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='All'>Loại tài liệu</SelectItem>
-                {docTypes
-                  .filter((t) => t !== 'All')
-                  .map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
+                {DOC_TYPES.filter((t) => t !== 'All').map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
-            <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val ?? 'All')}>
+            <Select
+              value={statusFilter}
+              onValueChange={(val) => setStatusFilter(val ?? 'All')}
+            >
               <SelectTrigger className='py-5 bg-white!'>
                 <SelectValue>
                   {statusFilter === 'All'
                     ? 'Trạng thái'
                     : statusFilter === 'Active'
-                    ? 'Đang hoạt động'
-                    : statusFilter === 'Inactive'
-                    ? 'Ngừng hoạt động'
-                    : statusFilter === 'Processing'
-                    ? 'Đang xử lý'
-                    : 'Lỗi'}
+                      ? 'Đang hoạt động'
+                      : 'Ngừng hoạt động'}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value='All'>Trạng thái</SelectItem>
                 <SelectItem value='Active'>Đang hoạt động</SelectItem>
                 <SelectItem value='Inactive'>Ngừng hoạt động</SelectItem>
-                <SelectItem value='Processing'>Đang xử lý</SelectItem>
-                <SelectItem value='Error'>Lỗi</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        {/* Document Table */}
         <div className='bg-white border border-[#f3f4f6] rounded-xl shadow-xs overflow-hidden'>
           <Table>
             <TableHeader>
@@ -1268,13 +939,22 @@ export default function LegalDocumentManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginatedDocuments.length === 0 ? (
+              {loading ? (
                 <TableRow>
                   <TableCell
                     colSpan={8}
                     className='px-4 py-12 text-center text-sm text-[#9ca3af]'
                   >
-                    No documents match your search criteria.
+                    Đang tải dữ liệu...
+                  </TableCell>
+                </TableRow>
+              ) : paginatedDocuments.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={8}
+                    className='px-4 py-12 text-center text-sm text-[#9ca3af]'
+                  >
+                    Không có tài liệu phù hợp.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -1286,9 +966,7 @@ export default function LegalDocumentManagement() {
                   >
                     <TableCell className='px-6 py-5'>
                       <div className='flex items-center gap-3'>
-                        <div
-                          className='w-10 h-10 rounded-lg bg-red-500 flex items-center justify-center shrink-0'
-                        >
+                        <div className='w-10 h-10 rounded-lg bg-red-500 flex items-center justify-center shrink-0'>
                           <FileText className='w-5 h-5 text-white' />
                         </div>
                         <div className='min-w-0'>
@@ -1304,17 +982,19 @@ export default function LegalDocumentManagement() {
                       </div>
                     </TableCell>
                     <TableCell className='px-4 py-5'>
-                      <span className='text-sm text-[#4b5563]'>
-                        {doc.document_type}
-                      </span>
+                      <span className='text-sm text-[#4b5563]'>{doc.document_type}</span>
                     </TableCell>
                     <TableCell className='px-4 py-5'>
                       <div>
                         <p className='text-sm font-medium text-[#374151]'>
-                          {doc.effective_date}
+                          {formatDateOnly(doc.effective_date)}
                         </p>
-                        <p className='text-[11px] text-[#10b981] mt-1'>
-                          Còn hiệu lực
+                        <p
+                          className={`text-[11px] mt-1 ${
+                            doc.expired_date ? 'text-[#9ca3af]' : 'text-[#10b981]'
+                          }`}
+                        >
+                          {doc.expired_date ? 'Hết hiệu lực' : 'Còn hiệu lực'}
                         </p>
                       </div>
                     </TableCell>
@@ -1322,26 +1002,20 @@ export default function LegalDocumentManagement() {
                       <StatusBadge status={doc.status} />
                     </TableCell>
                     <TableCell className='px-4 py-5'>
-                      <OcrBadge status={doc.ocr_status} />
+                      <IndexBadge badge={doc.index_badge} />
                     </TableCell>
                     <TableCell className='px-4 py-5'>
                       <span className='text-sm text-[#6b7280]'>
-                        {doc.total_chunks > 0
-                          ? doc.total_chunks
-                          : '---'}
+                        {doc.total_chunks > 0 ? doc.total_chunks : '---'}
                       </span>
                     </TableCell>
                     <TableCell className='px-4 py-5'>
                       <div>
                         <p className='text-sm text-[#374151]'>
-                          {new Date(
-                            doc.updated_at,
-                          ).toLocaleDateString('vi-VN')}
+                          {new Date(doc.updated_at).toLocaleDateString('vi-VN')}
                         </p>
                         <p className='text-[11px] text-[#9ca3af] mt-1'>
-                          {new Date(
-                            doc.updated_at,
-                          ).toLocaleTimeString('vi-VN', {
+                          {new Date(doc.updated_at).toLocaleTimeString('vi-VN', {
                             hour: '2-digit',
                             minute: '2-digit',
                           })}
@@ -1356,9 +1030,13 @@ export default function LegalDocumentManagement() {
                         <ActionsMenu
                           doc={doc}
                           onView={() => setSelectedDoc(doc)}
-                          onDelete={() => handleDelete(doc.id)}
-                          onToggle={() => handleToggle(doc.id)}
+                          onUpdatePdf={() => startUpdatePdf(doc)}
+                          onDelete={() => handleDelete(doc)}
+                          onToggle={() => handleToggle(doc)}
                         />
+                        {actionId === doc.id && (
+                          <span className='text-xs text-[#9ca3af]'>...</span>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1373,9 +1051,7 @@ export default function LegalDocumentManagement() {
                 <PaginationItem>
                   <PaginationPrevious
                     text=''
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.max(prev - 1, 1))
-                    }
+                    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                     aria-disabled={currentPage === 1}
                     className={
                       currentPage === 1
@@ -1401,9 +1077,7 @@ export default function LegalDocumentManagement() {
                   <PaginationNext
                     text=''
                     onClick={() =>
-                      setCurrentPage((prev) =>
-                        Math.min(prev + 1, totalPages),
-                      )
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
                     }
                     aria-disabled={currentPage === totalPages}
                     className={
@@ -1417,8 +1091,7 @@ export default function LegalDocumentManagement() {
             </Pagination>
 
             <span className='text-sm text-[#9ca3af]'>
-              Hiển thị{' '}
-              {filtered.length === 0 ? 0 : startIndex + 1} đến{' '}
+              Hiển thị {filtered.length === 0 ? 0 : startIndex + 1} đến{' '}
               {Math.min(startIndex + itemsPerPage, filtered.length)} trong tổng số{' '}
               {filtered.length} tài liệu
             </span>
@@ -1426,12 +1099,20 @@ export default function LegalDocumentManagement() {
         </div>
 
         {selectedDoc && (
-          <DocumentDrawer
-            doc={selectedDoc}
-            onClose={() => setSelectedDoc(null)}
-          />
+          <DocumentDrawer doc={selectedDoc} onClose={() => setSelectedDoc(null)} />
         )}
       </div>
+
+      <UploadDocumentModal
+        open={uploadOpen}
+        saving={saving}
+        form={uploadForm}
+        onChange={setUploadForm}
+        onClose={() => {
+          if (!saving) setUploadOpen(false)
+        }}
+        onSubmit={handleUpload}
+      />
     </div>
   )
 }
