@@ -1,9 +1,37 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
-import { Search, Plus, Scan, Trash2, Edit2, Package, BookOpen, RotateCcw, FlaskConical, ShoppingBag, Eye, X } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import {
+  Search,
+  Plus,
+  Scan,
+  Trash2,
+  Edit2,
+  Package,
+  BookOpen,
+  RotateCcw,
+  FlaskConical,
+  ShoppingBag,
+  Eye,
+  X,
+} from 'lucide-react'
+import { toast } from 'react-toastify'
 import type { Ingredient } from '../../types/ingredient.type'
-import { getAllIngredients } from '../../apis/ingredient.api'
-import { getProductIngredients } from '../../apis/productIngredient.api'
 import type { ProductIngredient } from '../../types/productIngredient.type'
+import type { Product } from '../../types/product.type'
+import {
+  getAllIngredients,
+  createIngredient,
+  updateIngredient,
+  deactivateIngredient,
+} from '../../apis/ingredient.api'
+import {
+  getProductIngredients,
+  addProductIngredient,
+  updateProductIngredient,
+  deleteProductIngredient,
+} from '../../apis/productIngredient.api'
+import { getAllProducts } from '../../apis/product.api'
+import { useBusiness } from '../../contexts/BusinessContext'
+import ConfirmModal from '../../components/ui/confirm-modal'
 
 interface Recipe {
   productId: string
@@ -12,129 +40,36 @@ interface Recipe {
   ingredients: ProductIngredient[]
 }
 
-const INGREDIENTS: Ingredient[] = [
-  {
-    id: 'ING000001',
-    name: 'Bột mì',
-    unit: 'kg',
-    estimatedPrice: 18000,
-    isDeleted: false,
-    createdAt: '2025-01-10T08:00:00Z',
-    updatedAt: '2025-06-20T10:30:00Z',
-  },
-  {
-    id: 'ING000002',
-    name: 'Phô mai Mozzarella',
-    unit: 'kg',
-    estimatedPrice: 120000,
-    isDeleted: false,
-    createdAt: '2025-01-15T09:00:00Z',
-    updatedAt: '2025-06-21T11:00:00Z',
-  },
-  {
-    id: 'ING000003',
-    name: 'Cà chua',
-    unit: 'kg',
-    estimatedPrice: 25000,
-    isDeleted: false,
-    createdAt: '2025-02-01T07:30:00Z',
-    updatedAt: '2025-06-22T08:45:00Z',
-  },
-  {
-    id: 'ING000004',
-    name: 'Thịt bò',
-    unit: 'kg',
-    estimatedPrice: 280000,
-    isDeleted: false,
-    createdAt: '2025-02-10T10:00:00Z',
-    updatedAt: '2025-06-23T09:00:00Z',
-  },
-  {
-    id: 'ING000005',
-    name: 'Rau diếp',
-    unit: 'kg',
-    estimatedPrice: 15000,
-    isDeleted: true,
-    createdAt: '2025-03-05T06:00:00Z',
-    updatedAt: '2025-06-24T14:00:00Z',
-  },
-  {
-    id: 'ING000006',
-    name: 'Hành tây',
-    unit: 'kg',
-    estimatedPrice: 20000,
-    isDeleted: false,
-    createdAt: '2025-03-12T08:30:00Z',
-    updatedAt: '2025-06-25T10:00:00Z',
-  },
-]
+type Tab = 'ingredient' | 'recipe'
 
-const RECIPES: Recipe[] = [
-  {
-    productId: 'SP000001',
-    productName: 'Pizza Hải Sản',
-    price: 85000,
-    ingredients: [
-      { productId: 'SP000001', ingredientId: 'ING000001', ingredientName: 'Bột mì', unit: 'kg', quantity: 0.5 },
-      { productId: 'SP000001', ingredientId: 'ING000002', ingredientName: 'Phô mai Mozzarella', unit: 'kg', quantity: 0.2 },
-      { productId: 'SP000001', ingredientId: 'ING000003', ingredientName: 'Cà chua', unit: 'kg', quantity: 0.15 },
-    ],
-  },
-  {
-    productId: 'SP000002',
-    productName: 'Hamburger Bò Nướng',
-    price: 55000,
-    ingredients: [
-      { productId: 'SP000002', ingredientId: 'ING000004', ingredientName: 'Thịt bò', unit: 'kg', quantity: 0.18 },
-      { productId: 'SP000002', ingredientId: 'ING000001', ingredientName: 'Bột mì', unit: 'kg', quantity: 0.08 },
-      { productId: 'SP000002', ingredientId: 'ING000006', ingredientName: 'Hành tây', unit: 'kg', quantity: 0.05 },
-    ],
-  },
-  {
-    productId: 'SP000003',
-    productName: 'Salad Gà Nướng',
-    price: 45000,
-    ingredients: [
-      { productId: 'SP000003', ingredientId: 'ING000005', ingredientName: 'Rau diếp', unit: 'kg', quantity: 0.12 },
-      { productId: 'SP000003', ingredientId: 'ING000003', ingredientName: 'Cà chua', unit: 'kg', quantity: 0.1 },
-      { productId: 'SP000003', ingredientId: 'ING000006', ingredientName: 'Hành tây', unit: 'kg', quantity: 0.04 },
-    ],
-  },
-  {
-    productId: 'SP000004',
-    productName: 'Mì Ý Sốt Bò Bằm',
-    price: 65000,
-    ingredients: [
-      { productId: 'SP000004', ingredientId: 'ING000001', ingredientName: 'Bột mì', unit: 'kg', quantity: 0.25 },
-      { productId: 'SP000004', ingredientId: 'ING000004', ingredientName: 'Thịt bò', unit: 'kg', quantity: 0.15 },
-      { productId: 'SP000004', ingredientId: 'ING000003', ingredientName: 'Cà chua', unit: 'kg', quantity: 0.2 },
-      { productId: 'SP000004', ingredientId: 'ING000006', ingredientName: 'Hành tây', unit: 'kg', quantity: 0.06 },
-    ],
-  },
-]
-
-const fakeFetchIngredients = async (): Promise<Ingredient[]> => {
-  void getAllIngredients
-  return new Promise((resolve) => setTimeout(() => resolve(INGREDIENTS), 400))
-}
-
-const fakeFetchRecipes = async (): Promise<Recipe[]> => {
-  void getProductIngredients
-  return new Promise((resolve) => setTimeout(() => resolve(RECIPES), 400))
-}
+type ConfirmAction =
+  | { type: 'add-ingredient' }
+  | { type: 'edit-ingredient'; id: string }
+  | { type: 'delete-ingredient'; id: string; name: string }
+  | { type: 'add-recipe'; productId: string }
+  | { type: 'edit-recipe'; productId: string }
+  | { type: 'delete-recipe'; productId: string; productName: string }
 
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
-type Tab = 'ingredient' | 'recipe'
+const parsePrice = (value: string): number | undefined => {
+  const clean = value.replace(/\D/g, '')
+  if (!clean) return undefined
+  return parseInt(clean, 10)
+}
 
-export default function Ingredient() {
+export default function IngredientPage() {
+  const { currentBusiness } = useBusiness()
+  const businessId = currentBusiness?.id
+
   const [activeTab, setActiveTab] = useState<Tab>('ingredient')
   const [searchQuery, setSearchQuery] = useState('')
 
   const [ingredients, setIngredients] = useState<Ingredient[]>([])
   const [loadingIngredients, setLoadingIngredients] = useState(false)
 
+  const [products, setProducts] = useState<Product[]>([])
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loadingRecipes, setLoadingRecipes] = useState(false)
   const [viewingRecipe, setViewingRecipe] = useState<Recipe | null>(null)
@@ -156,6 +91,9 @@ export default function Ingredient() {
     { ingredientId: '', quantity: '' },
   ])
 
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
+  const [isConfirmLoading, setIsConfirmLoading] = useState(false)
+
   const addNewDropdownRef = useRef<HTMLDivElement>(null)
   const [addNewDropdownOpen, setAddNewDropdownOpen] = useState(false)
 
@@ -164,22 +102,70 @@ export default function Ingredient() {
   const isIngredientEditing = isEditIngredientOpen
   const isRecipeEditing = isEditProductIngredientOpen
 
+  const fetchIngredients = useCallback(async () => {
+    if (!businessId) return
+    setLoadingIngredients(true)
+    try {
+      const res = await getAllIngredients(businessId, 1, 100)
+      setIngredients(res.data.items)
+    } catch (err) {
+      console.error(err)
+      toast.error('Không tải được danh sách nguyên liệu.')
+    } finally {
+      setLoadingIngredients(false)
+    }
+  }, [businessId])
+
+  const fetchRecipes = useCallback(async () => {
+    if (!businessId) return
+    setLoadingRecipes(true)
+    try {
+      const productRes = await getAllProducts(businessId, 1, 100)
+      const productList = productRes.data.items
+      setProducts(productList)
+
+      const recipeList = await Promise.all(
+        productList.map(async (product) => {
+          try {
+            const linkRes = await getProductIngredients(product.id)
+            return {
+              productId: product.id,
+              productName: product.name,
+              price: product.currentPrice ?? 0,
+              ingredients: linkRes.data ?? [],
+            } satisfies Recipe
+          } catch {
+            return {
+              productId: product.id,
+              productName: product.name,
+              price: product.currentPrice ?? 0,
+              ingredients: [],
+            } satisfies Recipe
+          }
+        }),
+      )
+      setRecipes(recipeList)
+    } catch (err) {
+      console.error(err)
+      toast.error('Không tải được danh sách công thức.')
+    } finally {
+      setLoadingRecipes(false)
+    }
+  }, [businessId])
+
   useEffect(() => {
+    if (!businessId) return
     if (activeTab === 'ingredient') {
-      setLoadingIngredients(true)
-      fakeFetchIngredients().then((data) => {
-        setIngredients(data)
-        setLoadingIngredients(false)
-      })
+      fetchIngredients()
     } else {
-      setLoadingRecipes(true)
-      fakeFetchRecipes().then((data) => {
-        setRecipes(data)
-        setLoadingRecipes(false)
-      })
+      fetchRecipes()
+      // Need ingredients for recipe modal dropdowns
+      if (ingredients.length === 0) {
+        fetchIngredients()
+      }
     }
     setSearchQuery('')
-  }, [activeTab])
+  }, [activeTab, businessId])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -207,6 +193,11 @@ export default function Ingredient() {
     )
   }, [recipes, searchQuery])
 
+  const activeIngredients = useMemo(
+    () => ingredients.filter((i) => !i.isDeleted),
+    [ingredients],
+  )
+
   const closeModal = () => {
     setIsAddIngredientOpen(false)
     setIsEditIngredientOpen(false)
@@ -222,13 +213,26 @@ export default function Ingredient() {
   }
 
   const handleOpenAddIngredient = () => {
+    setAddNewDropdownOpen(false)
     setFormName('')
     setFormUnit('')
     setFormPrice('')
     setIsAddIngredientOpen(true)
   }
 
-  const handleOpenAddProductIngredient = () => {
+  const handleOpenAddProductIngredient = async () => {
+    setAddNewDropdownOpen(false)
+    if (products.length === 0 && businessId) {
+      try {
+        const productRes = await getAllProducts(businessId, 1, 100)
+        setProducts(productRes.data.items)
+      } catch {
+        toast.error('Không tải được danh sách sản phẩm.')
+      }
+    }
+    if (ingredients.length === 0) {
+      await fetchIngredients()
+    }
     setRecipeProductId('')
     setRecipeRows([{ ingredientId: '', quantity: '' }])
     setIsAddProductIngredientOpen(true)
@@ -237,7 +241,14 @@ export default function Ingredient() {
   const handleOpenEditRecipe = (recipe: Recipe, e: React.MouseEvent) => {
     e.stopPropagation()
     setEditingRecipe(recipe)
-    setRecipeRows(recipe.ingredients.map((ing) => ({ ingredientId: ing.ingredientId, quantity: ing.quantity?.toString() ?? '' })))
+    setRecipeRows(
+      recipe.ingredients.length > 0
+        ? recipe.ingredients.map((ing) => ({
+            ingredientId: ing.ingredientId,
+            quantity: ing.quantity?.toString() ?? '',
+          }))
+        : [{ ingredientId: '', quantity: '' }],
+    )
     setIsEditProductIngredientOpen(true)
   }
 
@@ -250,30 +261,247 @@ export default function Ingredient() {
     setIsEditIngredientOpen(true)
   }
 
+  const getValidatedIngredientBody = () => {
+    const name = formName.trim()
+    if (!name) {
+      toast.error('Vui lòng nhập tên nguyên liệu.')
+      return null
+    }
+    return {
+      name,
+      unit: formUnit.trim() || undefined,
+      estimatedPrice: parsePrice(formPrice),
+    }
+  }
+
+  const getValidatedRecipeRows = () => {
+    const rows = recipeRows
+      .map((row) => ({
+        ingredientId: row.ingredientId,
+        quantity: Number(row.quantity.replace(',', '.')),
+      }))
+      .filter((row) => row.ingredientId)
+
+    if (rows.length === 0) {
+      toast.error('Vui lòng chọn ít nhất một nguyên liệu.')
+      return null
+    }
+
+    const ids = new Set<string>()
+    for (const row of rows) {
+      if (!row.quantity || row.quantity <= 0) {
+        toast.error('Số lượng nguyên liệu phải lớn hơn 0.')
+        return null
+      }
+      if (ids.has(row.ingredientId)) {
+        toast.error('Không được chọn trùng nguyên liệu trong cùng một công thức.')
+        return null
+      }
+      ids.add(row.ingredientId)
+    }
+
+    return rows
+  }
+
   const handleAddIngredient = (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement
+    if (!getValidatedIngredientBody()) return
+    setConfirmAction({ type: 'add-ingredient' })
   }
 
   const handleEditIngredient = (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement
+    if (!editingIngredient || !getValidatedIngredientBody()) return
+    setConfirmAction({ type: 'edit-ingredient', id: editingIngredient.id })
   }
 
-  const handleDeleteIngredient = (id: string, e: React.MouseEvent) => {
+  const handleDeleteIngredient = (ingredient: Ingredient, e: React.MouseEvent) => {
     e.stopPropagation()
-    // TODO: Implement
+    setConfirmAction({
+      type: 'delete-ingredient',
+      id: ingredient.id,
+      name: ingredient.name,
+    })
   }
 
   const handleAddProductIngredient = (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement
+    if (!recipeProductId) {
+      toast.error('Vui lòng chọn sản phẩm.')
+      return
+    }
+    if (!getValidatedRecipeRows()) return
+    setConfirmAction({ type: 'add-recipe', productId: recipeProductId })
   }
 
   const handleEditProductIngredient = (e: React.FormEvent) => {
     e.preventDefault()
-    // TODO: Implement
+    if (!editingRecipe || !getValidatedRecipeRows()) return
+    setConfirmAction({ type: 'edit-recipe', productId: editingRecipe.productId })
   }
+
+  const handleDeleteRecipe = (recipe: Recipe, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setConfirmAction({
+      type: 'delete-recipe',
+      productId: recipe.productId,
+      productName: recipe.productName,
+    })
+  }
+
+  const closeConfirm = () => {
+    if (isConfirmLoading) return
+    setConfirmAction(null)
+  }
+
+  const executeConfirm = async () => {
+    if (!confirmAction) return
+    setIsConfirmLoading(true)
+
+    try {
+      switch (confirmAction.type) {
+        case 'add-ingredient': {
+          if (!businessId) throw new Error('Missing businessId')
+          const body = getValidatedIngredientBody()
+          if (!body) break
+          await createIngredient(businessId, body)
+          toast.success('Thêm nguyên liệu thành công.')
+          closeModal()
+          await fetchIngredients()
+          break
+        }
+        case 'edit-ingredient': {
+          const body = getValidatedIngredientBody()
+          if (!body) break
+          await updateIngredient(confirmAction.id, body)
+          toast.success('Cập nhật nguyên liệu thành công.')
+          closeModal()
+          await fetchIngredients()
+          break
+        }
+        case 'delete-ingredient': {
+          await deactivateIngredient(confirmAction.id)
+          toast.success('Đã xoá nguyên liệu.')
+          await fetchIngredients()
+          break
+        }
+        case 'add-recipe': {
+          const rows = getValidatedRecipeRows()
+          if (!rows) break
+          for (const row of rows) {
+            await addProductIngredient(confirmAction.productId, {
+              ingredientId: row.ingredientId,
+              quantity: row.quantity,
+            })
+          }
+          toast.success('Thêm công thức thành công.')
+          closeModal()
+          await fetchRecipes()
+          break
+        }
+        case 'edit-recipe': {
+          const rows = getValidatedRecipeRows()
+          if (!rows || !editingRecipe) break
+
+          const original = editingRecipe.ingredients
+          const nextIds = new Set(rows.map((r) => r.ingredientId))
+          const originalById = new Map(original.map((ing) => [ing.ingredientId, ing]))
+
+          for (const ing of original) {
+            if (!nextIds.has(ing.ingredientId)) {
+              await deleteProductIngredient(confirmAction.productId, ing.ingredientId)
+            }
+          }
+
+          for (const row of rows) {
+            const existing = originalById.get(row.ingredientId)
+            if (!existing) {
+              await addProductIngredient(confirmAction.productId, {
+                ingredientId: row.ingredientId,
+                quantity: row.quantity,
+              })
+            } else if (existing.quantity !== row.quantity) {
+              await updateProductIngredient(confirmAction.productId, row.ingredientId, {
+                quantity: row.quantity,
+              })
+            }
+          }
+
+          toast.success('Cập nhật công thức thành công.')
+          closeModal()
+          await fetchRecipes()
+          break
+        }
+        case 'delete-recipe': {
+          const links = await getProductIngredients(confirmAction.productId)
+          for (const link of links.data ?? []) {
+            await deleteProductIngredient(confirmAction.productId, link.ingredientId)
+          }
+          toast.success('Đã gỡ nguyên liệu khỏi công thức. Sản phẩm và nguyên liệu vẫn được giữ lại.')
+          await fetchRecipes()
+          break
+        }
+      }
+      setConfirmAction(null)
+    } catch (err) {
+      console.error(err)
+      toast.error('Thao tác thất bại. Vui lòng thử lại.')
+    } finally {
+      setIsConfirmLoading(false)
+    }
+  }
+
+  const confirmCopy = useMemo(() => {
+    if (!confirmAction) {
+      return { title: '', message: '', confirmLabel: 'Xác nhận', variant: 'primary' as const }
+    }
+    switch (confirmAction.type) {
+      case 'add-ingredient':
+        return {
+          title: 'Thêm nguyên liệu',
+          message: `Bạn có chắc muốn thêm nguyên liệu "${formName.trim()}"?`,
+          confirmLabel: 'Thêm',
+          variant: 'primary' as const,
+        }
+      case 'edit-ingredient':
+        return {
+          title: 'Cập nhật nguyên liệu',
+          message: `Bạn có chắc muốn lưu thay đổi cho nguyên liệu "${formName.trim()}"?`,
+          confirmLabel: 'Lưu',
+          variant: 'primary' as const,
+        }
+      case 'delete-ingredient':
+        return {
+          title: 'Xoá nguyên liệu',
+          message: `Bạn có chắc muốn xoá nguyên liệu "${confirmAction.name}"?`,
+          confirmLabel: 'Xoá',
+          variant: 'danger' as const,
+        }
+      case 'add-recipe': {
+        const product = products.find((p) => p.id === confirmAction.productId)
+        return {
+          title: 'Thêm công thức',
+          message: `Bạn có chắc muốn thêm công thức cho sản phẩm "${product?.name ?? confirmAction.productId}"?`,
+          confirmLabel: 'Thêm',
+          variant: 'primary' as const,
+        }
+      }
+      case 'edit-recipe':
+        return {
+          title: 'Cập nhật công thức',
+          message: `Bạn có chắc muốn lưu thay đổi công thức cho "${editingRecipe?.productName ?? ''}"?`,
+          confirmLabel: 'Lưu',
+          variant: 'primary' as const,
+        }
+      case 'delete-recipe':
+        return {
+          title: 'Gỡ công thức',
+          message: `Gỡ tất cả nguyên liệu khỏi "${confirmAction.productName}"? Sản phẩm và nguyên liệu sẽ không bị xoá.`,
+          confirmLabel: 'Gỡ',
+          variant: 'danger' as const,
+        }
+    }
+  }, [confirmAction, formName, products, editingRecipe])
 
   const handleRecipeRowChange = (idx: number, field: 'ingredientId' | 'quantity', value: string) => {
     setRecipeRows((prev) => prev.map((row, i) => (i === idx ? { ...row, [field]: value } : row)))
@@ -285,6 +513,21 @@ export default function Ingredient() {
 
   const handleRemoveRecipeRow = (idx: number) => {
     setRecipeRows((prev) => prev.filter((_, i) => i !== idx))
+  }
+
+  const resolveIngredientName = (ingredientId: string) => {
+    const fromList = ingredients.find((ing) => ing.id === ingredientId)
+    if (fromList) return fromList.name
+    const fromRecipe = editingRecipe?.ingredients.find((ing) => ing.ingredientId === ingredientId)
+    return fromRecipe?.ingredientName ?? ingredientId
+  }
+
+  if (!businessId) {
+    return (
+      <div className='flex items-center justify-center min-h-[calc(100vh-51px)] bg-[#f8f9fa]'>
+        <p className='text-gray-500 font-medium'>Vui lòng chọn doanh nghiệp để quản lý nguyên liệu.</p>
+      </div>
+    )
   }
 
   return (
@@ -382,7 +625,6 @@ export default function Ingredient() {
                       <th className='py-4 px-6 font-semibold tracking-wide'>Tên nguyên liệu</th>
                       <th className='py-4 px-6 font-semibold tracking-wide text-center'>Đơn vị tính</th>
                       <th className='py-4 px-6 font-semibold tracking-wide text-right'>Giá ước tính</th>
-                      <th className='py-4 px-6 font-semibold tracking-wide text-center'>Trạng thái</th>
                       <th className='py-4 px-6 font-semibold tracking-wide'>Ngày tạo</th>
                       <th className='py-4 px-6 font-semibold tracking-wide'>Cập nhật</th>
                       <th className='py-4 px-6 font-semibold tracking-wide text-center w-28'>Thao tác</th>
@@ -403,17 +645,6 @@ export default function Ingredient() {
                             ? item.estimatedPrice.toLocaleString('vi-VN') + ' đ'
                             : '—'}
                         </td>
-                        <td className='py-4 px-6 text-center'>
-                          <span
-                            className={`inline-block text-[12px] px-3 py-1 rounded-full font-bold border ${
-                              item.isDeleted
-                                ? 'bg-red-50 text-red-500 border-red-200/60'
-                                : 'bg-emerald-50 text-emerald-600 border-emerald-200/60'
-                            }`}
-                          >
-                            {item.isDeleted ? 'Đã xoá' : 'Hoạt động'}
-                          </span>
-                        </td>
                         <td className='py-4 px-6 text-[13px] text-gray-500'>{formatDate(item.createdAt)}</td>
                         <td className='py-4 px-6 text-[13px] text-gray-500'>{formatDate(item.updatedAt)}</td>
                         <td className='py-4 px-6 text-center'>
@@ -426,7 +657,7 @@ export default function Ingredient() {
                               <Edit2 size={15} />
                             </button>
                             <button
-                              onClick={(e) => handleDeleteIngredient(item.id, e)}
+                              onClick={(e) => handleDeleteIngredient(item, e)}
                               className='p-1.5 text-gray-400 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
                               title='Xoá'
                             >
@@ -494,12 +725,15 @@ export default function Ingredient() {
                             >
                               <Edit2 size={15} />
                             </button>
-                            <button
-                              className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
-                              title='Xoá'
-                            >
-                              <Trash2 size={15} />
-                            </button>
+                            {recipe.ingredients.length > 0 && (
+                              <button
+                                onClick={(e) => handleDeleteRecipe(recipe, e)}
+                                className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
+                                title='Gỡ công thức'
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -606,7 +840,10 @@ export default function Ingredient() {
               </button>
             </div>
 
-            <form onSubmit={isRecipeEditing ? handleEditProductIngredient : handleAddProductIngredient} className='p-6 flex flex-col gap-4'>
+            <form
+              onSubmit={isRecipeEditing ? handleEditProductIngredient : handleAddProductIngredient}
+              className='p-6 flex flex-col gap-4'
+            >
               <div className='flex flex-col gap-1.5'>
                 <label className='text-[13px] font-bold text-gray-600'>
                   Sản phẩm <span className='text-red-500'>*</span>
@@ -626,9 +863,9 @@ export default function Ingredient() {
                     className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 bg-white'
                   >
                     <option value=''>-- Chọn sản phẩm --</option>
-                    {RECIPES.map((r) => (
-                      <option key={r.productId} value={r.productId}>
-                        {r.productName}
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
                       </option>
                     ))}
                   </select>
@@ -650,53 +887,49 @@ export default function Ingredient() {
                 </div>
 
                 <div className='flex flex-col gap-2 max-h-56 overflow-y-auto pr-1'>
-                  {recipeRows.map((row, idx) => {
-                    const selected = INGREDIENTS.find((ing) => ing.id === row.ingredientId)
-                    return (
-                      <div key={idx} className='flex items-center gap-2'>
-                        {isRecipeEditing ? (
-                          <input
-                            type='text'
-                            readOnly
-                            value={selected?.name ?? row.ingredientId}
-                            className='flex-1 border border-gray-200 rounded-[8px] px-3 py-2 text-[13px] font-medium text-gray-500 bg-gray-50 outline-hidden cursor-not-allowed'
-                          />
-                        ) : (
-                          <select
-                            required
-                            value={row.ingredientId}
-                            onChange={(e) => handleRecipeRowChange(idx, 'ingredientId', e.target.value)}
-                            className='flex-1 border border-gray-200 rounded-[8px] px-3 py-2 text-[13px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 bg-white'
-                          >
-                            <option value=''>-- Chọn nguyên liệu --</option>
-                            {INGREDIENTS.filter((ing) => !ing.isDeleted).map((ing) => (
-                              <option key={ing.id} value={ing.id}>
-                                {ing.name} ({ing.unit})
-                              </option>
-                            ))}
-                          </select>
-                        )}
-                        <input
-                          type='number'
-                          required
-                          min='0'
-                          step='any'
-                          placeholder='SL'
-                          value={row.quantity}
-                          onChange={(e) => handleRecipeRowChange(idx, 'quantity', e.target.value)}
-                          className='w-24 border border-gray-200 rounded-[8px] px-3 py-2 text-[13px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 text-right'
-                        />
-                        <button
-                          type='button'
-                          onClick={() => handleRemoveRecipeRow(idx)}
-                          disabled={recipeRows.length === 1}
-                          className='p-1.5 text-gray-300 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors disabled:cursor-not-allowed disabled:hover:text-gray-300 disabled:hover:bg-transparent'
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    )
-                  })}
+                  {recipeRows.map((row, idx) => (
+                    <div key={idx} className='flex items-center gap-2'>
+                      <select
+                        required
+                        value={row.ingredientId}
+                        onChange={(e) => handleRecipeRowChange(idx, 'ingredientId', e.target.value)}
+                        className='flex-1 border border-gray-200 rounded-[8px] px-3 py-2 text-[13px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 bg-white'
+                      >
+                        <option value=''>-- Chọn nguyên liệu --</option>
+                        {activeIngredients.map((ing) => (
+                          <option key={ing.id} value={ing.id}>
+                            {ing.name}
+                            {ing.unit ? ` (${ing.unit})` : ''}
+                          </option>
+                        ))}
+                        {/* Keep option visible if linked ingredient was deactivated */}
+                        {row.ingredientId &&
+                          !activeIngredients.some((ing) => ing.id === row.ingredientId) && (
+                            <option value={row.ingredientId}>
+                              {resolveIngredientName(row.ingredientId)}
+                            </option>
+                          )}
+                      </select>
+                      <input
+                        type='number'
+                        required
+                        min='0'
+                        step='any'
+                        placeholder='SL'
+                        value={row.quantity}
+                        onChange={(e) => handleRecipeRowChange(idx, 'quantity', e.target.value)}
+                        className='w-24 border border-gray-200 rounded-[8px] px-3 py-2 text-[13px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 text-right'
+                      />
+                      <button
+                        type='button'
+                        onClick={() => handleRemoveRecipeRow(idx)}
+                        disabled={recipeRows.length === 1}
+                        className='p-1.5 text-gray-300 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors disabled:cursor-not-allowed disabled:hover:text-gray-300 disabled:hover:bg-transparent'
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -733,7 +966,10 @@ export default function Ingredient() {
               <div>
                 <h3 className='text-[17px] font-bold text-gray-900'>{viewingRecipe.productName}</h3>
                 <p className='text-[13px] text-gray-500 mt-0.5'>
-                  Giá bán: <span className='font-bold text-[#D32F2F]'>{viewingRecipe.price.toLocaleString('vi-VN')} đ</span>
+                  Giá bán:{' '}
+                  <span className='font-bold text-[#D32F2F]'>
+                    {viewingRecipe.price.toLocaleString('vi-VN')} đ
+                  </span>
                 </p>
               </div>
               <button
@@ -755,39 +991,48 @@ export default function Ingredient() {
                 </span>
               </div>
 
-              <div className='rounded-[10px] border border-gray-100 overflow-hidden'>
-                <table className='w-full text-left border-collapse'>
-                  <thead>
-                    <tr className='bg-[#f8fafc] text-gray-500 text-[12px] font-bold border-b border-gray-100'>
-                      <th className='py-3 px-4 tracking-wide'>Nguyên liệu</th>
-                      <th className='py-3 px-4 tracking-wide text-center'>Đơn vị</th>
-                      <th className='py-3 px-4 tracking-wide text-right'>Số lượng</th>
-                    </tr>
-                  </thead>
-                  <tbody className='divide-y divide-gray-50'>
-                    {viewingRecipe.ingredients.map((ing, idx) => (
-                      <tr key={ing.ingredientId} className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'}`}>
-                        <td className='py-3 px-4'>
-                          <div className='flex items-center gap-2.5'>
-                            <div>
-                              <p className='text-[13.5px] font-bold text-gray-800'>{ing.ingredientName}</p>
-                              <p className='text-[11px] text-gray-400'>{ing.ingredientId}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className='py-3 px-4 text-center'>
-                          <span className='inline-block bg-[#f3f4f6] text-gray-600 text-[12px] px-3 py-0.5 rounded-full font-bold border border-gray-200/40'>
-                            {ing.unit ?? '—'}
-                          </span>
-                        </td>
-                        <td className='py-3 px-4 text-right font-bold text-[14px] text-gray-900'>
-                          {ing.quantity}
-                        </td>
+              {viewingRecipe.ingredients.length === 0 ? (
+                <p className='text-[13px] text-gray-400 text-center py-8'>
+                  Sản phẩm này chưa có nguyên liệu trong công thức.
+                </p>
+              ) : (
+                <div className='rounded-[10px] border border-gray-100 overflow-hidden'>
+                  <table className='w-full text-left border-collapse'>
+                    <thead>
+                      <tr className='bg-[#f8fafc] text-gray-500 text-[12px] font-bold border-b border-gray-100'>
+                        <th className='py-3 px-4 tracking-wide'>Nguyên liệu</th>
+                        <th className='py-3 px-4 tracking-wide text-center'>Đơn vị</th>
+                        <th className='py-3 px-4 tracking-wide text-right'>Số lượng</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className='divide-y divide-gray-50'>
+                      {viewingRecipe.ingredients.map((ing, idx) => (
+                        <tr
+                          key={ing.ingredientId}
+                          className={`${idx % 2 === 0 ? 'bg-white' : 'bg-[#fafafa]'}`}
+                        >
+                          <td className='py-3 px-4'>
+                            <div className='flex items-center gap-2.5'>
+                              <div>
+                                <p className='text-[13.5px] font-bold text-gray-800'>{ing.ingredientName}</p>
+                                <p className='text-[11px] text-gray-400'>{ing.ingredientId}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className='py-3 px-4 text-center'>
+                            <span className='inline-block bg-[#f3f4f6] text-gray-600 text-[12px] px-3 py-0.5 rounded-full font-bold border border-gray-200/40'>
+                              {ing.unit ?? '—'}
+                            </span>
+                          </td>
+                          <td className='py-3 px-4 text-right font-bold text-[14px] text-gray-900'>
+                            {ing.quantity}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
 
             <div className='px-7 py-4 mb-3 border-t border-gray-100 flex justify-end'>
@@ -801,6 +1046,17 @@ export default function Ingredient() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={confirmAction != null}
+        title={confirmCopy.title}
+        message={confirmCopy.message}
+        confirmLabel={confirmCopy.confirmLabel}
+        variant={confirmCopy.variant}
+        isLoading={isConfirmLoading}
+        onConfirm={executeConfirm}
+        onCancel={closeConfirm}
+      />
     </div>
   )
 }

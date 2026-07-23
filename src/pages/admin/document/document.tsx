@@ -477,14 +477,23 @@ function UploadDocumentModal({
             <label className='block text-sm font-medium text-[#374151] mb-1'>
               File PDF
             </label>
-            <input
-              type='file'
-              accept='.pdf,application/pdf'
-              onChange={(e) =>
-                onChange({ ...form, file: e.target.files?.[0] ?? null })
-              }
-              className='w-full text-sm text-[#374151]'
-            />
+            <label className='flex items-center gap-3 w-full px-3 py-2.5 rounded-lg border border-dashed border-[#d1d5db] bg-[#f9fafb] hover:bg-[#f3f4f6] hover:border-[#5d2ec0]/40 cursor-pointer transition-colors'>
+              <span className='inline-flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-md bg-[#5d2ec0] text-white text-sm font-medium shadow-xs'>
+                <FileUp className='w-3.5 h-3.5' />
+                Chọn file
+              </span>
+              <span className='text-sm text-[#6b7280] truncate'>
+                {form.file ? form.file.name : 'Chưa chọn file PDF'}
+              </span>
+              <input
+                type='file'
+                accept='.pdf,application/pdf'
+                onChange={(e) =>
+                  onChange({ ...form, file: e.target.files?.[0] ?? null })
+                }
+                className='sr-only'
+              />
+            </label>
           </div>
         </div>
 

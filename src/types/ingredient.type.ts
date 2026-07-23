@@ -1,5 +1,6 @@
 export interface Ingredient {
   id: string
+  businessId?: string
   name: string
   unit?: string
   estimatedPrice?: number
