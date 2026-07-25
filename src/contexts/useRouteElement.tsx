@@ -20,6 +20,9 @@ import SubscriptionPage from '../pages/landingPage/subscription'
 import { BusinessProvider } from './BusinessContext'
 import BusinessList from '../pages/admin/user/business'
 import Expense from '../pages/businessOwner/expense'
+import BankConfig from '../pages/businessOwner/bankConfig'
+import EInvoiceConfig from '../pages/businessOwner/einvoiceConfig'
+import OwnerSubscription from '../pages/businessOwner/ownerSubscription'
 import Report from '../pages/businessOwner/report'
 
 export default function useRouteElements() {
@@ -46,7 +49,10 @@ export default function useRouteElements() {
             { path: path.BUSINESS_OWNER_INGREDIENTS, element: <Ingredient /> },
             { path: path.BUSINESS_OWNER_ORDERS, element: <Order /> },
             { path: path.BUSINESS_OWNER_EXPENSES, element: <Expense /> },
-            { path: path.BUSINESS_OWNER_REPORTS, element: <Report /> }
+            { path: path.BUSINESS_OWNER_REPORTS, element: <Report /> },
+            { path: path.BUSINESS_OWNER_BANK_CONFIG, element: <BankConfig /> },
+            { path: path.BUSINESS_OWNER_EINVOICE_CONFIG, element: <EInvoiceConfig /> },
+            { path: path.BUSINESS_OWNER_SUBSCRIPTION, element: <OwnerSubscription /> }
           ]
         },
         { 

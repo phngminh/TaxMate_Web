@@ -1,22 +1,20 @@
-export interface ExpenseCategory {
+export interface ExpenseCategoryDTO {
   expenseCategoryId: string
-  businessId?: string
+  businessId: string
   categoryName: string
+  name?: string
   description?: string
-  isDefault: boolean
-  createdAt: string
-  updatedAt: string
+  createdAt?: string
 }
 
 export interface ExpenseDTO {
   expenseId: string
-  businessId: string
   expenseCategoryId: string
   categoryName: string
   expenseTitle: string
   amount: number
   expenseDate: string
-  paymentMethod?: string
+  paymentMethod: string
   receiptImageUrl?: string
   note?: string
   fileUrl?: string
@@ -24,8 +22,8 @@ export interface ExpenseDTO {
   paidDate?: string
   supplierId?: string
   supplierName?: string
-  createdAt: string
-  updatedAt: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface CreateExpenseRequest {
@@ -33,19 +31,35 @@ export interface CreateExpenseRequest {
   expenseTitle: string
   amount: number
   expenseDate: string
-  paymentMethod?: string
-  receiptImageUrl?: string
-  note?: string
-  fileUrl?: string
-  dueDate?: string
-  paidDate?: string
-  supplierId?: string
+  paymentMethod?: string | null
+  receiptImageUrl?: string | null
+  note?: string | null
+  fileUrl?: string | null
+  dueDate?: string | null
+  paidDate?: string | null
+  supplierId?: string | null
 }
 
-export interface UpdateExpenseRequest extends CreateExpenseRequest {}
+export interface UpdateExpenseRequest {
+  expenseCategoryId: string
+  expenseTitle: string
+  amount: number
+  expenseDate: string
+  paymentMethod?: string | null
+  receiptImageUrl?: string | null
+  note?: string | null
+  fileUrl?: string | null
+  dueDate?: string | null
+  paidDate?: string | null
+  supplierId?: string | null
+}
 
 export interface ExpenseSummaryDTO {
-  totalAmount: number
-  month: number
-  year: number
+  totalExpense: number
+  categorySummaries: {
+    categoryId: string
+    categoryName: string
+    amount: number
+    percentage: number
+  }[]
 }

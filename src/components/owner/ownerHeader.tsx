@@ -6,8 +6,22 @@ import { Bell, User, HeadphonesIcon, Heart, Store, Settings, LogOut, Plus } from
 import { useBusiness } from '../../contexts/BusinessContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
-import { createBusinessProfile, getBusinessProfiles } from '../../apis/profile.api'
-import BusinessModal from './addBusinessModal'
+import { createBusinessProfile } from '../../apis/profile.api'
+
+const categories = [
+  {
+    businessCategoryId: '11111111-1111-1111-1111-111111111111',
+    name: 'Ăn uống (F&B)',
+    icon: UtensilsCrossed,
+    color: 'text-green-500'
+  },
+  {
+    businessCategoryId: '22222222-2222-2222-2222-222222222222',
+    name: 'Dịch vụ',
+    icon: Handshake,
+    color: 'text-purple-500'
+  }
+]
 
 function NavItem({ label, isActive }: {
   label: string
@@ -29,10 +43,10 @@ function NavItem({ label, isActive }: {
 }
 
 const menuItems = [
-  { icon: HeadphonesIcon, label: 'Hỗ trợ' },
-  { icon: Heart,          label: 'Gói của tôi' },
-  { icon: Store,          label: 'Cài đặt Cửa hàng' },
-  { icon: Settings,       label: 'Cài đặt cá nhân' },
+  { icon: HeadphonesIcon, label: 'Hỗ trợ', path: null },
+  { icon: Heart,          label: 'Gói của tôi', path: path.BUSINESS_OWNER_SUBSCRIPTION },
+  { icon: Store,          label: 'Tài khoản Nhận tiền', path: path.BUSINESS_OWNER_BANK_CONFIG },
+  { icon: Settings,       label: 'Cấu hình HĐĐT', path: path.BUSINESS_OWNER_EINVOICE_CONFIG },
 ]
 
 export default function OwnerHeader() {
@@ -238,9 +252,15 @@ export default function OwnerHeader() {
               </div>
 
               <div className='flex-1 py-2 overflow-y-auto'>
-                {menuItems.map(({ icon: Icon, label }) => (
+                {menuItems.map(({ icon: Icon, label, path: itemPath }) => (
                   <button
                     key={label}
+                    onClick={() => {
+                      if (itemPath) {
+                        navigate(itemPath)
+                        setProfileOpen(false)
+                      }
+                    }}
                     className='w-full flex items-center gap-4 px-5 py-3.5 hover:bg-[#fef2f2] group transition-colors cursor-pointer border-b border-transparent hover:border-gray-50'
                   >
                     <Icon size={20} strokeWidth={2} className='text-[#c0392b] shrink-0' />
