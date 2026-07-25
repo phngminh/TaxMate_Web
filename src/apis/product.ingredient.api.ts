@@ -1,4 +1,4 @@
-import type { ProductIngredient, AddProductIngredientRequest, UpdateProductIngredientRequest } from '../types/productIngredient.type'
+import type { ProductIngredient, AddProductIngredientRequest, UpdateProductIngredientRequest } from '../types/product.ingredient.type'
 import type { ApiResponse } from '../types/common.type'
 import http from '../utils/http'
 

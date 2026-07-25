@@ -1,7 +1,7 @@
 export interface Product {
   id: string
   name: string
-  category?: string
+  productCategoryId?: string
   description?: string
   unit?: string
   currentPrice?: number
@@ -13,7 +13,7 @@ export interface Product {
 
 export interface CreateProductRequest {
   name: string
-  category?: string
+  productCategoryId?: string
   description?: string
   unit?: string
   currentPrice?: number
@@ -22,9 +22,19 @@ export interface CreateProductRequest {
 
 export interface UpdateProductRequest {
   name: string
-  category?: string
+  productCategoryId?: string
   description?: string
   unit?: string
   currentPrice?: number
   imageUrl?: string
+}
+
+export interface ProductForm {
+  name: string
+  productCategoryId: string
+  unit: string
+  price: string
+  description: string
+  imagePreview?: string
+  imageFile?: File
 }
