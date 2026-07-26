@@ -604,7 +604,7 @@ export default function Product() {
                     <th className='w-32 px-6 py-4'>Hình ảnh</th>
                     <th className='w-48 px-6 py-4'>Tên sản phẩm</th>
                     <th className='w-48 px-6 py-4'>Danh mục</th>
-                    <th className='w-28 px-6 py-4 text-center'>Đơn vị tính</th>
+                    <th className='w-28 px-6 py-4 text-center whitespace-nowrap'>Đơn vị tính</th>
                     <th 
                       className='w-40 px-6 py-4 text-right cursor-pointer hover:bg-[#d0e3f5] transition-colors select-none'
                       onClick={() => handleSort('price')}

@@ -403,9 +403,7 @@ export default function POS() {
       setQuickSubmitting(true)
       const res = await createProduct(businessId, {
         name: quickName.trim(),
-        currentPrice: priceNum,
-        unit: 'Món',
-        category: categories[0]?.name || 'Khác'
+        currentPrice: priceNum
       })
 
       if (res.success && res.data) {
@@ -630,7 +628,7 @@ export default function POS() {
     return products.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesCategory =
-        selectedCategoryId === 'all' || p.category === selectedCategoryId
+        selectedCategoryId === 'all' || p.productCategoryId === selectedCategoryId
       return matchesSearch && matchesCategory
     })
   }, [products, searchQuery, selectedCategoryId])
