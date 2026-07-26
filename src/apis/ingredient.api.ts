@@ -3,11 +3,12 @@ import type { ApiResponse, PagedResult } from '../types/common.type'
 import http from '../utils/http'
 
 export const getAllIngredients = async (
+  businessId: string,
   pageNumber = 1,
   pageSize = 10,
   search?: string
 ) => {
-  const response = await http.get<ApiResponse<PagedResult<Ingredient>>>('/api/Ingredient',
+  const response = await http.get<ApiResponse<PagedResult<Ingredient>>>(`/Ingredient/business/${businessId}`,
     {
       params: {
         pageNumber,
