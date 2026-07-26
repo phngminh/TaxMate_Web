@@ -11,13 +11,13 @@ export interface BusinessForm {
 
 const categories = [
   {
-    businessCategoryId: '11d1c694-d271-460b-8835-2b2e6a1b8c1d',
+    businessCategoryId: 'd1111111-1111-1111-1111-111111111111',
     name: 'Ăn uống, nhà hàng (F&B)',
     icon: UtensilsCrossed,
     color: 'text-green-500'
   },
   {
-    businessCategoryId: '22d2c694-d271-460b-8835-2b2e6a1b8c2d',
+    businessCategoryId: 'd2222222-2222-2222-2222-222222222222',
     name: 'Dịch vụ (Service)',
     icon: Handshake,
     color: 'text-purple-500'

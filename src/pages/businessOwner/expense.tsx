@@ -27,7 +27,7 @@ import {
   createExpenseCategory
 } from '../../apis/expense.api'
 import { getSuppliers, createSupplier, updateSupplier, deleteSupplier } from '../../apis/supplier.api'
-import { getIngredientPurchases, createIngredientPurchase, deleteIngredientPurchase } from '../../apis/ingredientPurchase.api'
+import { getIngredientPurchases, createIngredientPurchase, deleteIngredientPurchase, getIngredientPurchaseById } from '../../apis/ingredientPurchase.api'
 import { getAllIngredients } from '../../apis/ingredient.api'
 import { getAllProducts } from '../../apis/product.api'
 import type { Supplier } from '../../types/supplier.type'
@@ -130,7 +130,7 @@ export default function ExpensePage() {
         if (matRes.success) setMaterialPurchases(matRes.data.items || [])
         if (expRes.success) setExpenses(expRes.data.items || [])
         if (supRes.success) setSuppliers(supRes.data || [])
-        if (ingRes.success) setDbIngredients(ingRes.data || [])
+        if (ingRes.success) setDbIngredients(ingRes.data?.items || ingRes.data || [])
         if (prodRes.success) setDbProducts(prodRes.data.items || [])
       } else if (activeTab === 'suppliers') {
         const res = await getSuppliers(businessId)
@@ -154,14 +154,14 @@ export default function ExpensePage() {
     
     // Find existing category
     const found = cats.find(
-      x => x.name.toLowerCase().includes('nhập hàng') || x.name.toLowerCase().includes('nhap hang')
+      x => (x.categoryName || '').toLowerCase().includes('nhập hàng') || (x.categoryName || '').toLowerCase().includes('nhap hang')
     )
     if (found) return found.expenseCategoryId
 
     // Create new
     try {
       const res = await createExpenseCategory(businessId, {
-        name: 'Chi phí nhập hàng',
+        categoryName: 'Chi phí nhập hàng',
         description: 'Chi phí nhập sản phẩm từ nhà cung cấp'
       })
       if (res.success && res.data) {
@@ -870,10 +870,10 @@ export default function ExpensePage() {
                     className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-orange-400 bg-white transition-all font-medium text-gray-800 cursor-pointer'
                   >
                     {categories
-                      .filter(x => !x.name.toLowerCase().includes('nhập hàng'))
+                      .filter(x => !(x.categoryName || '').toLowerCase().includes('nhập hàng'))
                       .map(cat => (
                         <option key={cat.expenseCategoryId} value={cat.expenseCategoryId}>
-                          {cat.name}
+                          {cat.categoryName}
                         </option>
                       ))}
                   </select>
@@ -1198,7 +1198,7 @@ export default function ExpensePage() {
               </div>
 
               {/* Items Grid/Table inside Modal */}
-              <div className='flex flex-col gap-3 min-h-[150px]'>
+              <div className='flex flex-col gap-3 min-h-37.5'>
                 <h4 className='text-[13px] font-black text-gray-500 uppercase tracking-wider select-none'>
                   Danh sách hàng nhập ({purchaseItems.length})
                 </h4>

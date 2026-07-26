@@ -2,7 +2,6 @@ export interface ExpenseCategoryDTO {
   expenseCategoryId: string
   businessId: string
   categoryName: string
-  name?: string
   description?: string
   createdAt?: string
 }

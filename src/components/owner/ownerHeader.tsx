@@ -2,26 +2,12 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState } from 'react'
 import imgLogo from '../../assets/logo3.png'
 import path from '../../constants/path'
-import { Bell, User, HeadphonesIcon, Heart, Store, Settings, LogOut, Plus } from 'lucide-react'
+import { Bell, User, HeadphonesIcon, Heart, Store, Settings, LogOut, Plus, UtensilsCrossed, Handshake } from 'lucide-react'
 import { useBusiness } from '../../contexts/BusinessContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
-import { createBusinessProfile } from '../../apis/profile.api'
-
-const categories = [
-  {
-    businessCategoryId: '11111111-1111-1111-1111-111111111111',
-    name: 'Ăn uống (F&B)',
-    icon: UtensilsCrossed,
-    color: 'text-green-500'
-  },
-  {
-    businessCategoryId: '22222222-2222-2222-2222-222222222222',
-    name: 'Dịch vụ',
-    icon: Handshake,
-    color: 'text-purple-500'
-  }
-]
+import { createBusinessProfile, getBusinessProfiles } from '../../apis/profile.api'
+import BusinessModal from './addBusinessModal'
 
 function NavItem({ label, isActive }: {
   label: string

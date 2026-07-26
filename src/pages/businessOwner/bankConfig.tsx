@@ -274,7 +274,7 @@ export default function BankConfig() {
                         <h4 className='font-bold text-gray-900 text-[14px] truncate' title={acc.bankShortName}>
                           {BANK_MAP[acc.bankShortName] || acc.bankShortName}
                         </h4>
-                        <p className='text-gray-500 text-[11px] font-medium leading-tight mt-0.5 break-words' title={acc.bankName}>
+                        <p className='text-gray-500 text-[11px] font-medium leading-tight mt-0.5 wrap-break-word' title={acc.bankName}>
                           {acc.bankName}
                         </p>
                       </div>
