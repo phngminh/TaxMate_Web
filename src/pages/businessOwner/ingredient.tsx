@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import type { Ingredient } from '../../types/ingredient.type'
-import type { ProductIngredient } from '../../types/productIngredient.type'
+import type { ProductIngredient } from '../../types/product.ingredient.type'
 import type { Product } from '../../types/product.type'
 import {
   getAllIngredients,
@@ -28,7 +28,7 @@ import {
   addProductIngredient,
   updateProductIngredient,
   deleteProductIngredient,
-} from '../../apis/productIngredient.api'
+} from '../../apis/product.ingredient.api'
 import { getAllProducts } from '../../apis/product.api'
 import { useBusiness } from '../../contexts/BusinessContext'
 import ConfirmModal from '../../components/ui/confirm-modal'

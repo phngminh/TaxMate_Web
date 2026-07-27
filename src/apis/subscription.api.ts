@@ -1,14 +1,6 @@
 import type { ApiResponse } from '../types/common.type'
 import http from '../utils/http'
-import type {
-  SubscriptionPlanResponse,
-  UserSubscriptionResponse,
-  SubscribeRequest,
-  SubscribeResponse,
-  CreateSubscriptionPlanRequest,
-  UpdateSubscriptionPlanRequest,
-  UserSubscription,
-} from '../types/subscription.type'
+import type { SubscriptionPlanResponse, UserSubscriptionResponse, SubscribeRequest, SubscribeResponse, CreateSubscriptionPlanRequest, UpdateSubscriptionPlanRequest } from '../types/subscription.type'
 
 export const getSubscriptionPlans = async () => {
   const response = await http.get<ApiResponse<SubscriptionPlanResponse[]>>('/Subscription/plans')
@@ -16,15 +8,12 @@ export const getSubscriptionPlans = async () => {
 }
 
 export const getCurrentSubscription = async (userId: string) => {
-  const response = await http.get<ApiResponse<UserSubscription | null>>(`/Subscription/user/${userId}/current`)
+  const response = await http.get<ApiResponse<UserSubscriptionResponse | null>>(`/Subscription/user/${userId}/current`)
   return response.data
 }
 
 export const subscribe = async (userId: string, body: SubscribeRequest) => {
-  const response = await http.post<ApiResponse<SubscribeResponse>>(
-    `/Subscription/user/${userId}/subscribe`,
-    body,
-  )
+  const response = await http.post<ApiResponse<SubscribeResponse>>(`/Subscription/user/${userId}/subscribe`, body)
   return response.data
 }
 
@@ -59,17 +48,12 @@ export const createPlan = async (body: CreateSubscriptionPlanRequest) => {
 }
 
 export const updatePlan = async (id: string, body: UpdateSubscriptionPlanRequest) => {
-  const response = await http.put<ApiResponse<SubscriptionPlanResponse>>(
-    `/SubscriptionPlan/${id}`,
-    body,
-  )
+  const response = await http.put<ApiResponse<SubscriptionPlanResponse>>(`/SubscriptionPlan/${id}`, body)
   return response.data
 }
 
 export const togglePlanActive = async (id: string) => {
-  const response = await http.patch<ApiResponse<SubscriptionPlanResponse>>(
-    `/SubscriptionPlan/${id}/toggle-active`,
-  )
+  const response = await http.patch<ApiResponse<SubscriptionPlanResponse>>(`/SubscriptionPlan/${id}/toggle-active`,)
   return response.data
 }
 

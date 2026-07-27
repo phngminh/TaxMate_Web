@@ -4,7 +4,6 @@ import http from '../utils/http'
 
 export const getAllIngredients = async (
   businessId: string,
-  businessId: string,
   pageNumber = 1,
   pageSize = 100,
   search?: string
