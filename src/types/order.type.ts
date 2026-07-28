@@ -40,6 +40,7 @@ export interface OrderDetail {
 export interface OrderItem {
   transactionItemId: string
   productId?: string
+  productCode?: string
   productName: string
   unit?: string
   unitPrice: number
@@ -93,4 +94,4 @@ export interface CheckoutRequest {
   buyerCompanyName?: string | null
   buyerAddress?: string | null
   buyerEmail?: string | null
-}
+}
