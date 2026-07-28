@@ -33,6 +33,7 @@ export interface UpdateProductRequest {
 }
 
 export interface ProductForm {
+  productCode: string,
   name: string
   productCategoryId: string
   unit: string

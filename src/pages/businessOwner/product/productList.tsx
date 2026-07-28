@@ -65,18 +65,13 @@ export default function Product() {
   })
 
   const [productForm, setProductForm] = useState<ProductForm>({
+    productCode: '',
     name: '',
     productCategoryId: '',
     unit: '',
     price: '',
     description: ''
   })
-
-  const location = useLocation()
-
-  useEffect(() => {
-    console.log(location.pathname + location.search)
-  }, [location])
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -181,6 +176,7 @@ export default function Product() {
 
   const handleOpenAddProductModal = () => {
     setProductForm({
+      productCode: '',
       name: '',
       productCategoryId: '',
       unit: '',
@@ -195,6 +191,7 @@ export default function Product() {
 
   const handleOpenAddServiceModal = () => {
     setProductForm({
+      productCode: '',
       name: '',
       productCategoryId: '',
       unit: '',
@@ -222,6 +219,7 @@ export default function Product() {
     console.log('Editing product:', product)
     setSelectedProduct(product)
     setProductForm({
+      productCode: product.productCode,
       name: product.name,
       productCategoryId: product.productCategoryId ?? '',
       unit: product.unit ?? '',
@@ -294,6 +292,7 @@ export default function Product() {
       }
 
       const body = {
+        productCode: productForm.productCode.trim(),
         name: productForm.name.trim(),
         productCategoryId: productForm.productCategoryId || undefined,
         description: productForm.description || undefined,
@@ -348,6 +347,7 @@ export default function Product() {
       }
 
       await updateProduct(selectedProduct.id, {
+        productCode: productForm.productCode.trim(),
         name: productForm.name.trim(),
         productCategoryId: productForm.productCategoryId || undefined,
         description: productForm.description || undefined,
@@ -524,9 +524,10 @@ export default function Product() {
                 </button>
 
                 {categories.length === 0 ? (
-                  <div className='px-4 py-6 text-center text-sm text-gray-400'>
-                    Chưa có danh mục nào
-                  </div>
+                  <></>
+                  // <div className='px-4 py-6 text-center text-sm text-gray-400'>
+                  //   Chưa có danh mục nào
+                  // </div>
                 ) : (
                   categories.map((category) => (
                     <button
@@ -596,57 +597,57 @@ export default function Product() {
         </div>
 
         <div className='grow p-8 overflow-x-auto'>
-          {products.length > 0 ? (
-            <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-175'>
-              <table className='w-full text-left border-collapse'>
-                <thead>
-                  <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
-                    <th className='w-32 px-6 py-4'>Hình ảnh</th>
-                    <th className='w-48 px-6 py-4'>Tên sản phẩm</th>
-                    <th className='w-48 px-6 py-4'>Danh mục</th>
-                    <th className='w-28 px-6 py-4 text-center whitespace-nowrap'>Đơn vị tính</th>
-                    <th 
-                      className='w-40 px-6 py-4 text-right cursor-pointer hover:bg-[#d0e3f5] transition-colors select-none'
-                      onClick={() => handleSort('price')}
-                    >
-                      <div className='flex items-center justify-end gap-1'>
-                        Giá bán
-                        <span className='w-4 h-4 flex items-center justify-center text-blue-900'>
-                          {sortConfig?.key === 'price' ? (
-                            sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
-                          ) : (
-                            <div className='flex flex-col opacity-40'>
-                              <ArrowUp size={10} className='-mb-1' />
-                              <ArrowDown size={10} />
-                            </div>
-                          )}
-                        </span>
-                      </div>
-                    </th>
-                    <th className='w-32 px-6 py-4 text-center'>Trạng thái</th>
-                    <th 
-                      className='w-32 px-6 py-4 text-center cursor-pointer hover:bg-[#d0e3f5] transition-colors select-none'
-                      onClick={() => handleSort('createdAt')}
-                    >
-                      <div className='flex items-center justify-center gap-1'>
-                        Ngày tạo
-                        <span className='w-4 h-4 flex items-center justify-center text-blue-900'>
-                          {sortConfig?.key === 'createdAt' ? (
-                            sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
-                          ) : (
-                            <div className='flex flex-col opacity-40'>
-                              <ArrowUp size={10} className='-mb-1' />
-                              <ArrowDown size={10} />
-                            </div>
-                          )}
-                        </span>
-                      </div>
-                    </th>
-                    <th className='w-36 px-6 py-4 text-center'>Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody className='divide-y divide-gray-100'>
-                  {sortedProducts.map((product) => (
+          <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-175'>
+            <table className='w-full text-left border-collapse'>
+              <thead>
+                <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
+                  <th className='w-32 px-6 py-4'>Hình ảnh</th>
+                  <th className='w-48 px-6 py-4'>Tên sản phẩm</th>
+                  <th className='w-48 px-6 py-4'>Danh mục</th>
+                  <th className='w-28 px-6 py-4 text-center whitespace-nowrap'>Đơn vị tính</th>
+                  <th 
+                    className='w-40 px-6 py-4 text-right cursor-pointer hover:bg-[#d0e3f5] transition-colors select-none'
+                    onClick={() => handleSort('price')}
+                  >
+                    <div className='flex items-center justify-end gap-1'>
+                      Giá bán
+                      <span className='w-4 h-4 flex items-center justify-center text-blue-900'>
+                        {sortConfig?.key === 'price' ? (
+                          sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                        ) : (
+                          <div className='flex flex-col opacity-40'>
+                            <ArrowUp size={10} className='-mb-1' />
+                            <ArrowDown size={10} />
+                          </div>
+                        )}
+                      </span>
+                    </div>
+                  </th>
+                  <th className='w-32 px-6 py-4 text-center'>Trạng thái</th>
+                  <th 
+                    className='w-32 px-6 py-4 text-center cursor-pointer hover:bg-[#d0e3f5] transition-colors select-none'
+                    onClick={() => handleSort('createdAt')}
+                  >
+                    <div className='flex items-center justify-center gap-1'>
+                      Ngày tạo
+                      <span className='w-4 h-4 flex items-center justify-center text-blue-900'>
+                        {sortConfig?.key === 'createdAt' ? (
+                          sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                        ) : (
+                          <div className='flex flex-col opacity-40'>
+                            <ArrowUp size={10} className='-mb-1' />
+                            <ArrowDown size={10} />
+                          </div>
+                        )}
+                      </span>
+                    </div>
+                  </th>
+                  <th className='w-36 px-6 py-4 text-center'>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className='divide-y divide-gray-100'>
+                {sortedProducts.length > 0 ? (
+                  sortedProducts.map((product) => (
                     <tr 
                       key={product.id} 
                       className='hover:bg-[#fcfdfe] transition-colors group'
@@ -739,23 +740,37 @@ export default function Product() {
                         </div>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className='flex flex-col items-center justify-center py-20 px-4 bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)]'>
-              <ShoppingBag size={48} className='text-gray-300 mb-4 stroke-[1.5]' />
-              <p className='text-gray-500 font-bold text-[15px] mb-2'>Không tìm thấy sản phẩm nào</p>
-              <p className='text-gray-400 text-[13px] mb-4 text-center max-w-xs'>Hãy thử đổi từ khóa tìm kiếm hoặc đặt lại các bộ lọc hiện tại của bạn.</p>
-              <button
-                onClick={handleResetFilters}
-                className='px-4 py-2 bg-[#D32F2F] text-white text-[13px] font-bold rounded-[8px] hover:bg-[#B71C1C] transition-colors shadow-xs'
-              >
-                Đặt lại bộ lọc
-              </button>
-            </div>
-          )}
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={8}>
+                      <div className='flex flex-col items-center justify-center py-20 px-4'>
+                        <ShoppingBag
+                          size={48}
+                          className='text-gray-300 mb-4 stroke-[1.5]'
+                        />
+
+                        <p className='text-gray-500 font-bold text-[15px] mb-2'>
+                          Không tìm thấy sản phẩm nào
+                        </p>
+
+                        <p className='text-gray-400 text-[13px] mb-4 text-center max-w-xs'>
+                          Hãy thử đổi từ khóa tìm kiếm hoặc đặt lại các bộ lọc hiện tại của bạn.
+                        </p>
+
+                        <button
+                          onClick={handleResetFilters}
+                          className='px-4 py-2 bg-[#D32F2F] text-white text-[13px] font-bold rounded-[8px] hover:bg-[#B71C1C]'
+                        >
+                          Đặt lại bộ lọc
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
 
           {products.length > 0 && totalPages > 1 && (
             <div className='mt-4'>
