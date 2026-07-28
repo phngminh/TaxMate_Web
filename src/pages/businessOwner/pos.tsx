@@ -3,16 +3,16 @@ import { Search, Plus, Menu, X, Check, Utensils, Printer } from 'lucide-react'
 import type { Product } from '../../types/product.type'
 
 const PRODUCTS: Product[] = [
-  { id: 'SP000001', name: 'Pizza', currentPrice: 55000, category: 'Fast food', status: 'active', createdAt: '', updatedAt: '' },
-  { id: 'SP000002', name: 'Hamburger', currentPrice: 35000, category: 'Fast food', status: 'active', createdAt: '', updatedAt: '' },
-  { id: 'SP000003', name: 'Coca', currentPrice: 20000, category: 'Đồ uống', status: 'active', createdAt: '', updatedAt: '' },
-  { id: 'SP000004', name: 'Trà đào', currentPrice: 25000, category: 'Đồ uống', status: 'active', createdAt: '', updatedAt: '' },
-  { id: 'SP000005', name: 'Khoai tây chiên', currentPrice: 30000, category: 'Fast food', status: 'active', createdAt: '', updatedAt: '' },
-  { id: 'SP000006', name: 'Mì Ý', currentPrice: 65000, category: 'Món chính', status: 'active', createdAt: '', updatedAt: '' },
+  { id: '1', productCode: 'SP000001', name: 'Pizza', currentPrice: 55000, category: 'Fast food', status: 'active', createdAt: '', updatedAt: '' },
+  { id: '2', productCode: 'SP000002', name: 'Hamburger', currentPrice: 35000, category: 'Fast food', status: 'active', createdAt: '', updatedAt: '' },
+  { id: '3', productCode: 'SP000003', name: 'Coca', currentPrice: 20000, category: 'Đồ uống', status: 'active', createdAt: '', updatedAt: '' },
+  { id: '4', productCode: 'SP000004', name: 'Trà đào', currentPrice: 25000, category: 'Đồ uống', status: 'active', createdAt: '', updatedAt: '' },
+  { id: '5', productCode: 'SP000005', name: 'Khoai tây chiên', currentPrice: 30000, category: 'Fast food', status: 'active', createdAt: '', updatedAt: '' },
+  { id: '6', productCode: 'SP000006', name: 'Mì Ý', currentPrice: 65000, category: 'Món chính', status: 'active', createdAt: '', updatedAt: '' },
 ]
 
 interface OrderItem {
-  id: string
+  productCode: string
   name: string
   price: number
   quantity: number
@@ -36,9 +36,9 @@ export default function POS() {
     {
       id: 'T-1',
       items: [
-        { id: 'SP000001', name: 'Pizza', price: 55000, quantity: 1 },
-        { id: 'SP000002', name: 'Hamburger', price: 35000, quantity: 1 },
-        { id: 'SP000003', name: 'Coca', price: 20000, quantity: 1 }
+        { productCode: 'SP000001', name: 'Pizza', price: 55000, quantity: 1 },
+        { productCode: 'SP000002', name: 'Hamburger', price: 35000, quantity: 1 },
+        { productCode: 'SP000003', name: 'Coca', price: 20000, quantity: 1 }
       ],
       customerName: '',
       discountType: 'VND',
@@ -113,28 +113,28 @@ export default function POS() {
   const handleAddProductToCart = (product: Product) => {
     setOrders(prev => prev.map(o => {
       if (o.id !== activeOrderId) return o
-      const existing = o.items.find(item => item.id === product.id)
+      const existing = o.items.find(item => item.productCode === product.productCode)
       if (existing) {
         return {
           ...o,
-          items: o.items.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item)
+          items: o.items.map(item => item.productCode === product.productCode ? { ...item, quantity: item.quantity + 1 } : item)
         }
       } else {
         return {
           ...o,
-          items: [...o.items, { id: product.id, name: product.name, price: product.currentPrice ?? 0, quantity: 1 }]
+          items: [...o.items, { productCode: product.productCode, name: product.name, price: product.currentPrice ?? 0, quantity: 1 }]
         }
       }
     }))
   }
 
-  const handleUpdateQuantity = (productId: string, delta: number) => {
+  const handleUpdateQuantity = (productCode: string, delta: number) => {
     setOrders(prev => prev.map(o => {
       if (o.id !== activeOrderId) return o
       return {
         ...o,
         items: o.items.map(item => {
-          if (item.id === productId) {
+          if (item.productCode === productCode) {
             const nextQty = item.quantity + delta
             return nextQty > 0 ? { ...item, quantity: nextQty } : null
           }
@@ -256,6 +256,7 @@ export default function POS() {
               <div className='text-xs font-medium text-slate-700 mb-1 line-clamp-2 min-h-8 flex items-center justify-center'>
                 {product.name}
               </div>
+              <div className='text-[11px] text-slate-500 mb-1'>{product.productCode}</div>
               <div className='text-xs font-bold text-slate-900'>
                 {formatPrice(product.currentPrice ?? 0)} đ
               </div>
@@ -323,14 +324,14 @@ export default function POS() {
 
         <div className='grow p-4 overflow-y-auto min-h-0 space-y-4'>
           {activeOrder.items.map((item, index) => (
-            <div key={item.id} className='flex items-center justify-between text-xs py-1'>
+            <div key={item.productCode} className='flex items-center justify-between text-xs py-1'>
               <div className='w-1/2 font-semibold text-slate-700'>
-                {index + 1}. {item.name}
+                {index + 1}. {item.name} ({item.productCode})
               </div>
               <div className='flex items-center gap-4'>
                 <div className='flex items-center border border-taxmate-red rounded-md overflow-hidden bg-white'>
                   <button
-                    onClick={() => handleUpdateQuantity(item.id, -1)}
+                    onClick={() => handleUpdateQuantity(item.productCode, -1)}
                     className='px-2 py-1 text-taxmate-red font-bold hover:bg-[#ffebeb] transition-colors text-sm'
                   >
                     -
@@ -339,7 +340,7 @@ export default function POS() {
                     {item.quantity}
                   </span>
                   <button
-                    onClick={() => handleUpdateQuantity(item.id, 1)}
+                    onClick={() => handleUpdateQuantity(item.productCode, 1)}
                     className='px-2 py-1 text-taxmate-red font-bold hover:bg-[#ffebeb] transition-colors text-sm'
                   >
                     +

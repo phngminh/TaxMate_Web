@@ -1,5 +1,6 @@
 export interface Product {
   id: string
+  productCode: string
   name: string
   category?: string
   description?: string
@@ -12,6 +13,7 @@ export interface Product {
 }
 
 export interface CreateProductRequest {
+  productCode: string
   name: string
   category?: string
   description?: string
@@ -21,6 +23,7 @@ export interface CreateProductRequest {
 }
 
 export interface UpdateProductRequest {
+  productCode: string
   name: string
   category?: string
   description?: string

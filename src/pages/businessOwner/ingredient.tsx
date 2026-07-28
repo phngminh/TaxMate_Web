@@ -35,6 +35,7 @@ import ConfirmModal from '../../components/ui/confirm-modal'
 
 interface Recipe {
   productId: string
+  productCode: string
   productName: string
   price: number
   ingredients: ProductIngredient[]
@@ -130,6 +131,7 @@ export default function IngredientPage() {
             const linkRes = await getProductIngredients(product.id)
             return {
               productId: product.id,
+              productCode: product.productCode,
               productName: product.name,
               price: product.currentPrice ?? 0,
               ingredients: linkRes.data ?? [],
@@ -137,6 +139,7 @@ export default function IngredientPage() {
           } catch {
             return {
               productId: product.id,
+              productCode: product.productCode,
               productName: product.name,
               price: product.currentPrice ?? 0,
               ingredients: [],
@@ -189,7 +192,7 @@ export default function IngredientPage() {
     return recipes.filter(
       (r) =>
         r.productName.toLowerCase().includes(q) ||
-        r.productId.toLowerCase().includes(q),
+        r.productCode.toLowerCase().includes(q),
     )
   }, [recipes, searchQuery])
 
@@ -481,7 +484,7 @@ export default function IngredientPage() {
         const product = products.find((p) => p.id === confirmAction.productId)
         return {
           title: 'Thêm công thức',
-          message: `Bạn có chắc muốn thêm công thức cho sản phẩm "${product?.name ?? confirmAction.productId}"?`,
+          message: `Bạn có chắc muốn thêm công thức cho sản phẩm "${product?.name ?? confirmAction.productId}" (${product?.productCode ?? ''})?`,
           confirmLabel: 'Thêm',
           variant: 'primary' as const,
         }
@@ -698,7 +701,7 @@ export default function IngredientPage() {
                   <tbody className='divide-y divide-gray-100'>
                     {filteredRecipes.map((recipe) => (
                       <tr key={recipe.productId} className='hover:bg-[#fcfdfe] transition-colors group'>
-                        <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>{recipe.productId}</td>
+                        <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>{recipe.productCode}</td>
                         <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{recipe.productName}</td>
                         <td className='py-4 px-6 text-center'>
                           <span className='inline-flex items-center gap-1.5 bg-[#eef2ff] text-[#4c51bf] text-[12.5px] px-3 py-1 rounded-full font-bold border border-[#c7d2fe]/60'>
@@ -865,7 +868,7 @@ export default function IngredientPage() {
                     <option value=''>-- Chọn sản phẩm --</option>
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name}
+                        {p.name} ({p.productCode})
                       </option>
                     ))}
                   </select>

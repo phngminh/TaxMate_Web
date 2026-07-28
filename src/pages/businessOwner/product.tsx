@@ -49,6 +49,7 @@ export default function Product() {
     : SERVICE_UNITS
 
   const [formName, setFormName] = useState('')
+  const [formProductCode, setFormProductCode] = useState('')
   const [formCategory, setFormCategory] = useState('')
   const [formUnit, setFormUnit] = useState(units[0])
   const [formPrice, setFormPrice] = useState('')
@@ -95,7 +96,7 @@ export default function Product() {
     return products.filter((product) => {
       const matchesSearch =
         product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.id.toLowerCase().includes(searchQuery.toLowerCase())
+        product.productCode.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory
       const matchesStatus = selectedStatus === 'all' || product.status === selectedStatus
 
@@ -105,6 +106,7 @@ export default function Product() {
 
   const handleOpenAddProductModal = () => {
     setFormName('')
+    setFormProductCode('')
     setFormCategory('')
     setFormUnit(PRODUCT_UNITS[0])
     setFormPrice('')
@@ -117,6 +119,7 @@ export default function Product() {
 
   const handleOpenAddServiceModal = () => {
     setFormName('')
+    setFormProductCode('')
     setFormCategory('')
     setFormUnit(SERVICE_UNITS[0])
     setFormPrice('')
@@ -143,6 +146,7 @@ export default function Product() {
     console.log('Editing product:', product)
     setEditingProduct(product)
     setFormName(product.name)
+    setFormProductCode(product.productCode ?? '')
     setFormCategory(product.category ?? '')
     setFormUnit(product.unit ?? '')
     setFormDescription(product.description ?? '')
@@ -173,6 +177,7 @@ export default function Product() {
 
     try {
       await createProduct(businessId, {
+        productCode: formProductCode.trim(),
         name: formName,
         category: formCategory,
         description: formDescription,
@@ -193,6 +198,7 @@ export default function Product() {
 
     try {
       await updateProduct(editingProduct.id, {
+        productCode: formProductCode.trim(),
         name: formName,
         category: formCategory,
         description: formDescription,
@@ -388,7 +394,7 @@ export default function Product() {
                       className='hover:bg-[#fcfdfe] transition-colors group'
                     >
                       <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>
-                        {product.id}
+                        {product.productCode}
                       </td>
                       <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>
                         {product.name}
@@ -458,6 +464,20 @@ export default function Product() {
               onSubmit={handleSubmit}
               className='flex-1 overflow-y-auto p-6 flex flex-col gap-5'
             >
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-[13px] font-bold text-gray-600'>
+                  Mã {itemLabel} <span className='text-red-500'>*</span>
+                </label>
+                <input
+                  type='text'
+                  required
+                  placeholder='Ví dụ: SP000001'
+                  value={formProductCode}
+                  onChange={(e) => setFormProductCode(e.target.value)}
+                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
+                />
+              </div>
+
               <div className='flex flex-col gap-1.5'>
                 <label className='text-[13px] font-bold text-gray-600'>
                   Tên {itemLabel} <span className='text-red-500'>*</span>

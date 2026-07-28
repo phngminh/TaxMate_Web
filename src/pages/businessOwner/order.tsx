@@ -25,6 +25,7 @@ const ORDERS: OrderDetail[] = [
       {
         transactionItemId: 'item1',
         productId: 'SP000001',
+        productCode: 'SP000001',
         productName: 'Pizza',
         unit: 'Cái',
         unitPrice: 55000,
@@ -56,6 +57,7 @@ const ORDERS: OrderDetail[] = [
       {
         transactionItemId: 'item2',
         productId: 'SP000002',
+        productCode: 'SP000002',
         productName: 'Hamburger',
         unit: 'Cái',
         unitPrice: 35000,
@@ -87,6 +89,7 @@ const ORDERS: OrderDetail[] = [
       {
         transactionItemId: 'item3',
         productId: 'SP000003',
+        productCode: 'SP000003',
         productName: 'Coca',
         unit: 'Lon',
         unitPrice: 20000,
@@ -356,7 +359,7 @@ export default function Order() {
                 <h4 className='text-[14px] font-bold text-gray-700 mb-3'>Danh sách sản phẩm</h4>
                 <div className='flex flex-col gap-3'>
                   {selectedOrder.items.map((item) => {
-                    const imageUrl = PRODUCT_IMAGES[item.productId || '']
+                    const imageUrl = PRODUCT_IMAGES[item.productCode || '']
                     return (
                       <div key={item.transactionItemId} className='flex items-center justify-between gap-4 p-3 border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors'>
                         <div className='flex items-center gap-3'>
@@ -373,6 +376,9 @@ export default function Order() {
                           )}
                           <div>
                             <span className='font-bold text-gray-900 block'>{item.productName}</span>
+                            <span className='text-[12.5px] text-gray-500'>
+                              Mã SP: {item.productCode ?? '—'}
+                            </span>
                             <span className='text-[12.5px] text-gray-500'>
                               Số lượng: {item.quantity} {item.unit} x {item.unitPrice.toLocaleString('vi-VN')}đ
                             </span>
