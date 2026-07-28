@@ -605,6 +605,7 @@ export default function Product() {
                     <th className='w-48 px-6 py-4'>Tên sản phẩm</th>
                     <th className='w-48 px-6 py-4'>Danh mục</th>
                     <th className='w-28 px-6 py-4 text-center whitespace-nowrap'>Đơn vị tính</th>
+                    <th className='w-32 px-6 py-4 text-center whitespace-nowrap'>Tồn kho</th>
                     <th 
                       className='w-40 px-6 py-4 text-right cursor-pointer hover:bg-[#d0e3f5] transition-colors select-none'
                       onClick={() => handleSort('price')}
@@ -677,6 +678,19 @@ export default function Product() {
                       </td>
                       <td className='py-4 px-6 text-center'>
                         {product.unit ?? 'N/A'}
+                      </td>
+                      <td className='py-4 px-6 text-center whitespace-nowrap'>
+                        {product.stockQuantity === null || product.stockQuantity === undefined ? (
+                          <span className='text-gray-400 font-medium text-[13px]'>N/A</span>
+                        ) : product.stockQuantity === 0 ? (
+                          <span className='inline-block bg-red-50 text-red-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-red-200/60'>
+                            0 (Hết hàng)
+                          </span>
+                        ) : (
+                          <span className='text-gray-900 font-bold text-[13.5px]'>
+                            {product.stockQuantity.toLocaleString('vi-VN')}
+                          </span>
+                        )}
                       </td>
                       <td className='py-4 px-6 text-right text-[14.5px] font-bold text-gray-900 whitespace-nowrap'>
                         {

@@ -381,6 +381,7 @@ export default function Ingredient() {
                       <th className='py-4 px-6 font-semibold tracking-wide'>Mã nguyên liệu</th>
                       <th className='py-4 px-6 font-semibold tracking-wide'>Tên nguyên liệu</th>
                       <th className='py-4 px-6 font-semibold tracking-wide text-center'>Đơn vị tính</th>
+                      <th className='py-4 px-6 font-semibold tracking-wide text-center'>Tồn kho</th>
                       <th className='py-4 px-6 font-semibold tracking-wide text-right'>Giá ước tính</th>
                       <th className='py-4 px-6 font-semibold tracking-wide text-center'>Trạng thái</th>
                       <th className='py-4 px-6 font-semibold tracking-wide'>Ngày tạo</th>
@@ -397,6 +398,19 @@ export default function Ingredient() {
                           <span className='inline-block bg-[#f3f4f6] text-gray-600 text-[12.5px] px-3.5 py-1 rounded-full font-bold border border-gray-200/40'>
                             {item.unit ?? '—'}
                           </span>
+                        </td>
+                        <td className='py-4 px-6 text-center whitespace-nowrap'>
+                          {item.stockQuantity === null || item.stockQuantity === undefined ? (
+                            <span className='text-gray-400 font-medium text-[13px]'>N/A</span>
+                          ) : item.stockQuantity === 0 ? (
+                            <span className='inline-block bg-red-50 text-red-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-red-200/60'>
+                              0 (Hết kho)
+                            </span>
+                          ) : (
+                            <span className='text-gray-900 font-bold text-[13.5px]'>
+                              {item.stockQuantity.toLocaleString('vi-VN')}
+                            </span>
+                          )}
                         </td>
                         <td className='py-4 px-6 text-right text-[14px] text-gray-900 font-bold'>
                           {item.estimatedPrice != null

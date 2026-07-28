@@ -48,3 +48,11 @@ export const deleteProduct = async (id: string) => {
   const response = await http.delete<ApiResponse<object>>(`/Product/${id}`)
   return response.data
 }
+
+export const updateProductCostPrice = async (
+  id: string,
+  body: { incomingQuantity: number; incomingCostPrice: number }
+) => {
+  const response = await http.patch<ApiResponse<Product>>(`/Product/${id}/cost-price`, body)
+  return response.data
+}

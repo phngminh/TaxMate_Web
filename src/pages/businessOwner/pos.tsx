@@ -1265,9 +1265,11 @@ export default function POS() {
               )}
               {successInvoiceStatus && (
                 <div className='flex justify-between'>
-                  <span>Trạng thái HĐĐT:</span>
+                  <span>{successOfficialPdfUrl || successTaxAuthorityCode ? 'Trạng thái HĐĐT:' : 'Trạng thái hóa đơn:'}</span>
                   <span className={`font-bold ${successInvoiceStatus === 'Issued' ? 'text-emerald-600' : 'text-slate-500'}`}>
-                    {successInvoiceStatus === 'Issued' ? 'Đã phát hành hóa đơn đỏ' : 'Chờ xử lý'}
+                    {successInvoiceStatus === 'Issued'
+                      ? (successOfficialPdfUrl || successTaxAuthorityCode ? 'Đã phát hành hóa đơn đỏ' : 'Đã xuất hóa đơn bán lẻ')
+                      : 'Chờ xử lý'}
                   </span>
                 </div>
               )}

@@ -5,6 +5,8 @@ export interface Product {
   description?: string
   unit?: string
   currentPrice?: number
+  costPrice?: number
+  stockQuantity?: number
   imageUrl?: string
   status: string
   createdAt: string

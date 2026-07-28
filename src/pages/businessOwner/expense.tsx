@@ -29,7 +29,7 @@ import {
 import { getSuppliers, createSupplier, updateSupplier, deleteSupplier } from '../../apis/supplier.api'
 import { getIngredientPurchases, createIngredientPurchase, deleteIngredientPurchase, getIngredientPurchaseById } from '../../apis/ingredientPurchase.api'
 import { getAllIngredients } from '../../apis/ingredient.api'
-import { getAllProducts } from '../../apis/product.api'
+import { getAllProducts, updateProductCostPrice } from '../../apis/product.api'
 import type { Supplier } from '../../types/supplier.type'
 import type { ExpenseCategoryDTO, ExpenseDTO } from '../../types/expense.type'
 import type { Ingredient } from '../../types/ingredient.type'
@@ -147,6 +147,21 @@ export default function ExpensePage() {
   useEffect(() => {
     loadData()
   }, [businessId, activeTab])
+
+  // Automatically refresh product, ingredient, and supplier lookups when opening purchase modal
+  useEffect(() => {
+    if (showAddPurchaseModal && businessId) {
+      Promise.all([
+        getAllIngredients(businessId),
+        getAllProducts(businessId, 1, 500),
+        getSuppliers(businessId)
+      ]).then(([ingRes, prodRes, supRes]) => {
+        if (ingRes.success) setDbIngredients(ingRes.data?.items || ingRes.data || [])
+        if (prodRes.success) setDbProducts(prodRes.data.items || [])
+        if (supRes.success) setSuppliers(supRes.data || [])
+      }).catch(err => console.error('Failed to load purchase lookups:', err))
+    }
+  }, [showAddPurchaseModal, businessId])
 
   // Get or Create "Chi phí nhập hàng" Category dynamically to prevent errors
   const getOrCreateImportCategory = async (cats: ExpenseCategoryDTO[]) => {
@@ -360,6 +375,22 @@ export default function ExpensePage() {
           note: noteContent,
           supplierId: purchaseSupplierId
         })
+
+        // Automatically update Product CostPrice & StockQuantity via Moving Weighted Average
+        for (const item of purchaseItems) {
+          let lineUnitCost = item.costPrice
+          if (item.quantity > 0) {
+            let lineTotal = item.quantity * item.costPrice
+            lineTotal = Math.max(0, lineTotal - item.discountValue)
+            lineTotal = lineTotal * (1 + item.taxPercent / 100)
+            lineUnitCost = lineTotal / item.quantity
+          }
+
+          await updateProductCostPrice(item.itemId, {
+            incomingQuantity: item.quantity,
+            incomingCostPrice: lineUnitCost
+          })
+        }
       }
 
       toast.success('Nhập kho hàng hóa thành công!')
