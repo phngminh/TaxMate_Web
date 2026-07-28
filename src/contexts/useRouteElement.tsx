@@ -23,7 +23,7 @@ import Expense from '../pages/businessOwner/expense'
 import BankConfig from '../pages/businessOwner/bankConfig'
 import EInvoiceConfig from '../pages/businessOwner/einvoiceConfig'
 import OwnerSubscription from '../pages/businessOwner/ownerSubscription'
-import Report from '../pages/businessOwner/report'
+import Report from '../pages/businessOwner/report/ownerReport'
 
 export default function useRouteElements() {
   const routeElements = useRoutes([
