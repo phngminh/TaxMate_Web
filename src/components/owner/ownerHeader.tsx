@@ -8,6 +8,8 @@ import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
 import { createBusinessProfile, getBusinessProfiles } from '../../apis/profile.api'
 import BusinessModal from './addBusinessModal'
+import { getCurrentSubscription } from '../../apis/subscription.api'
+import type { UserSubscriptionResponse } from '../../types/subscription.type'
 
 function NavItem({ label, isActive }: {
   label: string
@@ -41,6 +43,7 @@ export default function OwnerHeader() {
   const [showAddBusinessModal, setShowAddBusinessModal] = useState(false)
   const profileRef = useRef<HTMLDivElement>(null)
   const { businesses, currentBusiness, setCurrentBusiness, clearBusiness, setBusinesses } = useBusiness()
+  const [subscription, setSubscription] = useState<UserSubscriptionResponse | null>(null)
   const emptyBusinessForm = {
     businessName: '',
     address: '',
@@ -69,8 +72,24 @@ export default function OwnerHeader() {
   }
 
   useEffect(() => {
-      checkBusinessProfile()
+    checkBusinessProfile()
   }, [])
+
+  useEffect(() => {
+    const fetchCurrentSubscription = async () => {
+      if (!user) return
+
+      try {
+        const res = await getCurrentSubscription(user.id)
+        setSubscription(res.data)
+      } catch (error) {
+        console.error(error)
+        setSubscription(null)
+      }
+    }
+
+    fetchCurrentSubscription()
+  }, [user])
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -232,7 +251,9 @@ export default function OwnerHeader() {
                 <h2 className='text-[22px] font-bold leading-tight mb-1'>{currentBusiness?.businessName ?? 'Chưa có cửa hàng'}</h2>
                 <p className='text-[14px] text-white/90 mb-3'>{currentBusiness?.mainCategoryName ?? 'Hãy tạo hồ sơ cửa hàng'}</p>
                 <div className='bg-white inline-flex items-center px-2.5 py-1 rounded-md self-start shadow-xs'>
-                  <span className='text-[#1d1d1d] text-[12px] font-semibold mr-1.5'>Gói Hộ Kinh Doanh</span>
+                  <span className='text-[#1d1d1d] text-[12px] font-semibold mr-1.5'>
+                    {subscription?.subscriptionPlanName ?? 'Gói Miễn Phí'}
+                  </span>
                   <div className='bg-yellow-400 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] leading-none'>★</div>
                 </div>
               </div>

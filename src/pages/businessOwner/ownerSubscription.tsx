@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react'
 import { Check, X, ShieldAlert, Sparkles, Loader2, Calendar, CreditCard, ArrowRight } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useAuth } from '../../contexts/AuthContext'
-import { getPlans, getCurrentSubscription, subscribe, cancelAutoRenew } from '../../apis/subscription.api'
-import type { SubscriptionPlan, UserSubscription } from '../../types/subscription.type'
+import { getSubscriptionPlans, getCurrentSubscription, subscribe, cancelAutoRenew } from '../../apis/subscription.api'
+import type { SubscriptionPlan, UserSubscriptionResponse } from '../../types/subscription.type'
 
 export default function OwnerSubscription() {
   const { user } = useAuth()
@@ -11,7 +11,7 @@ export default function OwnerSubscription() {
 
   // Data states
   const [plans, setPlans] = useState<SubscriptionPlan[]>([])
-  const [currentSub, setCurrentSub] = useState<UserSubscription | null>(null)
+  const [currentSub, setCurrentSub] = useState<UserSubscriptionResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState<string | null>(null) // planId being subscribed
 
@@ -23,13 +23,17 @@ export default function OwnerSubscription() {
     try {
       setLoading(true)
       const [plansRes, currentRes] = await Promise.all([
-        getPlans(),
+        getSubscriptionPlans(),
         getCurrentSubscription(userId)
       ])
 
       if (plansRes.success) {
         // Sort plans by sortOrder
-        const sorted = (plansRes.data || []).sort((a, b) => a.sortOrder - b.sortOrder)
+        const sorted = (plansRes.data || []).sort((a, b) => a.sortOrder - b.sortOrder).map(plan => ({
+          ...plan,
+          maxProducts: plan.maxProducts ?? undefined,
+          maxTransactionsPerMonth: plan.maxTransactionsPerMonth ?? undefined
+        }))
         setPlans(sorted)
       }
       if (currentRes.success) {
@@ -96,7 +100,7 @@ export default function OwnerSubscription() {
     <div className='bg-[#f8f9fa] pt-6 pb-16 min-h-[calc(100vh-51px)] px-6 overflow-y-auto'>
       <div className='max-w-6xl mx-auto'>
         {/* HEADER SECTION */}
-        <div className='text-center mb-10'>
+        {/* <div className='text-center mb-10'>
           <h1 className='text-[24px] font-black text-gray-900 flex items-center justify-center gap-2'>
             <Sparkles className='text-[#D32F2F] size-6' />
             Nâng cấp Tài khoản Premium
@@ -104,7 +108,7 @@ export default function OwnerSubscription() {
           <p className='text-gray-500 text-xs mt-2 max-w-lg mx-auto font-medium'>
             Mở khóa đầy đủ các tính năng quản lý POS chuyên nghiệp, tạo mã VietQR động không giới hạn và xuất hóa đơn điện tử tự động.
           </p>
-        </div>
+        </div> */}
 
         {loading ? (
           <div className='flex justify-center items-center py-20'>
@@ -139,12 +143,12 @@ export default function OwnerSubscription() {
                   <div className='flex flex-col gap-1.5 font-semibold text-slate-600 text-xs'>
                     <div className='flex items-center gap-2'>
                       <Calendar size={15} className='text-gray-400' />
-                      <span>Ngày bắt đầu: <span className='text-slate-800 font-bold font-mono'>{new Date(currentSub.startDate).toLocaleDateString('vi-VN')}</span></span>
+                      <span>Ngày bắt đầu: <span className='text-slate-800 font-bold'>{new Date(currentSub.startDate).toLocaleDateString('vi-VN')}</span></span>
                     </div>
                     {currentSub.endDate && (
                       <div className='flex items-center gap-2'>
                         <Calendar size={15} className='text-gray-400' />
-                        <span>Ngày hết hạn: <span className='text-slate-800 font-bold font-mono'>{new Date(currentSub.endDate).toLocaleDateString('vi-VN')}</span></span>
+                        <span>Ngày hết hạn: <span className='text-slate-800 font-bold'>{new Date(currentSub.endDate).toLocaleDateString('vi-VN')}</span></span>
                       </div>
                     )}
                   </div>
@@ -247,8 +251,8 @@ export default function OwnerSubscription() {
                       </p>
 
                       {/* Giá */}
-                      <div className='flex items-baseline gap-1.5 mb-8 border-b border-gray-100 pb-6'>
-                        <span className='text-3xl font-black text-gray-900 font-mono'>{priceFormatted}</span>
+                      <div className='flex items-baseline gap-1.5 mb-4 border-b border-gray-100 pb-2'>
+                        <span className='text-3xl font-black text-gray-900'>{priceFormatted}</span>
                         {cycleText && (
                           <span className='text-xs font-bold text-gray-400'>{cycleText}</span>
                         )}
