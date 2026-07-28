@@ -57,6 +57,20 @@ export default function ProductModal({
         >
           <div className='flex flex-col gap-1.5'>
             <label className='text-[13px] font-bold text-gray-600'>
+              Mã {itemLabel} <span className='text-red-500'>*</span>
+            </label>
+            <input
+              type='text'
+              required
+              placeholder='Ví dụ: SP000001'
+              value={productForm.productCode}
+              onChange={(e) => setProductForm(prev => ({ ...prev, productCode: e.target.value }))}
+              className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
+            />
+          </div>
+
+          <div className='flex flex-col gap-1.5'>
+            <label className='text-[13px] font-bold text-gray-600'>
               Tên {itemLabel} <span className='text-red-500'>*</span>
             </label>
             <input
