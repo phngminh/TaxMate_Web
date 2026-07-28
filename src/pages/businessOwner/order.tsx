@@ -115,6 +115,8 @@ export default function OrderPage() {
       } else if (timeFilter === 'Năm nay') {
         const isThisYear = orderDate.getFullYear() === now.getFullYear()
         if (!isThisYear) return false
+      } else if (timeFilter === 'Tùy chọn') {
+        
       }
 
       return true
@@ -286,7 +288,7 @@ export default function OrderPage() {
           <div className='flex flex-col gap-3'>
             <span className='text-[13px] font-bold text-gray-500'>Thời gian</span>
             <div className='flex flex-col gap-3.5'>
-              {['Hôm nay', '7 ngày qua', '30 ngày qua', 'Tháng này', 'Tháng trước', 'Năm nay'].map(opt => (
+              {['Hôm nay', '7 ngày qua', '30 ngày qua', 'Tháng này', 'Tháng trước', 'Năm nay', 'Tùy chọn'].map(opt => (
                 <label key={opt} className='flex items-center gap-3 cursor-pointer group text-[13.5px] text-gray-700 select-none'>
                   <input
                     type='radio'
@@ -348,7 +350,7 @@ export default function OrderPage() {
                       <td className='py-4 px-6 text-[13.5px] text-gray-900 font-bold'>
                         {order.transactionCode}
                         {order.invoiceNumber && (
-                          <span className='block text-[10px] text-gray-400 font-bold font-mono mt-0.5'>
+                          <span className='block text-[10px] text-gray-400 font-bold mt-0.5'>
                             HĐ: {order.invoiceNumber}
                           </span>
                         )}
@@ -356,13 +358,13 @@ export default function OrderPage() {
                       <td className='py-4 px-6 text-[13.5px] text-gray-600 font-medium'>
                         {getStatusBadge(order.status)}
                       </td>
-                      <td className='py-4 px-6 text-[13.5px] text-gray-600 font-bold font-mono'>
+                      <td className='py-4 px-6 text-[13.5px] text-gray-600 font-bold'>
                         {order.itemCount} món
                       </td>
-                      <td className='py-4 px-6 text-[13.5px] text-gray-500 font-semibold font-mono'>
+                      <td className='py-4 px-6 text-[13.5px] text-gray-500 font-semibold'>
                         {formatDateTime(order.transactionDate)}
                       </td>
-                      <td className='py-4 px-6 text-right text-[14.5px] text-gray-900 font-black font-mono'>
+                      <td className='py-4 px-6 text-right text-[14.5px] text-gray-900 font-black'>
                         {order.totalAmount.toLocaleString('vi-VN')} đ
                       </td>
                       <td className='py-4 px-6 text-center'>
@@ -414,7 +416,7 @@ export default function OrderPage() {
               <div className='grid grid-cols-2 gap-4 text-[13.5px] border-b border-gray-100 pb-4 font-semibold text-slate-600'>
                 <div>
                   <span className='text-gray-500 block text-[11px] font-bold uppercase tracking-wider mb-0.5'>Thời gian</span>
-                  <span className='font-bold text-gray-800 font-mono'>{formatDateTime(selectedOrder.transactionDate)}</span>
+                  <span className='font-bold text-gray-800'>{formatDateTime(selectedOrder.transactionDate)}</span>
                 </div>
                 <div>
                   <span className='text-gray-500 block text-[11px] font-bold uppercase tracking-wider mb-0.5'>Trạng thái</span>
@@ -436,12 +438,12 @@ export default function OrderPage() {
                         </div>
                         <div>
                           <span className='font-bold text-gray-900 block text-[13px]'>{item.productName}</span>
-                          <span className='text-[11.5px] text-gray-500 font-semibold font-mono'>
+                          <span className='text-[11.5px] text-gray-500 font-semibold'>
                             Số lượng: {item.quantity} {item.unit || 'món'} x {item.unitPrice.toLocaleString('vi-VN')} đ
                           </span>
                         </div>
                       </div>
-                      <span className='font-bold text-gray-900 text-[13.5px] font-mono'>
+                      <span className='font-bold text-gray-900 text-[13.5px]'>
                         {item.lineTotal.toLocaleString('vi-VN')} đ
                       </span>
                     </div>
@@ -452,12 +454,12 @@ export default function OrderPage() {
               <div className='border-t border-gray-100 pt-4 flex flex-col gap-2 font-semibold text-slate-500 text-xs'>
                 <div className='flex justify-between'>
                   <span className='text-gray-400'>Tạm tính:</span>
-                  <span className='font-bold text-gray-800 font-mono'>{selectedOrder.subTotal.toLocaleString('vi-VN')} đ</span>
+                  <span className='font-bold text-gray-800'>{selectedOrder.subTotal.toLocaleString('vi-VN')} đ</span>
                 </div>
                 {selectedOrder.discountAmount > 0 && (
                   <div className='flex justify-between text-emerald-600'>
                     <span>Giảm giá:</span>
-                    <span className='font-bold font-mono'>-{selectedOrder.discountAmount.toLocaleString('vi-VN')} đ</span>
+                    <span className='font-bold'>-{selectedOrder.discountAmount.toLocaleString('vi-VN')} đ</span>
                   </div>
                 )}
                 <div className='flex justify-between'>
@@ -481,7 +483,7 @@ export default function OrderPage() {
 
                 <div className='flex justify-between text-[15px] border-t border-gray-100 pt-3 mt-1'>
                   <span className='font-black text-gray-800'>Tổng cộng:</span>
-                  <span className='font-black text-[#D32F2F] text-[16.5px] font-mono'>
+                  <span className='font-black text-[#D32F2F] text-[16.5px]'>
                     {selectedOrder.totalAmount.toLocaleString('vi-VN')} đ
                   </span>
                 </div>

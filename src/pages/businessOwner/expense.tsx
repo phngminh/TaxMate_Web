@@ -617,17 +617,17 @@ export default function ExpensePage() {
             <>
               {/* TAB 1: LEDGER */}
               {activeTab === 'ledger' && (
-                <div className='overflow-x-auto w-full'>
+                <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden w-full'>
                   {expenses.length > 0 ? (
                     <table className='w-full text-left border-collapse'>
                       <thead>
-                        <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13px] font-black border-b border-[#cbd5e1]/40 select-none'>
+                        <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
                           <th className='py-3.5 px-5 font-bold'>Nội dung khoản chi</th>
                           <th className='py-3.5 px-5 font-bold'>Danh mục</th>
                           <th className='py-3.5 px-5 font-bold'>Phương thức</th>
                           <th className='py-3.5 px-5 font-bold'>Ngày lập</th>
                           <th className='py-3.5 px-5 font-bold text-right'>Số tiền chi</th>
-                          <th className='py-3.5 px-5 font-bold text-center w-24'>Thao tác</th>
+                          <th className='py-3.5 px-5 font-bold text-center w-24 whitespace-nowrap'>Thao tác</th>
                         </tr>
                       </thead>
                       <tbody className='divide-y divide-gray-100 text-xs font-semibold text-gray-600'>
@@ -642,8 +642,8 @@ export default function ExpensePage() {
                                 </span>
                               </td>
                               <td className='py-4 px-5'>{e.paymentMethod === 'Cash' ? 'Tiền mặt' : e.paymentMethod === 'Transfer' ? 'Chuyển khoản' : 'Thẻ'}</td>
-                              <td className='py-4 px-5 font-mono'>{new Date(e.expenseDate).toLocaleDateString('vi-VN')}</td>
-                              <td className='py-4 px-5 text-right font-black text-orange-600 font-mono'>-{formatPrice(e.amount)} đ</td>
+                              <td className='py-4 px-5'>{new Date(e.expenseDate).toLocaleDateString('vi-VN')}</td>
+                              <td className='py-4 px-5 text-right font-black text-orange-600'>-{formatPrice(e.amount)} đ</td>
                               <td className='py-4 px-5 text-center'>
                                 <button
                                   onClick={async () => {
@@ -702,7 +702,7 @@ export default function ExpensePage() {
                       <tbody className='divide-y divide-gray-100 text-xs font-semibold text-gray-600'>
                         {combinedPurchases.map(p => (
                           <tr key={p.id} className='hover:bg-[#fcfdfe] transition-colors'>
-                            <td className='py-4 px-5 text-gray-900 font-bold font-mono'>{p.invoiceNumber}</td>
+                            <td className='py-4 px-5 text-gray-900 font-bold'>{p.invoiceNumber}</td>
                             <td className='py-4 px-5'>
                               <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] ${
                                 p.type === 'Product'
@@ -714,8 +714,8 @@ export default function ExpensePage() {
                             </td>
                             <td className='py-4 px-5 font-bold text-slate-700'>{p.supplierName}</td>
                             <td className='py-4 px-5 max-w-xs truncate font-medium'>{p.summary}</td>
-                            <td className='py-4 px-5 font-mono'>{new Date(p.date).toLocaleDateString('vi-VN')}</td>
-                            <td className='py-4 px-5 text-right font-black text-orange-600 font-mono'>-{formatPrice(p.amount)} đ</td>
+                            <td className='py-4 px-5'>{new Date(p.date).toLocaleDateString('vi-VN')}</td>
+                            <td className='py-4 px-5 text-right font-black text-orange-600'>-{formatPrice(p.amount)} đ</td>
                             <td className='py-4 px-5 text-center'>
                               <button
                                 onClick={async () => {
@@ -785,7 +785,7 @@ export default function ExpensePage() {
                           <tr key={s.id} className='hover:bg-[#fcfdfe] transition-colors'>
                             <td className='py-4 px-5 text-gray-900 font-bold'>{s.name}</td>
                             <td className='py-4 px-5'>{s.contactName || '---'}</td>
-                            <td className='py-4 px-5 font-mono'>{s.phoneNumber || '---'}</td>
+                            <td className='py-4 px-5'>{s.phoneNumber || '---'}</td>
                             <td className='py-4 px-5 max-w-xs truncate'>{s.address || '---'}</td>
                             <td className='py-4 px-5 text-[11px] text-gray-400'>{s.note || '---'}</td>
                             <td className='py-4 px-5 text-center'>
@@ -892,7 +892,7 @@ export default function ExpensePage() {
                       const clean = e.target.value.replace(/\D/g, '')
                       setLedgerAmount(clean === '' ? '' : parseInt(clean).toLocaleString('vi-VN'))
                     }}
-                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 text-right font-mono'
+                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 text-right'
                   />
                 </div>
               </div>
@@ -917,7 +917,7 @@ export default function ExpensePage() {
                     type='date'
                     value={ledgerDate}
                     onChange={e => setLedgerDate(e.target.value)}
-                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 font-mono'
+                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800'
                   />
                 </div>
               </div>
@@ -1011,7 +1011,7 @@ export default function ExpensePage() {
                     placeholder='Số điện thoại liên hệ...'
                     value={supPhone}
                     onChange={e => setSupPhone(e.target.value.replace(/\s+/g, ''))}
-                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 font-mono'
+                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
                   />
                 </div>
               </div>
@@ -1159,7 +1159,7 @@ export default function ExpensePage() {
                     placeholder='Ví dụ: HDNK-003...'
                     value={purchaseInvoiceNumber}
                     onChange={e => setPurchaseInvoiceNumber(e.target.value)}
-                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] font-semibold text-gray-800 font-mono'
+                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] font-semibold text-gray-800'
                   />
                 </div>
               </div>
@@ -1241,7 +1241,7 @@ export default function ExpensePage() {
                                   min='0'
                                   value={item.costPrice}
                                   onChange={e => updateLineItem(idx, { costPrice: parseFloat(e.target.value) || 0 })}
-                                  className='w-24 border border-slate-200 rounded px-1.5 py-1 text-right font-bold text-slate-800 font-mono'
+                                  className='w-24 border border-slate-200 rounded px-1.5 py-1 text-right font-bold text-slate-800'
                                 />
                               </td>
                               <td className='p-3 text-right'>
@@ -1250,7 +1250,7 @@ export default function ExpensePage() {
                                   min='0'
                                   value={item.discountValue}
                                   onChange={e => updateLineItem(idx, { discountValue: parseFloat(e.target.value) || 0 })}
-                                  className='w-20 border border-slate-200 rounded px-1.5 py-1 text-right font-bold text-slate-800 font-mono'
+                                  className='w-20 border border-slate-200 rounded px-1.5 py-1 text-right font-bold text-slate-800'
                                 />
                               </td>
                               <td className='p-3 text-center'>
@@ -1265,7 +1265,7 @@ export default function ExpensePage() {
                                   <option value={10}>10%</option>
                                 </select>
                               </td>
-                              <td className='p-3 text-right font-black text-slate-800 font-mono'>
+                              <td className='p-3 text-right font-black text-slate-800'>
                                 {formatPrice(itemTotal)} đ
                               </td>
                               <td className='p-3 text-center'>
@@ -1298,7 +1298,7 @@ export default function ExpensePage() {
                     type='date'
                     value={purchaseDate}
                     onChange={e => setPurchaseDate(e.target.value)}
-                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] font-mono'
+                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F]'
                   />
                 </div>
                 <div className='flex flex-col gap-1.5'>
@@ -1317,7 +1317,7 @@ export default function ExpensePage() {
               {purchaseItems.length > 0 && (
                 <div className='bg-red-50/30 rounded-[12px] border border-red-100/50 p-4 flex justify-between items-center select-none'>
                   <span className='font-extrabold text-slate-600 text-sm'>Tổng thanh toán hóa đơn</span>
-                  <span className='font-black text-[#D32F2F] text-lg font-mono'>
+                  <span className='font-black text-[#D32F2F] text-lg'>
                     {formatPrice(
                       purchaseItems.reduce((acc, curr) => {
                         let sub = curr.quantity * curr.costPrice
@@ -1387,7 +1387,7 @@ export default function ExpensePage() {
                     </div>
                     <div>
                       <span className='text-gray-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5'>Ngày chi</span>
-                      <span className='text-gray-800 font-bold font-mono'>{new Date(selectedExpenseDetail.expenseDate).toLocaleDateString('vi-VN')}</span>
+                      <span className='text-gray-800 font-bold'>{new Date(selectedExpenseDetail.expenseDate).toLocaleDateString('vi-VN')}</span>
                     </div>
                   </div>
 
@@ -1417,7 +1417,7 @@ export default function ExpensePage() {
 
                   <div className='flex justify-between border-t border-gray-100 pt-4 items-center'>
                     <span className='font-black text-gray-800 text-sm'>Tổng tiền chi tiêu:</span>
-                    <span className='font-black text-orange-600 text-lg font-mono'>
+                    <span className='font-black text-orange-600 text-lg'>
                       -{formatPrice(selectedExpenseDetail.amount)} đ
                     </span>
                   </div>
@@ -1430,11 +1430,11 @@ export default function ExpensePage() {
                   <div className='grid grid-cols-2 gap-4 border-b border-gray-100 pb-4'>
                     <div>
                       <span className='text-gray-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5'>Số hóa đơn</span>
-                      <span className='text-gray-800 text-sm font-bold font-mono'>{selectedMaterialDetail.invoiceNumber || 'N/A'}</span>
+                      <span className='text-gray-800 text-sm font-bold'>{selectedMaterialDetail.invoiceNumber || 'N/A'}</span>
                     </div>
                     <div>
                       <span className='text-gray-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5'>Ngày lập phiếu</span>
-                      <span className='text-gray-800 font-bold font-mono'>{new Date(selectedMaterialDetail.purchaseDate).toLocaleDateString('vi-VN')}</span>
+                      <span className='text-gray-800 font-bold'>{new Date(selectedMaterialDetail.purchaseDate).toLocaleDateString('vi-VN')}</span>
                     </div>
                   </div>
 
@@ -1452,7 +1452,7 @@ export default function ExpensePage() {
                   <div className='grid grid-cols-2 gap-4 border-b border-gray-100 pb-4'>
                     <div>
                       <span className='text-gray-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5'>Số lượng nhập</span>
-                      <span className='text-gray-800 font-bold text-sm font-mono'>
+                      <span className='text-gray-800 font-bold text-sm'>
                         {selectedMaterialDetail.quantity} {selectedMaterialDetail.ingredientUnit || 'đơn vị'}
                       </span>
                     </div>
@@ -1460,7 +1460,7 @@ export default function ExpensePage() {
 
                   <div className='flex justify-between border-t border-gray-100 pt-4 items-center'>
                     <span className='font-black text-gray-800 text-sm'>Tổng thanh toán phiếu chi:</span>
-                    <span className='font-black text-orange-600 text-lg font-mono'>
+                    <span className='font-black text-orange-600 text-lg'>
                       -{formatPrice(selectedMaterialDetail.totalCost)} đ
                     </span>
                   </div>
