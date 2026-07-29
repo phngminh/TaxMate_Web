@@ -6,6 +6,11 @@ export interface ExpenseCategoryDTO {
   createdAt?: string
 }
 
+export interface CreateExpenseCategoryRequest {
+  categoryName: string
+  description?: string
+}
+
 export interface ExpenseDTO {
   expenseId: string
   expenseCategoryId: string
