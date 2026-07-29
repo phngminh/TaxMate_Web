@@ -1,12 +1,12 @@
 import { useState, useMemo, useEffect } from 'react'
 import { ArrowUpCircle, ArrowDownCircle, MoreVertical, RotateCcw, TrendingUp, TrendingDown, Plus, ChevronRight, Download, Loader2 } from 'lucide-react'
-import { useBusiness } from '../../contexts/BusinessContext'
-import { getAllExpenses, createExpense, getExpenseCategories, updateExpense, deleteExpense, createExpenseCategory } from '../../apis/expense.api'
-import { getAllIncomes, createIncome, getIncomeCategories, updateIncome, deleteIncome, createIncomeCategory } from '../../apis/income.api'
-import { exportS1a } from '../../apis/taxBook.api'
+import { useBusiness } from '../../../contexts/BusinessContext'
+import { getAllExpenses, createExpense, getExpenseCategories, updateExpense, deleteExpense, createExpenseCategory } from '../../../apis/expense.api'
+import { getAllIncomes, createIncome, getIncomeCategories, updateIncome, deleteIncome, createIncomeCategory } from '../../../apis/income.api'
+import { exportS1a } from '../../../apis/taxBook.api'
 import { toast } from 'react-toastify'
-import type { ExpenseCategory } from '../../types/expense.type'
-import type { IncomeCategory } from '../../types/income.type'
+import type { ExpenseCategory } from '../../../types/expense.type'
+import type { IncomeCategory } from '../../../types/income.type'
 
 interface ExpenseRecord {
   id: string
@@ -939,7 +939,7 @@ export default function Expense() {
         </div>
       )}
       {isConfirmDeleteOpen && (
-        <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-[60] flex items-center justify-center p-4 animate-in fade-in duration-200'>
+        <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-60 flex items-center justify-center p-4 animate-in fade-in duration-200'>
           <div className='bg-white rounded-[16px] shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-200 p-6 flex flex-col items-center text-center'>
             <div className='w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mb-4'>
               <span className='text-red-500 text-2xl'>!</span>

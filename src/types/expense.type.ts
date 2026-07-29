@@ -1,4 +1,4 @@
-export interface ExpenseCategoryDTO {
+export interface ExpenseCategory {
   expenseCategoryId: string
   businessId: string
   categoryName: string
