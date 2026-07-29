@@ -34,6 +34,7 @@ function NavItem({ label, isActive }: {
 const menuItems = [
   { icon: HeadphonesIcon, label: 'Hỗ trợ' },
   { icon: Heart,          label: 'Gói của tôi' },
+  { icon: FileDown,       label: 'Xuất S1A-HKD' },
   { icon: FileDown,       label: 'Xuất S2A-HKD' },
   { icon: Store,          label: 'Cài đặt Cửa hàng' },
   { icon: Settings,       label: 'Cài đặt cá nhân' },
@@ -56,10 +57,12 @@ export default function OwnerHeader() {
 
   const [form, setForm] = useState(emptyBusinessForm)
   const [loading, setLoading] = useState(false)
+  const [showExportS1aModal, setShowExportS1aModal] = useState(false)
   const [showExportS2aModal, setShowExportS2aModal] = useState(false)
   const [exportBusinessId, setExportBusinessId] = useState('')
   const [exportYear, setExportYear] = useState(new Date().getFullYear().toString())
   const [exportQuarter, setExportQuarter] = useState<'1' | '2' | '3' | '4'>('1')
+  const [isExportingS1a, setIsExportingS1a] = useState(false)
   const [isExportingS2a, setIsExportingS2a] = useState(false)
   const navigate = useNavigate()
   const { user, logout } = useAuth()
@@ -156,6 +159,70 @@ export default function OwnerHeader() {
     setShowBusinessModal(false)
     setShowAddBusinessModal(false)
     setForm(emptyBusinessForm)
+  }
+
+  const openExportS1aModal = () => {
+    setExportBusinessId(currentBusiness?.id ?? businesses[0]?.id ?? '')
+    setExportYear(new Date().getFullYear().toString())
+    setExportQuarter('1')
+    setShowExportS1aModal(true)
+  }
+
+  const handleExportS1a = async () => {
+    if (!exportBusinessId) {
+      toast.error('Vui lòng chọn hồ sơ kinh doanh')
+      return
+    }
+
+    const year = Number(exportYear)
+    if (!Number.isInteger(year) || year < 2000 || year > 2100) {
+      toast.error('Năm phải nằm trong khoảng 2000 - 2100')
+      return
+    }
+
+    try {
+      setIsExportingS1a(true)
+      const res = await http.get(`/businesses/${exportBusinessId}/tax-books/s1a/export`, {
+        params: {
+          year,
+          quarter: Number(exportQuarter)
+        },
+        responseType: 'blob'
+      })
+
+      const selectedBusiness = businesses.find((x) => x.id === exportBusinessId)
+      const filename = `S1a-HKD_${selectedBusiness?.businessName ?? exportBusinessId}_Q${exportQuarter}_${year}.docx`
+        .replace(/[\\/:*?"<>|]/g, '_')
+
+      const blobUrl = window.URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = blobUrl
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(blobUrl)
+
+      toast.success('Xuất file S1A-HKD thành công')
+      setShowExportS1aModal(false)
+    } catch (error: any) {
+      let message = 'Không thể xuất file S1A-HKD'
+      const responseData = error?.response?.data
+      if (responseData instanceof Blob) {
+        try {
+          const text = await responseData.text()
+          const parsed = JSON.parse(text)
+          message = parsed?.message || parsed?.error || message
+        } catch {
+          // keep default message
+        }
+      } else if (typeof responseData?.message === 'string') {
+        message = responseData.message
+      }
+      toast.error(message)
+    } finally {
+      setIsExportingS1a(false)
+    }
   }
 
   const openExportS2aModal = () => {
@@ -335,7 +402,9 @@ export default function OwnerHeader() {
                     key={label}
                     className='w-full flex items-center gap-4 px-5 py-3.5 hover:bg-[#fef2f2] group transition-colors cursor-pointer border-b border-transparent hover:border-gray-50'
                     onClick={() => {
-                      if (label === 'Xuất S2A-HKD') {
+                      if (label === 'Xuất S1A-HKD') {
+                        openExportS1aModal()
+                      } else if (label === 'Xuất S2A-HKD') {
                         openExportS2aModal()
                       }
                     }}
@@ -433,6 +502,87 @@ export default function OwnerHeader() {
         onClose={handleCloseBusinessModal}
         onSubmit={handleCreateBusiness}
       />
+
+      {showExportS1aModal && (
+        <div className='fixed inset-0 z-60 flex items-center justify-center bg-black/60 p-4' onClick={() => setShowExportS1aModal(false)}>
+          <div
+            className='w-full max-w-120 rounded-2xl bg-white p-6 shadow-2xl'
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className='text-xl font-bold text-gray-900 mb-4'>Xuất sổ S1A-HKD</h3>
+
+            <div className='space-y-4'>
+              <div>
+                <label className='mb-2 block text-sm font-semibold text-gray-600'>
+                  Hồ sơ kinh doanh <span className='text-taxmate-red'>*</span>
+                </label>
+                <select
+                  value={exportBusinessId}
+                  onChange={(e) => setExportBusinessId(e.target.value)}
+                  className='h-11 w-full rounded-xl border border-gray-300 bg-white px-4 text-sm text-gray-900 outline-hidden focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+                >
+                  {businesses.map((business) => (
+                    <option key={business.id} value={business.id}>
+                      {business.businessName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className='grid grid-cols-2 gap-4'>
+                <div>
+                  <label className='mb-2 block text-sm font-semibold text-gray-600'>
+                    Năm <span className='text-taxmate-red'>*</span>
+                  </label>
+                  <input
+                    type='number'
+                    min={2000}
+                    max={2100}
+                    value={exportYear}
+                    onChange={(e) => setExportYear(e.target.value)}
+                    className='h-11 w-full rounded-xl border border-gray-300 bg-white px-4 text-sm text-gray-900 outline-hidden focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+                  />
+                </div>
+
+                <div>
+                  <label className='mb-2 block text-sm font-semibold text-gray-600'>
+                    Quý <span className='text-taxmate-red'>*</span>
+                  </label>
+                  <select
+                    value={exportQuarter}
+                    onChange={(e) => setExportQuarter(e.target.value as '1' | '2' | '3' | '4')}
+                    className='h-11 w-full rounded-xl border border-gray-300 bg-white px-4 text-sm text-gray-900 outline-hidden focus:border-taxmate-red focus:ring-2 focus:ring-taxmate-red/20'
+                  >
+                    <option value='1'>Quý 1</option>
+                    <option value='2'>Quý 2</option>
+                    <option value='3'>Quý 3</option>
+                    <option value='4'>Quý 4</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className='mt-6 flex justify-end gap-3'>
+              <button
+                type='button'
+                onClick={() => setShowExportS1aModal(false)}
+                className='px-5 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50'
+                disabled={isExportingS1a}
+              >
+                Hủy
+              </button>
+              <button
+                type='button'
+                onClick={handleExportS1a}
+                disabled={isExportingS1a}
+                className='px-5 py-2.5 rounded-xl bg-taxmate-red text-white font-semibold hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed'
+              >
+                {isExportingS1a ? 'Đang xuất...' : 'Xuất file'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showExportS2aModal && (
         <div className='fixed inset-0 z-60 flex items-center justify-center bg-black/60 p-4' onClick={() => setShowExportS2aModal(false)}>
