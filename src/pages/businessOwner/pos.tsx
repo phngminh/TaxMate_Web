@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import * as signalR from '@microsoft/signalr'
-import { Search, Plus, X, Check, Utensils, Printer, Loader2, PlayCircle, RefreshCw, FileText, Sparkles, Building, Mail, MapPin, Hash } from 'lucide-react'
+import { Search, Plus, X, Check, Utensils, Printer, Loader2, PlayCircle, RefreshCw, FileText, Sparkles, Building, Mail, MapPin, Hash, House } from 'lucide-react'
 import { toast } from 'react-toastify'
 import http from '../../utils/http'
 import { useBusiness } from '../../contexts/BusinessContext'
@@ -21,8 +21,9 @@ import { getPaymentAccounts, createPaymentAccount, createSePayMockPayment } from
 import { getEInvoiceConfig } from '../../apis/einvoice.api'
 import type { Product } from '../../types/product.type'
 import type { ProductCategory } from '../../types/productCategory.type'
-import type { OrderDetail } from '../../types/order.type'
 import type { PaymentAccount } from '../../types/paymentAccount.type'
+import { useNavigate } from 'react-router-dom'
+import path from '../../constants/path'
 
 const BANK_OPTIONS = [
   { shortName: 'VCB', fullName: 'Vietcombank' },
@@ -50,6 +51,7 @@ export default function POS() {
   const { currentBusiness } = useBusiness()
   const businessId = currentBusiness?.id
   const { user } = useAuth()
+  const navigate = useNavigate()
 
   // Data state
   const [products, setProducts] = useState<Product[]>([])
@@ -81,6 +83,7 @@ export default function POS() {
 
   // Quick Add Product state
   const [showQuickAddModal, setShowQuickAddModal] = useState(false)
+  const [quickProductCode, setQuickProductCode] = useState('')
   const [quickName, setQuickName] = useState('')
   const [quickPrice, setQuickPrice] = useState('')
   const [quickSubmitting, setQuickSubmitting] = useState(false)
@@ -402,6 +405,7 @@ export default function POS() {
     try {
       setQuickSubmitting(true)
       const res = await createProduct(businessId, {
+        productCode: quickProductCode.trim(),
         name: quickName.trim(),
         currentPrice: priceNum
       })
@@ -777,8 +781,15 @@ export default function POS() {
             </button>
           </div>
 
-          <div className='flex items-center gap-2 text-white pb-2 text-xs font-bold'>
-            <span>Xin chào, {user?.fullName || 'Nhân viên'}</span>
+          <div className='flex items-center justify-between pb-2'>
+            <div className='flex items-center gap-2 text-white text-xs font-bold'>
+              <span>Xin chào, {user?.fullName || 'Nhân viên'}</span>
+              <House
+                size={16}
+                className='cursor-pointer hover:text-blue-200 transition-colors'
+                onClick={() => navigate(path.BASE_BUSINESS_OWNER)}
+              />
+            </div>
           </div>
         </div>
 
@@ -803,37 +814,46 @@ export default function POS() {
         ) : activeTab ? (
           <div className='grow p-4 overflow-y-auto min-h-0 space-y-4'>
             {activeTab.items.map((item, index) => (
-              <div key={item.transactionItemId} className='flex items-center justify-between text-xs py-1 border-b border-slate-50 pb-2'>
-                <div className='w-1/2 font-bold text-slate-700 pr-2 leading-snug'>
-                  {index + 1}. {item.productName}
+              <div
+                key={item.transactionItemId}
+                className='flex items-center justify-between border-b border-slate-100 py-2 gap-3'
+              >
+                <div className='flex-1 min-w-0'>
+                  <div className='font-bold text-slate-700 text-xs truncate'>
+                    {index + 1}. {item.productName}
+                  </div>
                 </div>
-                <div className='flex items-center gap-3'>
+
+                <div className='flex items-center gap-4 shrink-0'>
                   <div className='flex items-center border border-[#b90a0a] rounded-md overflow-hidden bg-white'>
                     <button
-                      onClick={() => handleUpdateQuantity(item.transactionItemId, item.quantity, -1)}
+                      onClick={() =>handleUpdateQuantity(item.transactionItemId, item.quantity, -1)}
                       className='px-2 py-0.5 text-[#b90a0a] font-black hover:bg-[#ffebeb] transition-colors text-xs select-none'
                     >
                       -
                     </button>
-                    <span className='px-2.5 text-slate-800 font-bold text-xs font-mono select-none'>
+                    <span className='px-2.5 text-slate-800 font-bold text-xs select-none'>
                       {item.quantity}
                     </span>
                     <button
-                      onClick={() => handleUpdateQuantity(item.transactionItemId, item.quantity, 1)}
+                      onClick={() =>handleUpdateQuantity(item.transactionItemId, item.quantity, 1)}
                       className='px-2 py-0.5 text-[#b90a0a] font-black hover:bg-[#ffebeb] transition-colors text-xs select-none'
                     >
                       +
                     </button>
                   </div>
-                  <div className='w-14 text-right text-slate-400 font-bold font-mono'>
+
+                  <div className='min-w-27.5 text-right text-slate-400 font-semibold text-xs whitespace-nowrap'>
                     {formatPrice(item.unitPrice)}
                   </div>
-                  <div className='w-20 text-right font-black text-slate-900 font-mono'>
+
+                  <div className='min-w-35 text-right font-black text-slate-900 text-xs whitespace-nowrap'>
                     {formatPrice(item.lineTotal)}
                   </div>
                 </div>
               </div>
             ))}
+
             {activeTab.items.length === 0 && (
               <div className='text-center py-20 text-slate-400 text-xs font-bold'>
                 Đơn hàng chưa có sản phẩm.
@@ -848,11 +868,11 @@ export default function POS() {
             <div className='flex items-center justify-between'>
               <div className='flex items-center gap-2 select-none'>
                 <span className='font-extrabold text-[#003B95] text-[15px]'>Tổng thanh toán</span>
-                <span className='bg-[#b90a0a] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center font-mono'>
+                <span className='bg-[#b90a0a] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center'>
                   {activeTab.items.reduce((acc, curr) => acc + curr.quantity, 0)}
                 </span>
               </div>
-              <div className='font-black text-[#003B95] text-lg font-mono'>
+              <div className='font-black text-[#003B95] text-lg'>
                 {formatPrice(activeTab.totalAmount)} đ
               </div>
             </div>
@@ -919,7 +939,7 @@ export default function POS() {
                         placeholder='MST (tùy chọn)...'
                         value={buyerTaxCode}
                         onChange={e => setBuyerTaxCode(e.target.value)}
-                        className='w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-mono font-medium outline-hidden focus:border-[#b90a0a]'
+                        className='w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-medium outline-hidden focus:border-[#b90a0a]'
                       />
                     </div>
                     <div>
@@ -1038,7 +1058,7 @@ export default function POS() {
                       placeholder='Nhập số tài khoản...'
                       value={inlineAccountNumber}
                       onChange={e => setInlineAccountNumber(e.target.value.replace(/\s+/g, ''))}
-                      className='w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-xs font-mono font-bold outline-hidden focus:border-[#b90a0a]'
+                      className='w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-xs font-bold outline-hidden focus:border-[#b90a0a]'
                     />
                   </div>
                   <div>
@@ -1175,7 +1195,7 @@ export default function POS() {
               <span className='text-xs font-bold text-slate-500'>Đang chờ nhận tiền...</span>
             </div>
 
-            <h4 className='text-2xl font-black text-[#004795] font-mono mb-1'>
+            <h4 className='text-2xl font-black text-[#004795] mb-1'>
               {formatPrice(awaitingAmount)} VND
             </h4>
             <p className='text-xs text-gray-400 mb-4 font-semibold'>
@@ -1198,7 +1218,7 @@ export default function POS() {
               </div>
               <div className='flex justify-between'>
                 <span>Số tài khoản:</span>
-                <span className='font-bold text-slate-800 font-mono'>{selectedAccount.accountNumber}</span>
+                <span className='font-bold text-slate-800'>{selectedAccount.accountNumber}</span>
               </div>
               <div className='flex justify-between'>
                 <span>Chủ tài khoản:</span>
@@ -1242,7 +1262,7 @@ export default function POS() {
             </div>
             
             <h3 className='text-emerald-600 text-xl font-extrabold mb-1 select-none'>Thanh toán thành công!</h3>
-            <h4 className='text-3xl font-black text-slate-900 font-mono mb-4'>
+            <h4 className='text-3xl font-black text-slate-900 mb-4'>
               {formatPrice(successAmount)} đ
             </h4>
 
@@ -1254,13 +1274,13 @@ export default function POS() {
               {successInvoiceNumber && (
                 <div className='flex justify-between'>
                   <span>Số hóa đơn bán lẻ:</span>
-                  <span className='font-bold text-slate-800 font-mono'>{successInvoiceNumber}</span>
+                  <span className='font-bold text-slate-800'>{successInvoiceNumber}</span>
                 </div>
               )}
               {successInvoiceStatus === 'Issued' && successTaxAuthorityCode && (
                 <div className='flex justify-between'>
                   <span>Mã cơ quan thuế:</span>
-                  <span className='font-bold text-blue-600 font-mono'>{successTaxAuthorityCode}</span>
+                  <span className='font-bold text-blue-600'>{successTaxAuthorityCode}</span>
                 </div>
               )}
               {successInvoiceStatus && (
@@ -1354,6 +1374,20 @@ export default function POS() {
 
               <div>
                 <label className='font-bold text-gray-700 block mb-1'>
+                  Mã sản phẩm <span className='text-red-500'>*</span>
+                </label>
+                <input
+                  type='text'
+                  required
+                  placeholder='Ví dụ: SP0001...'
+                  value={quickProductCode}
+                  onChange={e => setQuickProductCode(e.target.value)}
+                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-[#b90a0a] font-semibold text-gray-800'
+                />
+              </div>
+
+              <div>
+                <label className='font-bold text-gray-700 block mb-1'>
                   Tên sản phẩm <span className='text-red-500'>*</span>
                 </label>
                 <input
@@ -1376,7 +1410,7 @@ export default function POS() {
                   placeholder='0'
                   value={quickPrice}
                   onChange={e => setQuickPrice(e.target.value)}
-                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-[#b90a0a] font-mono font-bold text-gray-800'
+                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-[#b90a0a] font-bold text-gray-800'
                 />
               </div>
 

@@ -23,14 +23,44 @@ import Expense from '../pages/businessOwner/expense'
 import BankConfig from '../pages/businessOwner/bankConfig'
 import EInvoiceConfig from '../pages/businessOwner/einvoiceConfig'
 import OwnerSubscription from '../pages/businessOwner/ownerSubscription'
-import Report from '../pages/businessOwner/report'
+import Report from '../pages/businessOwner/report/ownerReport'
+import { useAuth } from './AuthContext'
 
 export default function useRouteElements() {
+  const { isAuthenticated, user } = useAuth()
   const routeElements = useRoutes([
     { path: path.home, element: <LandingPage /> },
     { path: path.subscription, element: <SubscriptionPage /> },
-    { path: path.BUSINESS_OWNER_LOGIN, element: <BusinessOwnerLoginPage /> },
-    { path: path.BUSINESS_OWNER_REGISTER, element: <BusinessOwnerRegisterPage /> },
+    {
+      path: path.BUSINESS_OWNER_LOGIN,
+      element: isAuthenticated
+        ? (
+            <Navigate
+              to={user?.role === 'Admin'
+                ? path.ADMIN_DASHBOARD
+                : path.BUSINESS_OWNER_HOME}
+              replace
+            />
+          )
+        : (
+            <BusinessOwnerLoginPage />
+          )
+    },
+    {
+      path: path.BUSINESS_OWNER_REGISTER,
+      element: isAuthenticated
+        ? (
+            <Navigate
+              to={user?.role === 'Admin'
+                ? path.ADMIN_DASHBOARD
+                : path.BUSINESS_OWNER_HOME}
+              replace
+            />
+          )
+        : (
+            <BusinessOwnerRegisterPage />
+          )
+    },
     //================ Business Owner routes ================
     {
       path: path.BASE_BUSINESS_OWNER,

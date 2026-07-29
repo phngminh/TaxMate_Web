@@ -115,6 +115,8 @@ export default function OrderPage() {
       } else if (timeFilter === 'Năm nay') {
         const isThisYear = orderDate.getFullYear() === now.getFullYear()
         if (!isThisYear) return false
+      } else if (timeFilter === 'Tùy chọn') {
+        
       }
 
       return true
@@ -286,7 +288,7 @@ export default function OrderPage() {
           <div className='flex flex-col gap-3'>
             <span className='text-[13px] font-bold text-gray-500'>Thời gian</span>
             <div className='flex flex-col gap-3.5'>
-              {['Hôm nay', '7 ngày qua', '30 ngày qua', 'Tháng này', 'Tháng trước', 'Năm nay'].map(opt => (
+              {['Hôm nay', '7 ngày qua', '30 ngày qua', 'Tháng này', 'Tháng trước', 'Năm nay', 'Tùy chọn'].map(opt => (
                 <label key={opt} className='flex items-center gap-3 cursor-pointer group text-[13.5px] text-gray-700 select-none'>
                   <input
                     type='radio'
@@ -329,7 +331,7 @@ export default function OrderPage() {
             <div className='flex justify-center items-center py-20'>
               <Loader2 className='animate-spin text-[#D32F2F] size-10' />
             </div>
-          ) : filteredOrders.length > 0 ? (
+          ) : (
             <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden w-full'>
               <table className='w-full text-left border-collapse'>
                 <thead>
@@ -342,53 +344,74 @@ export default function OrderPage() {
                     <th className='py-4 px-6 font-semibold tracking-wide text-center w-28'>Thao tác</th>
                   </tr>
                 </thead>
+
                 <tbody className='divide-y divide-gray-100'>
-                  {filteredOrders.map(order => (
-                    <tr key={order.transactionId} className='hover:bg-[#fcfdfe] transition-colors group'>
-                      <td className='py-4 px-6 text-[13.5px] text-gray-900 font-bold'>
-                        {order.transactionCode}
-                        {order.invoiceNumber && (
-                          <span className='block text-[10px] text-gray-400 font-bold font-mono mt-0.5'>
-                            HĐ: {order.invoiceNumber}
-                          </span>
-                        )}
-                      </td>
-                      <td className='py-4 px-6 text-[13.5px] text-gray-600 font-medium'>
-                        {getStatusBadge(order.status)}
-                      </td>
-                      <td className='py-4 px-6 text-[13.5px] text-gray-600 font-bold font-mono'>
-                        {order.itemCount} món
-                      </td>
-                      <td className='py-4 px-6 text-[13.5px] text-gray-500 font-semibold font-mono'>
-                        {formatDateTime(order.transactionDate)}
-                      </td>
-                      <td className='py-4 px-6 text-right text-[14.5px] text-gray-900 font-black font-mono'>
-                        {order.totalAmount.toLocaleString('vi-VN')} đ
-                      </td>
-                      <td className='py-4 px-6 text-center'>
-                        <button
-                          onClick={() => handleViewDetails(order.transactionId)}
-                          disabled={loadingDetail}
-                          className='p-1.5 text-gray-400 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors cursor-pointer'
-                          title='Xem chi tiết'
-                        >
-                          <Eye size={16} />
-                        </button>
+                  {filteredOrders.length > 0 ? (
+                    filteredOrders.map(order => (
+                      <tr key={order.transactionId} className='hover:bg-[#fcfdfe] transition-colors group'>
+                        <td className='py-4 px-6 text-[13.5px] text-gray-900 font-bold'>
+                          {order.transactionCode}
+                          {order.invoiceNumber && (
+                            <span className='block text-[10px] text-gray-400 font-bold mt-0.5'>
+                              HĐ: {order.invoiceNumber}
+                            </span>
+                          )}
+                        </td>
+
+                        <td className='py-4 px-6 text-[13.5px] text-gray-600 font-medium'>
+                          {getStatusBadge(order.status)}
+                        </td>
+
+                        <td className='py-4 px-6 text-[13.5px] text-gray-600 font-bold'>
+                          {order.itemCount} món
+                        </td>
+
+                        <td className='py-4 px-6 text-[13.5px] text-gray-500 font-semibold'>
+                          {formatDateTime(order.transactionDate)}
+                        </td>
+
+                        <td className='py-4 px-6 text-right text-[14.5px] text-gray-900 font-black'>
+                          {order.totalAmount.toLocaleString('vi-VN')} đ
+                        </td>
+
+                        <td className='py-4 px-6 text-center'>
+                          <button
+                            onClick={() => handleViewDetails(order.transactionId)}
+                            disabled={loadingDetail}
+                            className='p-1.5 text-gray-400 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors cursor-pointer'
+                            title='Xem chi tiết'
+                          >
+                            <Eye size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={8}>
+                        <div className='flex flex-col items-center justify-center py-20 px-4'>
+                          <Box
+                            size={48}
+                            className='text-gray-300 mb-4 stroke-[1.5]'
+                          />
+                          <p className='text-gray-500 font-bold text-[15px] mb-2'>
+                            Không tìm thấy đơn hàng nào
+                          </p>
+                          <p className='text-gray-400 text-[13px] mb-4 text-center max-w-xs'>
+                            Hãy thử đổi từ khóa tìm kiếm hoặc đặt lại các bộ lọc hiện tại của bạn.
+                          </p>
+                          <button
+                            onClick={handleResetFilters}
+                            className='px-4 py-2 bg-[#D32F2F] text-white text-[13px] font-bold rounded-[8px] hover:bg-[#B71C1C]'
+                          >
+                            Đặt lại bộ lọc
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
-            </div>
-          ) : (
-            <div className='bg-white rounded-[16px] border border-gray-200 py-20 px-6 text-center shadow-xs'>
-              <div className='bg-slate-100 size-16 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400'>
-                <Box size={32} />
-              </div>
-              <h3 className='text-[16px] font-bold text-gray-900'>Không tìm thấy đơn hàng nào</h3>
-              <p className='text-gray-500 text-xs mt-1 max-w-sm mx-auto'>
-                Thử thay đổi điều kiện lọc hoặc nhập một từ khóa khác để tìm kiếm lại.
-              </p>
             </div>
           )}
         </div>
@@ -414,7 +437,7 @@ export default function OrderPage() {
               <div className='grid grid-cols-2 gap-4 text-[13.5px] border-b border-gray-100 pb-4 font-semibold text-slate-600'>
                 <div>
                   <span className='text-gray-500 block text-[11px] font-bold uppercase tracking-wider mb-0.5'>Thời gian</span>
-                  <span className='font-bold text-gray-800 font-mono'>{formatDateTime(selectedOrder.transactionDate)}</span>
+                  <span className='font-bold text-gray-800'>{formatDateTime(selectedOrder.transactionDate)}</span>
                 </div>
                 <div>
                   <span className='text-gray-500 block text-[11px] font-bold uppercase tracking-wider mb-0.5'>Trạng thái</span>
@@ -436,12 +459,12 @@ export default function OrderPage() {
                         </div>
                         <div>
                           <span className='font-bold text-gray-900 block text-[13px]'>{item.productName}</span>
-                          <span className='text-[11.5px] text-gray-500 font-semibold font-mono'>
+                          <span className='text-[11.5px] text-gray-500 font-semibold'>
                             Số lượng: {item.quantity} {item.unit || 'món'} x {item.unitPrice.toLocaleString('vi-VN')} đ
                           </span>
                         </div>
                       </div>
-                      <span className='font-bold text-gray-900 text-[13.5px] font-mono'>
+                      <span className='font-bold text-gray-900 text-[13.5px]'>
                         {item.lineTotal.toLocaleString('vi-VN')} đ
                       </span>
                     </div>
@@ -452,12 +475,12 @@ export default function OrderPage() {
               <div className='border-t border-gray-100 pt-4 flex flex-col gap-2 font-semibold text-slate-500 text-xs'>
                 <div className='flex justify-between'>
                   <span className='text-gray-400'>Tạm tính:</span>
-                  <span className='font-bold text-gray-800 font-mono'>{selectedOrder.subTotal.toLocaleString('vi-VN')} đ</span>
+                  <span className='font-bold text-gray-800'>{selectedOrder.subTotal.toLocaleString('vi-VN')} đ</span>
                 </div>
                 {selectedOrder.discountAmount > 0 && (
                   <div className='flex justify-between text-emerald-600'>
                     <span>Giảm giá:</span>
-                    <span className='font-bold font-mono'>-{selectedOrder.discountAmount.toLocaleString('vi-VN')} đ</span>
+                    <span className='font-bold'>-{selectedOrder.discountAmount.toLocaleString('vi-VN')} đ</span>
                   </div>
                 )}
                 <div className='flex justify-between'>
@@ -481,7 +504,7 @@ export default function OrderPage() {
 
                 <div className='flex justify-between text-[15px] border-t border-gray-100 pt-3 mt-1'>
                   <span className='font-black text-gray-800'>Tổng cộng:</span>
-                  <span className='font-black text-[#D32F2F] text-[16.5px] font-mono'>
+                  <span className='font-black text-[#D32F2F] text-[16.5px]'>
                     {selectedOrder.totalAmount.toLocaleString('vi-VN')} đ
                   </span>
                 </div>

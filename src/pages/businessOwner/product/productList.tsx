@@ -625,7 +625,7 @@ export default function Product() {
                   </th>
                   <th className='w-32 px-6 py-4 text-center'>Trạng thái</th>
                   <th 
-                    className='w-32 px-6 py-4 text-center cursor-pointer hover:bg-[#d0e3f5] transition-colors select-none'
+                    className='w-32 px-6 py-4 text-center cursor-pointer hover:bg-[#d0e3f5] transition-colors select-none whitespace-nowrap'
                     onClick={() => handleSort('createdAt')}
                   >
                     <div className='flex items-center justify-center gap-1'>
@@ -676,13 +676,13 @@ export default function Product() {
                           {categories.find(c => c.id === product.productCategoryId)?.name ?? 'N/A'}
                         </span>
                       </td>
-                      <td className='py-4 px-6 text-center'>
+                      <td className='py-4 px-6 text-center text-sm'>
                         {product.unit ?? 'N/A'}
                       </td>
                       <td className='py-4 px-6 text-right text-[14.5px] font-bold text-gray-900 whitespace-nowrap'>
                         {
                           product.currentPrice != null
-                            ? product.currentPrice.toLocaleString('vi-VN')
+                            ? product.currentPrice.toLocaleString('vi-VN') + ' đ'
                             : 'N/A'
                         }
                       </td>
@@ -749,15 +749,12 @@ export default function Product() {
                           size={48}
                           className='text-gray-300 mb-4 stroke-[1.5]'
                         />
-
                         <p className='text-gray-500 font-bold text-[15px] mb-2'>
                           Không tìm thấy sản phẩm nào
                         </p>
-
                         <p className='text-gray-400 text-[13px] mb-4 text-center max-w-xs'>
                           Hãy thử đổi từ khóa tìm kiếm hoặc đặt lại các bộ lọc hiện tại của bạn.
                         </p>
-
                         <button
                           onClick={handleResetFilters}
                           className='px-4 py-2 bg-[#D32F2F] text-white text-[13px] font-bold rounded-[8px] hover:bg-[#B71C1C]'
