@@ -331,7 +331,7 @@ export default function OrderPage() {
             <div className='flex justify-center items-center py-20'>
               <Loader2 className='animate-spin text-[#D32F2F] size-10' />
             </div>
-          ) : filteredOrders.length > 0 ? (
+          ) : (
             <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden w-full'>
               <table className='w-full text-left border-collapse'>
                 <thead>
@@ -344,53 +344,74 @@ export default function OrderPage() {
                     <th className='py-4 px-6 font-semibold tracking-wide text-center w-28'>Thao tác</th>
                   </tr>
                 </thead>
+
                 <tbody className='divide-y divide-gray-100'>
-                  {filteredOrders.map(order => (
-                    <tr key={order.transactionId} className='hover:bg-[#fcfdfe] transition-colors group'>
-                      <td className='py-4 px-6 text-[13.5px] text-gray-900 font-bold'>
-                        {order.transactionCode}
-                        {order.invoiceNumber && (
-                          <span className='block text-[10px] text-gray-400 font-bold mt-0.5'>
-                            HĐ: {order.invoiceNumber}
-                          </span>
-                        )}
-                      </td>
-                      <td className='py-4 px-6 text-[13.5px] text-gray-600 font-medium'>
-                        {getStatusBadge(order.status)}
-                      </td>
-                      <td className='py-4 px-6 text-[13.5px] text-gray-600 font-bold'>
-                        {order.itemCount} món
-                      </td>
-                      <td className='py-4 px-6 text-[13.5px] text-gray-500 font-semibold'>
-                        {formatDateTime(order.transactionDate)}
-                      </td>
-                      <td className='py-4 px-6 text-right text-[14.5px] text-gray-900 font-black'>
-                        {order.totalAmount.toLocaleString('vi-VN')} đ
-                      </td>
-                      <td className='py-4 px-6 text-center'>
-                        <button
-                          onClick={() => handleViewDetails(order.transactionId)}
-                          disabled={loadingDetail}
-                          className='p-1.5 text-gray-400 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors cursor-pointer'
-                          title='Xem chi tiết'
-                        >
-                          <Eye size={16} />
-                        </button>
+                  {filteredOrders.length > 0 ? (
+                    filteredOrders.map(order => (
+                      <tr key={order.transactionId} className='hover:bg-[#fcfdfe] transition-colors group'>
+                        <td className='py-4 px-6 text-[13.5px] text-gray-900 font-bold'>
+                          {order.transactionCode}
+                          {order.invoiceNumber && (
+                            <span className='block text-[10px] text-gray-400 font-bold mt-0.5'>
+                              HĐ: {order.invoiceNumber}
+                            </span>
+                          )}
+                        </td>
+
+                        <td className='py-4 px-6 text-[13.5px] text-gray-600 font-medium'>
+                          {getStatusBadge(order.status)}
+                        </td>
+
+                        <td className='py-4 px-6 text-[13.5px] text-gray-600 font-bold'>
+                          {order.itemCount} món
+                        </td>
+
+                        <td className='py-4 px-6 text-[13.5px] text-gray-500 font-semibold'>
+                          {formatDateTime(order.transactionDate)}
+                        </td>
+
+                        <td className='py-4 px-6 text-right text-[14.5px] text-gray-900 font-black'>
+                          {order.totalAmount.toLocaleString('vi-VN')} đ
+                        </td>
+
+                        <td className='py-4 px-6 text-center'>
+                          <button
+                            onClick={() => handleViewDetails(order.transactionId)}
+                            disabled={loadingDetail}
+                            className='p-1.5 text-gray-400 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors cursor-pointer'
+                            title='Xem chi tiết'
+                          >
+                            <Eye size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={8}>
+                        <div className='flex flex-col items-center justify-center py-20 px-4'>
+                          <Box
+                            size={48}
+                            className='text-gray-300 mb-4 stroke-[1.5]'
+                          />
+                          <p className='text-gray-500 font-bold text-[15px] mb-2'>
+                            Không tìm thấy đơn hàng nào
+                          </p>
+                          <p className='text-gray-400 text-[13px] mb-4 text-center max-w-xs'>
+                            Hãy thử đổi từ khóa tìm kiếm hoặc đặt lại các bộ lọc hiện tại của bạn.
+                          </p>
+                          <button
+                            onClick={handleResetFilters}
+                            className='px-4 py-2 bg-[#D32F2F] text-white text-[13px] font-bold rounded-[8px] hover:bg-[#B71C1C]'
+                          >
+                            Đặt lại bộ lọc
+                          </button>
+                        </div>
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
-            </div>
-          ) : (
-            <div className='bg-white rounded-[16px] border border-gray-200 py-20 px-6 text-center shadow-xs'>
-              <div className='bg-slate-100 size-16 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400'>
-                <Box size={32} />
-              </div>
-              <h3 className='text-[16px] font-bold text-gray-900'>Không tìm thấy đơn hàng nào</h3>
-              <p className='text-gray-500 text-xs mt-1 max-w-sm mx-auto'>
-                Thử thay đổi điều kiện lọc hoặc nhập một từ khóa khác để tìm kiếm lại.
-              </p>
             </div>
           )}
         </div>

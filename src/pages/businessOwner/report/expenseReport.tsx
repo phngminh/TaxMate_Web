@@ -109,24 +109,29 @@ export default function ExpenseReport({ businessId }: Props) {
   const selectedQuarter = selectedQuarterStr ? Number(selectedQuarterStr.split('-')[1]) : 1
 
   return (
-    <div className='flex flex-col gap-6 w-full animate-fade-in'>
+    <div className='flex flex-col gap-6 w-full animate-fade-in pb-24'>
       {/* Filter Bar */}
       <div className='flex items-center justify-between bg-white border border-[#eef0f2] rounded-[12px] p-4 shadow-[0px_1px_1px_rgba(0,0,0,0.02)]'>
         <div className='flex flex-col gap-0.5'>
           <h2 className='text-[16px] font-bold text-gray-800'>Báo cáo Chi phí & Dòng tiền</h2>
           <p className='text-[12px] text-gray-500'>Kiểm soát chi phí hoạt động và phân bổ quỹ tiền mặt</p>
         </div>
-        <div className='flex items-center gap-2'>
-          <Calendar size={15} className='text-gray-400' />
-          <span className='text-[13px] font-semibold text-gray-600'>Chọn Quý báo cáo:</span>
+        <div className='relative inline-block'>
+          <Calendar
+            size={15}
+            className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none'
+          />
           <select
             value={selectedQuarterStr}
             onChange={(e) => setSelectedQuarterStr(e.target.value)}
-            className='bg-white border border-[#e5e7eb] rounded-[8px] px-3 py-1.5 text-[#4b5563] text-[13px] font-semibold focus:outline-none focus:ring-1 focus:ring-[#7c3aed] cursor-pointer'
+            className='bg-white border border-[#e5e7eb] rounded-[8px] pl-10 pr-8 py-1.5 text-[#4b5563] text-[13px] font-semibold focus:outline-none focus:ring-1 focus:ring-[#7c3aed] cursor-pointer appearance-none'
           >
             {activeQuarters.length > 0 ? (
               activeQuarters.map((q) => (
-                <option key={`${q.year}-${q.quarter}`} value={`${q.year}-${q.quarter}`}>
+                <option
+                  key={`${q.year}-${q.quarter}`}
+                  value={`${q.year}-${q.quarter}`}
+                >
                   Quý {q.quarter}/{q.year}
                 </option>
               ))

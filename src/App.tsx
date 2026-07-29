@@ -8,9 +8,12 @@ import AOS from 'aos'
 import 'aos/dist/aos.css'
 import { BusinessProvider } from './contexts/BusinessContext'
 
-function App() {
+function AppRoutes() {
   const routeElement = useRouteElements()
+  return <>{routeElement}</>
+}
 
+function App() {
   useEffect(() => {
     AOS.init({
       duration: 800,
@@ -24,7 +27,7 @@ function App() {
   return (
     <AuthProvider>
       <BusinessProvider>
-        {routeElement}
+        <AppRoutes />
         <ToastContainer />
       </BusinessProvider>
     </AuthProvider>

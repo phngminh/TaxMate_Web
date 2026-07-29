@@ -15,7 +15,6 @@ export default function Report() {
   return (
     <div className='flex flex-col bg-[#f8f9fa] min-h-[calc(100vh-51px)] w-full'>
       <div className='flex grow w-full'>
-        {/* Left Sidebar */}
         <div className='w-72 bg-white border-r border-[#ffe5e5] p-6 flex flex-col gap-4 shrink-0'>
           <span className='text-[13px] font-bold text-gray-500 uppercase tracking-wide'>Báo cáo</span>
           <div className='flex flex-col gap-1'>
@@ -39,7 +38,7 @@ export default function Report() {
               }`}
             >
               <CircleDollarSign size={17} className={activeTab === 'profit' ? 'text-[#4c51bf]' : 'text-gray-400'} />
-              Lợi nhuận & Thuế
+              Lợi nhuận ước tính
             </button>
             <button
               onClick={() => setActiveTab('expense')}

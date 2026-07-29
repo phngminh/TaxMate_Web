@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import {
   ArrowUpCircle,
-  RotateCcw,
   Plus,
   X,
   Loader2,
@@ -12,8 +11,6 @@ import {
   UserPlus,
   Coins,
   Package,
-  Calendar,
-  FileText
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useBusiness } from '../../contexts/BusinessContext'
@@ -107,6 +104,9 @@ export default function ExpensePage() {
   const [quickSupPhone, setQuickSupPhone] = useState('')
   const [showQuickSupForm, setShowQuickSupForm] = useState(false)
 
+  const [quickCategoryName, setQuickCategoryName] = useState('')
+  const [showQuickCategoryForm, setShowQuickCategoryForm] = useState(false)
+
   // 1. Fetch data depending on active tab
   const loadData = async () => {
     if (!businessId) return
@@ -118,6 +118,7 @@ export default function ExpensePage() {
           getExpenseCategories(businessId)
         ])
         if (expRes.success) setExpenses(expRes.data.items || [])
+          console.log(expRes)
         if (catRes.success) setCategories(catRes.data || [])
       } else if (activeTab === 'purchases') {
         const [matRes, expRes, supRes, ingRes, prodRes] = await Promise.all([
@@ -199,6 +200,7 @@ export default function ExpensePage() {
         paymentMethod: ledgerMethod,
         note: ledgerNote.trim() || null
       })
+      console.log(res)
 
       if (res.success) {
         toast.success('Ghi nhận khoản chi thành công!')
@@ -268,6 +270,26 @@ export default function ExpensePage() {
       }
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Không thể xóa nhà cung cấp.')
+    }
+  }
+
+  const handleQuickAddCategory = async () => {
+    if (!businessId || !quickCategoryName.trim()) return
+
+    try {
+      const res = await createExpenseCategory(businessId, {
+        categoryName: quickCategoryName.trim()
+      })
+
+      if (res.success && res.data) {
+        toast.success('Đã thêm nhanh danh mục chi!')
+        setCategories(prev => [...prev, res.data])
+        setLedgerCategoryId(res.data.expenseCategoryId)
+        setShowQuickCategoryForm(false)
+        setQuickCategoryName('')
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Không thể tạo nhanh danh mục chi.')
     }
   }
 
@@ -618,32 +640,48 @@ export default function ExpensePage() {
               {/* TAB 1: LEDGER */}
               {activeTab === 'ledger' && (
                 <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden w-full'>
-                  {expenses.length > 0 ? (
-                    <table className='w-full text-left border-collapse'>
-                      <thead>
-                        <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
-                          <th className='py-3.5 px-5 font-bold'>Nội dung khoản chi</th>
-                          <th className='py-3.5 px-5 font-bold'>Danh mục</th>
-                          <th className='py-3.5 px-5 font-bold'>Phương thức</th>
-                          <th className='py-3.5 px-5 font-bold'>Ngày lập</th>
-                          <th className='py-3.5 px-5 font-bold text-right'>Số tiền chi</th>
-                          <th className='py-3.5 px-5 font-bold text-center w-24 whitespace-nowrap'>Thao tác</th>
-                        </tr>
-                      </thead>
-                      <tbody className='divide-y divide-gray-100 text-xs font-semibold text-gray-600'>
-                        {expenses
+                  <table className='w-full text-left border-collapse'>
+                    <thead>
+                      <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
+                        <th className='py-3.5 px-5 font-bold'>Nội dung khoản chi</th>
+                        <th className='py-3.5 px-5 font-bold'>Danh mục</th>
+                        <th className='py-3.5 px-5 font-bold'>Phương thức</th>
+                        <th className='py-3.5 px-5 font-bold'>Ngày lập</th>
+                        <th className='py-3.5 px-5 font-bold text-right'>Số tiền chi</th>
+                        <th className='py-3.5 px-5 font-bold text-center w-24 whitespace-nowrap'>Thao tác</th>
+                      </tr>
+                    </thead>
+
+                    <tbody className='divide-y divide-gray-100 text-xs font-semibold text-gray-600'>
+                      {expenses.filter(e => !e.categoryName.toLowerCase().includes('nhập hàng')).length > 0 ? (
+                        expenses
                           .filter(e => !e.categoryName.toLowerCase().includes('nhập hàng'))
                           .map(e => (
                             <tr key={e.expenseId} className='hover:bg-[#fcfdfe] transition-colors'>
                               <td className='py-4 px-5 text-gray-900 font-bold'>{e.expenseTitle}</td>
+
                               <td className='py-4 px-5'>
                                 <span className='bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full border border-orange-100 font-bold text-[10px]'>
                                   {e.categoryName}
                                 </span>
                               </td>
-                              <td className='py-4 px-5'>{e.paymentMethod === 'Cash' ? 'Tiền mặt' : e.paymentMethod === 'Transfer' ? 'Chuyển khoản' : 'Thẻ'}</td>
-                              <td className='py-4 px-5'>{new Date(e.expenseDate).toLocaleDateString('vi-VN')}</td>
-                              <td className='py-4 px-5 text-right font-black text-orange-600'>-{formatPrice(e.amount)} đ</td>
+
+                              <td className='py-4 px-5'>
+                                {e.paymentMethod === 'Cash'
+                                  ? 'Tiền mặt'
+                                  : e.paymentMethod === 'Transfer'
+                                    ? 'Chuyển khoản'
+                                    : 'Thẻ'}
+                              </td>
+
+                              <td className='py-4 px-5'>
+                                {new Date(e.expenseDate).toLocaleDateString('vi-VN')}
+                              </td>
+
+                              <td className='py-4 px-5 text-right font-black text-orange-600'>
+                                -{formatPrice(e.amount)} đ
+                              </td>
+
                               <td className='py-4 px-5 text-center'>
                                 <button
                                   onClick={async () => {
@@ -664,6 +702,7 @@ export default function ExpensePage() {
                                 >
                                   <ClipboardList size={15} />
                                 </button>
+
                                 <button
                                   onClick={() => handleDeletePurchase('Product', e.expenseId)}
                                   className='text-slate-400 hover:text-[#b90a0a] p-1 hover:bg-red-50 rounded-md transition-colors cursor-pointer'
@@ -672,37 +711,43 @@ export default function ExpensePage() {
                                 </button>
                               </td>
                             </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <div className='text-center py-20 text-slate-400 text-xs font-bold'>
-                      Không có khoản chi vận hành nào.
-                    </div>
-                  )}
+                          ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className='py-20'>
+                            <div className='text-center text-slate-400 text-xs font-bold'>
+                              Chưa có khoản chi phí vận hành nào được lưu.
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               )}
 
               {/* TAB 2: PURCHASES */}
               {activeTab === 'purchases' && (
                 <div className='overflow-x-auto w-full'>
-                  {combinedPurchases.length > 0 ? (
-                    <table className='w-full text-left border-collapse'>
-                      <thead>
-                        <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13px] font-black border-b border-[#cbd5e1]/40 select-none'>
-                          <th className='py-3.5 px-5 font-bold'>Số hóa đơn</th>
-                          <th className='py-3.5 px-5 font-bold'>Loại hàng nhập</th>
-                          <th className='py-3.5 px-5 font-bold'>Đối tác nhà cung cấp</th>
-                          <th className='py-3.5 px-5 font-bold'>Chi tiết nhập hàng</th>
-                          <th className='py-3.5 px-5 font-bold'>Ngày nhập</th>
-                          <th className='py-3.5 px-5 font-bold text-right'>Tổng tiền</th>
-                          <th className='py-3.5 px-5 font-bold text-center w-24'>Thao tác</th>
-                        </tr>
-                      </thead>
-                      <tbody className='divide-y divide-gray-100 text-xs font-semibold text-gray-600'>
-                        {combinedPurchases.map(p => (
+                  <table className='w-full text-left border-collapse'>
+                    <thead>
+                      <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13px] font-black border-b border-[#cbd5e1]/40 select-none'>
+                        <th className='py-3.5 px-5 font-bold'>Số hóa đơn</th>
+                        <th className='py-3.5 px-5 font-bold'>Loại hàng nhập</th>
+                        <th className='py-3.5 px-5 font-bold'>Đối tác nhà cung cấp</th>
+                        <th className='py-3.5 px-5 font-bold'>Chi tiết nhập hàng</th>
+                        <th className='py-3.5 px-5 font-bold'>Ngày nhập</th>
+                        <th className='py-3.5 px-5 font-bold text-right'>Tổng tiền</th>
+                        <th className='py-3.5 px-5 font-bold text-center w-24'>Thao tác</th>
+                      </tr>
+                    </thead>
+
+                    <tbody className='divide-y divide-gray-100 text-xs font-semibold text-gray-600'>
+                      {combinedPurchases.length > 0 ? (
+                        combinedPurchases.map(p => (
                           <tr key={p.id} className='hover:bg-[#fcfdfe] transition-colors'>
                             <td className='py-4 px-5 text-gray-900 font-bold'>{p.invoiceNumber}</td>
+
                             <td className='py-4 px-5'>
                               <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] ${
                                 p.type === 'Product'
@@ -712,10 +757,19 @@ export default function ExpensePage() {
                                 {p.type === 'Product' ? 'Sản phẩm' : 'Nguyên liệu'}
                               </span>
                             </td>
+
                             <td className='py-4 px-5 font-bold text-slate-700'>{p.supplierName}</td>
+
                             <td className='py-4 px-5 max-w-xs truncate font-medium'>{p.summary}</td>
-                            <td className='py-4 px-5'>{new Date(p.date).toLocaleDateString('vi-VN')}</td>
-                            <td className='py-4 px-5 text-right font-black text-orange-600'>-{formatPrice(p.amount)} đ</td>
+
+                            <td className='py-4 px-5'>
+                              {new Date(p.date).toLocaleDateString('vi-VN')}
+                            </td>
+
+                            <td className='py-4 px-5 text-right font-black text-orange-600'>
+                              -{formatPrice(p.amount)} đ
+                            </td>
+
                             <td className='py-4 px-5 text-center'>
                               <button
                                 onClick={async () => {
@@ -746,6 +800,7 @@ export default function ExpensePage() {
                               >
                                 <ClipboardList size={15} />
                               </button>
+
                               <button
                                 onClick={() => handleDeletePurchase(p.type, p.id)}
                                 className='text-slate-400 hover:text-[#b90a0a] p-1 hover:bg-red-50 rounded-md transition-colors cursor-pointer'
@@ -754,34 +809,39 @@ export default function ExpensePage() {
                               </button>
                             </td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <div className='text-center py-20 text-slate-400 text-xs font-bold'>
-                      Chưa có lịch sử hóa đơn nhập kho nào.
-                    </div>
-                  )}
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={7} className='py-20'>
+                            <div className='text-center text-slate-400 text-xs font-bold'>
+                              Chưa có lịch sử hóa đơn nhập kho nào.
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               )}
 
               {/* TAB 3: SUPPLIERS */}
               {activeTab === 'suppliers' && (
                 <div className='overflow-x-auto w-full'>
-                  {suppliers.length > 0 ? (
-                    <table className='w-full text-left border-collapse'>
-                      <thead>
-                        <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13px] font-black border-b border-[#cbd5e1]/40 select-none'>
-                          <th className='py-3.5 px-5 font-bold'>Tên nhà cung cấp</th>
-                          <th className='py-3.5 px-5 font-bold'>Người liên hệ</th>
-                          <th className='py-3.5 px-5 font-bold'>Số điện thoại</th>
-                          <th className='py-3.5 px-5 font-bold'>Địa chỉ</th>
-                          <th className='py-3.5 px-5 font-bold'>Ghi chú</th>
-                          <th className='py-3.5 px-5 font-bold text-center w-24'>Thao tác</th>
-                        </tr>
-                      </thead>
-                      <tbody className='divide-y divide-gray-100 text-xs font-semibold text-gray-600'>
-                        {suppliers.map(s => (
+                  <table className='w-full text-left border-collapse'>
+                    <thead>
+                      <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13px] font-black border-b border-[#cbd5e1]/40 select-none'>
+                        <th className='py-3.5 px-5 font-bold'>Tên nhà cung cấp</th>
+                        <th className='py-3.5 px-5 font-bold'>Người liên hệ</th>
+                        <th className='py-3.5 px-5 font-bold'>Số điện thoại</th>
+                        <th className='py-3.5 px-5 font-bold'>Địa chỉ</th>
+                        <th className='py-3.5 px-5 font-bold'>Ghi chú</th>
+                        <th className='py-3.5 px-5 font-bold text-center w-24'>Thao tác</th>
+                      </tr>
+                    </thead>
+
+                    <tbody className='divide-y divide-gray-100 text-xs font-semibold text-gray-600'>
+                      {suppliers.length > 0 ? (
+                        suppliers.map(s => (
                           <tr key={s.id} className='hover:bg-[#fcfdfe] transition-colors'>
                             <td className='py-4 px-5 text-gray-900 font-bold'>{s.name}</td>
                             <td className='py-4 px-5'>{s.contactName || '---'}</td>
@@ -803,6 +863,7 @@ export default function ExpensePage() {
                               >
                                 <Edit size={15} />
                               </button>
+
                               <button
                                 onClick={() => handleDeleteSupplier(s.id)}
                                 className='text-slate-400 hover:text-[#b90a0a] p-1 hover:bg-red-50 rounded-md transition-colors cursor-pointer'
@@ -811,14 +872,18 @@ export default function ExpensePage() {
                               </button>
                             </td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <div className='text-center py-20 text-slate-400 text-xs font-bold'>
-                      Chưa có nhà cung cấp nào được lưu.
-                    </div>
-                  )}
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className='py-20'>
+                            <div className='text-center text-slate-400 text-xs font-bold'>
+                              Chưa có nhà cung cấp nào được lưu.
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </>
@@ -862,20 +927,59 @@ export default function ExpensePage() {
               </div>
 
               <div className='grid grid-cols-2 gap-4'>
-                <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Danh mục chi</label>
+                <div className='flex flex-col gap-1.5 relative'>
+                  <div className='flex justify-between items-center select-none'>
+                    <label className='text-[13px] font-bold text-gray-600'>
+                      Danh mục chi
+                    </label>
+
+                    <button
+                      type='button'
+                      onClick={() => setShowQuickCategoryForm(!showQuickCategoryForm)}
+                      className='text-[11px] font-extrabold text-[#D32F2F] hover:underline cursor-pointer'
+                    >
+                      {showQuickCategoryForm ? 'Đóng' : '+ Thêm nhanh'}
+                    </button>
+                  </div>
+
+                  {showQuickCategoryForm ? (
+                    <div className='absolute z-20 left-0 right-0 top-6 bg-white border border-gray-200 rounded-lg p-3 shadow-md flex flex-col gap-2'>
+                      <input
+                        type='text'
+                        placeholder='Tên danh mục chi...'
+                        value={quickCategoryName}
+                        onChange={e => setQuickCategoryName(e.target.value)}
+                        className='border border-gray-200 rounded-md p-1.5 text-xs outline-hidden focus:border-[#D32F2F]'
+                      />
+
+                      <button
+                        type='button'
+                        onClick={handleQuickAddCategory}
+                        className='bg-[#D32F2F] text-white py-1 rounded text-xs font-bold cursor-pointer'
+                      >
+                        Tạo nhanh
+                      </button>
+                    </div>
+                  ) : null}
+
                   <select
                     value={ledgerCategoryId}
                     onChange={e => setLedgerCategoryId(e.target.value)}
                     className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-orange-400 bg-white transition-all font-medium text-gray-800 cursor-pointer'
                   >
-                    {categories
-                      .filter(x => !(x.categoryName || '').toLowerCase().includes('nhập hàng'))
-                      .map(cat => (
-                        <option key={cat.expenseCategoryId} value={cat.expenseCategoryId}>
-                          {cat.categoryName}
-                        </option>
-                      ))}
+                    {categories.filter(x => !(x.categoryName || '').toLowerCase().includes('nhập hàng')).length > 0 ? (
+                      categories
+                        .filter(x => !(x.categoryName || '').toLowerCase().includes('nhập hàng'))
+                        .map(cat => (
+                          <option key={cat.expenseCategoryId} value={cat.expenseCategoryId}>
+                            {cat.categoryName}
+                          </option>
+                        ))
+                    ) : (
+                      <option value=''>
+                        Chưa có danh mục chi
+                      </option>
+                    )}
                   </select>
                 </div>
 
@@ -1113,7 +1217,7 @@ export default function ExpensePage() {
                     </button>
                   </div>
                   {showQuickSupForm ? (
-                    <div className='absolute z-20 left-0 right-0 top-12 bg-white border border-gray-200 rounded-lg p-3 shadow-md flex flex-col gap-2'>
+                    <div className='absolute z-20 left-0 right-0 top-6 bg-white border border-gray-200 rounded-lg p-3 shadow-md flex flex-col gap-2'>
                       <input
                         type='text'
                         placeholder='Tên nhà cung cấp...'

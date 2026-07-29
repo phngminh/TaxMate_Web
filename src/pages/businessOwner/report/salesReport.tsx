@@ -11,7 +11,7 @@ import {
   Pie,
   Cell,
 } from 'recharts'
-import { TrendingUp, Clock, Calendar, ArrowRight, Loader2, ShoppingBag, DollarSign } from 'lucide-react'
+import { TrendingUp, Clock, Calendar, Loader2, ShoppingBag, DollarSign } from 'lucide-react'
 import { getActiveSalesMonths, getSalesDashboard } from '../../../apis/report.api'
 import type { ActiveSalesMonthResponse, SalesDashboardResponse } from '../../../types/report.type'
 import { toast } from 'react-toastify'
@@ -105,20 +105,22 @@ export default function SalesReport({ businessId }: Props) {
   )
 
   return (
-    <div className='flex flex-col gap-6 w-full animate-fade-in'>
+    <div className='flex flex-col gap-6 w-full animate-fade-in pb-24'>
       {/* Top Filter Bar */}
       <div className='flex items-center justify-between bg-white border border-[#eef0f2] rounded-[12px] p-4 shadow-[0px_1px_1px_rgba(0,0,0,0.02)]'>
         <div className='flex flex-col gap-0.5'>
           <h2 className='text-[16px] font-bold text-gray-800'>Báo cáo Bán hàng</h2>
           <p className='text-[12px] text-gray-500'>Xem chi tiết hiệu quả kinh doanh và sản phẩm bán chạy</p>
         </div>
-        <div className='flex items-center gap-2'>
-          <Calendar size={15} className='text-gray-400' />
-          <span className='text-[13px] font-semibold text-gray-600'>Chọn kỳ báo cáo:</span>
+        <div className='relative inline-block'>
+          <Calendar
+            size={15}
+            className='absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none'
+          />
           <select
             value={selectedMonthStr}
             onChange={(e) => setSelectedMonthStr(e.target.value)}
-            className='bg-white border border-[#e5e7eb] rounded-[8px] px-3 py-1.5 text-[#4b5563] text-[13px] font-semibold focus:outline-none focus:ring-1 focus:ring-[#7c3aed] cursor-pointer'
+            className='bg-white border border-[#e5e7eb] rounded-[8px] pl-10 pr-8 py-1.5 text-[#4b5563] text-[13px] font-semibold focus:outline-none focus:ring-1 focus:ring-[#7c3aed] cursor-pointer appearance-none'
           >
             {activeMonths.length > 0 ? (
               activeMonths.map((m) => (
@@ -237,10 +239,9 @@ export default function SalesReport({ businessId }: Props) {
             </div>
           </div>
 
-          {/* Charts Section */}
-          <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+          <div className='flex flex-col lg:flex-row gap-4'>
             {/* Revenue Trend Chart */}
-            <div className='bg-white border border-[#eef0f2] rounded-[12px] shadow-[0px_1px_1px_rgba(0,0,0,0.02)] p-6 lg:col-span-2 flex flex-col'>
+            <div className='bg-white border border-[#eef0f2] rounded-[12px] shadow-[0px_1px_1px_rgba(0,0,0,0.02)] p-6 flex-[550_550_0] min-w-0 flex flex-col'>
               <div className='flex items-center justify-between mb-4'>
                 <div className='text-[#1f2937] text-[15px] font-bold'>Xu hướng doanh thu</div>
                 <div className='flex items-center gap-3 text-[11px] text-[#6b7280]'>
@@ -306,9 +307,8 @@ export default function SalesReport({ businessId }: Props) {
             </div>
 
             {/* Revenue Structure (Pie Chart) */}
-            <div className='bg-white border border-[#eef0f2] rounded-[12px] shadow-[0px_1px_1px_rgba(0,0,0,0.02)] p-6 flex flex-col'>
+            <div className='bg-white border border-[#eef0f2] rounded-[12px] shadow-[0px_1px_1px_rgba(0,0,0,0.02)] p-6 flex-[330_330_0] min-w-0 flex flex-col'>
               <div className='text-[#1f2937] text-[15px] font-bold mb-4'>Cơ cấu doanh thu</div>
-
               {dashboardData.revenueDistribution && dashboardData.revenueDistribution.length > 0 ? (
                 <>
                   <div className='relative flex-1 flex items-center justify-center' style={{ height: 180 }}>
@@ -365,16 +365,18 @@ export default function SalesReport({ businessId }: Props) {
             </div>
 
             {/* Top Products */}
-            <div className='bg-white border border-[#eef0f2] rounded-[12px] shadow-[0px_1px_1px_rgba(0,0,0,0.02)] p-6 lg:col-span-3 flex flex-col'>
-              <div className='flex items-center justify-between mb-4'>
-                <div className='text-[#1f2937] text-[15px] font-bold'>Top sản phẩm nổi bật</div>
+            <div className='bg-white border border-[#eef0f2] rounded-[12px] shadow-[0px_1px_1px_rgba(0,0,0,0.02)] p-6 flex-[330_330_0] min-w-0 flex flex-col'>
+              <div className='flex flex-col mb-4'>
+                <div className='text-[#1f2937] text-[15px] font-bold'>
+                  Top sản phẩm nổi bật
+                </div>
                 <div className='text-[11px] text-[#6b7280] font-medium'>
-                  Xếp hạng theo sản phẩm bán chạy nhất
+                  Xếp hạng sản phẩm bán chạy
                 </div>
               </div>
 
               {dashboardData.topSellingProducts && dashboardData.topSellingProducts.length > 0 ? (
-                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4'>
+                <div className='flex flex-col gap-4 flex-1'>
                   {dashboardData.topSellingProducts.map((p, idx) => {
                     const maxRevenue = dashboardData.topSellingProducts[0]?.revenue || 1
                     const pct = Math.round((p.revenue / maxRevenue) * 100)
