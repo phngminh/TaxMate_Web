@@ -5,7 +5,7 @@ class Http {
 
   constructor() {
     this.instance = axios.create({
-      baseURL: 'https://1461-2a09-bac1-6540-8-00-278-54.ngrok-free.app/api',
+      baseURL: 'http://localhost:5086/api',
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
@@ -30,21 +30,21 @@ class Http {
     config: InternalAxiosRequestConfig
   ): InternalAxiosRequestConfig {
     const token = localStorage.getItem('token')
-
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
-
     return config
   }
 
   private handleResponseError(error: any) {
-    // Only clear the session when the token is missing/invalid/expired,
-    // not on every Authorization failure path.
     if (error?.response?.status === 401) {
       const hasToken = !!localStorage.getItem('token')
       if (hasToken) {
         localStorage.removeItem('token')
+        localStorage.removeItem('businesses')
+        localStorage.removeItem('currentBusiness')
+
+        window.dispatchEvent(new Event('logout'))
       }
     }
 

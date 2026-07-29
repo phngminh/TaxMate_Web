@@ -45,6 +45,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [])
 
   useEffect(() => {
+    const handleLogout = () => {
+      logout()
+    }
+
+    window.addEventListener('logout', handleLogout)
+
+    return () => {
+      window.removeEventListener('logout', handleLogout)
+    }
+  }, [logout])
+
+  useEffect(() => {
     const initializeAuth = async () => {
       const savedToken = localStorage.getItem('token')
 

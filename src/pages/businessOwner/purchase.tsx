@@ -45,7 +45,7 @@ interface PurchaseLineItem {
   taxPercent: number
 }
 
-export default function ExpensePage() {
+export default function PurchasePage() {
   const { currentBusiness } = useBusiness()
   const businessId = currentBusiness?.id
 

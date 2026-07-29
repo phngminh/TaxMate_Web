@@ -619,7 +619,7 @@ export default function IngredientPage() {
           {activeTab === 'ingredient' && (
             loadingIngredients ? (
               <LoadingSkeleton />
-            ) : filteredIngredients.length > 0 ? (
+            ) : (
               <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-175'>
                 <table className='w-full text-left border-collapse'>
                   <thead>
@@ -634,137 +634,156 @@ export default function IngredientPage() {
                       <th className='py-4 px-6 font-semibold tracking-wide text-center w-28'>Thao tác</th>
                     </tr>
                   </thead>
+
                   <tbody className='divide-y divide-gray-100'>
-                    {filteredIngredients.map((item) => (
-                      <tr key={item.id} className='hover:bg-[#fcfdfe] transition-colors group'>
-                        <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>{item.id}</td>
-                        <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{item.name}</td>
-                        <td className='py-4 px-6 text-center'>
-                          <span className='inline-block bg-[#f3f4f6] text-gray-600 text-[12.5px] px-3.5 py-1 rounded-full font-bold border border-gray-200/40'>
-                            {item.unit ?? '—'}
-                          </span>
-                        </td>
-                        <td className='py-4 px-6 text-center whitespace-nowrap'>
-                          {item.stockQuantity === null || item.stockQuantity === undefined ? (
-                            <span className='text-gray-400 font-medium text-[13px]'>N/A</span>
-                          ) : item.stockQuantity === 0 ? (
-                            <span className='inline-block bg-red-50 text-red-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-red-200/60'>
-                              0 (Hết kho)
+                    {filteredIngredients.length > 0 ? (
+                      filteredIngredients.map((item) => (
+                        <tr key={item.id} className='hover:bg-[#fcfdfe] transition-colors group'>
+                          <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>{item.id}</td>
+                          <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{item.name}</td>
+                          <td className='py-4 px-6 text-center'>
+                            <span className='inline-block bg-[#f3f4f6] text-gray-600 text-[12.5px] px-3.5 py-1 rounded-full font-bold border border-gray-200/40'>
+                              {item.unit ?? '—'}
                             </span>
-                          ) : (
-                            <span className='text-gray-900 font-bold text-[13.5px]'>
-                              {item.stockQuantity.toLocaleString('vi-VN')}
-                            </span>
-                          )}
-                        </td>
-                        <td className='py-4 px-6 text-right text-[14px] text-gray-900 font-bold'>
-                          {item.estimatedPrice != null
-                            ? item.estimatedPrice.toLocaleString('vi-VN') + ' đ'
-                            : '—'}
-                        </td>
-                        <td className='py-4 px-6 text-[13px] text-gray-500'>{formatDate(item.createdAt)}</td>
-                        <td className='py-4 px-6 text-[13px] text-gray-500'>{formatDate(item.updatedAt)}</td>
-                        <td className='py-4 px-6 text-center'>
-                          <div className='flex items-center justify-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
-                            <button
-                              onClick={(e) => handleOpenEditIngredient(item, e)}
-                              className='p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors'
-                              title='Sửa'
-                            >
-                              <Edit2 size={15} />
-                            </button>
-                            <button
-                              onClick={(e) => handleDeleteIngredient(item, e)}
-                              className='p-1.5 text-gray-400 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
-                              title='Xoá'
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          </div>
+                          </td>
+                          <td className='py-4 px-6 text-center whitespace-nowrap'>
+                            {item.stockQuantity === null || item.stockQuantity === undefined ? (
+                              <span className='text-gray-400 font-medium text-[13px]'>N/A</span>
+                            ) : item.stockQuantity === 0 ? (
+                              <span className='inline-block bg-red-50 text-red-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-red-200/60'>
+                                0 (Hết kho)
+                              </span>
+                            ) : (
+                              <span className='text-gray-900 font-bold text-[13.5px]'>
+                                {item.stockQuantity.toLocaleString('vi-VN')}
+                              </span>
+                            )}
+                          </td>
+                          <td className='py-4 px-6 text-right text-[14px] text-gray-900 font-bold'>
+                            {item.estimatedPrice != null
+                              ? item.estimatedPrice.toLocaleString('vi-VN') + ' đ'
+                              : '—'}
+                          </td>
+                          <td className='py-4 px-6 text-[13px] text-gray-500'>{formatDate(item.createdAt)}</td>
+                          <td className='py-4 px-6 text-[13px] text-gray-500'>{formatDate(item.updatedAt)}</td>
+                          <td className='py-4 px-6 text-center'>
+                            <div className='flex items-center justify-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
+                              <button
+                                onClick={(e) => handleOpenEditIngredient(item, e)}
+                                className='p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors'
+                                title='Sửa'
+                              >
+                                <Edit2 size={15} />
+                              </button>
+                              <button
+                                onClick={(e) => handleDeleteIngredient(item, e)}
+                                className='p-1.5 text-gray-400 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
+                                title='Xoá'
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className='py-16'>
+                          <EmptyState
+                            icon={
+                              <Package
+                                size={48}
+                                className='text-gray-300 mb-4 stroke-[1.5]'
+                              />
+                            }
+                            title='Không tìm thấy nguyên liệu nào'
+                            subtitle='Hãy thêm nguyên liệu mới hoặc thay đổi từ khoá tìm kiếm.'
+                            onReset={() => setSearchQuery('')}
+                          />
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
-            ) : (
-              <EmptyState
-                icon={<Package size={48} className='text-gray-300 mb-4 stroke-[1.5]' />}
-                title='Không tìm thấy nguyên liệu nào'
-                subtitle='Hãy thêm nguyên liệu mới hoặc thay đổi từ khoá tìm kiếm.'
-                onReset={() => setSearchQuery('')}
-              />
             )
           )}
 
           {activeTab === 'recipe' && (
             loadingRecipes ? (
               <LoadingSkeleton />
-            ) : filteredRecipes.length > 0 ? (
-              <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-150'>
+            ) : (
+              <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-150'>
                 <table className='w-full text-left border-collapse'>
                   <thead>
                     <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
-                      <th className='py-4 px-6 font-semibold tracking-wide'>Mã sản phẩm</th>
-                      <th className='py-4 px-6 font-semibold tracking-wide'>Tên sản phẩm</th>
-                      <th className='py-4 px-6 font-semibold tracking-wide text-center'>Số nguyên liệu</th>
-                      <th className='py-4 px-6 font-semibold tracking-wide text-right'>Giá bán</th>
-                      <th className='py-4 px-6 font-semibold tracking-wide text-center w-32'>Thao tác</th>
+                      <th className='py-4 px-6 tracking-wide'>Mã sản phẩm</th>
+                      <th className='py-4 px-6 tracking-wide'>Tên sản phẩm</th>
+                      <th className='py-4 px-6 tracking-wide text-center'>Số nguyên liệu</th>
+                      <th className='py-4 px-6 tracking-wide text-right'>Giá bán</th>
+                      <th className='py-4 px-6 tracking-wide text-center w-32'>Thao tác</th>
                     </tr>
                   </thead>
+
                   <tbody className='divide-y divide-gray-100'>
-                    {filteredRecipes.map((recipe) => (
-                      <tr key={recipe.productId} className='hover:bg-[#fcfdfe] transition-colors group'>
-                        <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>{recipe.productCode}</td>
-                        <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{recipe.productName}</td>
-                        <td className='py-4 px-6 text-center'>
-                          <span className='inline-flex items-center gap-1.5 bg-[#eef2ff] text-[#4c51bf] text-[12.5px] px-3 py-1 rounded-full font-bold border border-[#c7d2fe]/60'>
-                            <FlaskConical size={11} />
-                            {recipe.ingredients.length} nguyên liệu
-                          </span>
-                        </td>
-                        <td className='py-4 px-6 text-right text-[14px] text-gray-900 font-bold'>
-                          {recipe.price.toLocaleString('vi-VN')} đ
-                        </td>
-                        <td className='py-4 px-6 text-center'>
-                          <div className='flex items-center justify-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
-                            <button
-                              onClick={() => setViewingRecipe(recipe)}
-                              className='p-1.5 text-gray-400 hover:text-[#4c51bf] hover:bg-[#eef2ff] rounded-md transition-colors'
-                              title='Xem công thức'
-                            >
-                              <Eye size={15} />
-                            </button>
-                            <button
-                              onClick={(e) => handleOpenEditRecipe(recipe, e)}
-                              className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
-                              title='Sửa'
-                            >
-                              <Edit2 size={15} />
-                            </button>
-                            {recipe.ingredients.length > 0 && (
+                    {filteredRecipes.length > 0 ? (
+                      filteredRecipes.map((recipe) => (
+                        <tr key={recipe.productId} className='hover:bg-[#fcfdfe] transition-colors group'>
+                          <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>{recipe.productCode ?? 'N/A'}</td>
+                          <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{recipe.productName}</td>
+                          <td className='py-4 px-6 text-center'>
+                            <span className='inline-flex items-center gap-1.5 bg-[#eef2ff] text-[#4c51bf] text-[12.5px] px-3 py-1 rounded-full font-bold border border-[#c7d2fe]/60'>
+                              <FlaskConical size={11} />
+                              {recipe.ingredients.length} nguyên liệu
+                            </span>
+                          </td>
+                          <td className='py-4 px-6 text-right text-[14px] text-gray-900 font-bold'>
+                            {recipe.price.toLocaleString('vi-VN')} đ
+                          </td>
+                          <td className='py-4 px-6 text-left'>
+                            <div className='flex items-center justify-start gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
                               <button
-                                onClick={(e) => handleDeleteRecipe(recipe, e)}
-                                className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
-                                title='Gỡ công thức'
+                                onClick={() => setViewingRecipe(recipe)}
+                                className='p-1.5 text-gray-500 hover:text-[#4c51bf] hover:bg-[#eef2ff] rounded-md transition-colors'
+                                title='Xem công thức'
                               >
-                                <Trash2 size={15} />
+                                <Eye size={15} />
                               </button>
-                            )}
-                          </div>
+                              <button
+                                onClick={(e) => handleOpenEditRecipe(recipe, e)}
+                                className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
+                                title='Sửa'
+                              >
+                                <Edit2 size={15} />
+                              </button>
+                              {recipe.ingredients.length > 0 && (
+                                <button
+                                  onClick={(e) => handleDeleteRecipe(recipe, e)}
+                                  className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
+                                  title='Gỡ công thức'
+                                >
+                                  <Trash2 size={15} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className='py-10'>
+                          <EmptyState
+                            icon={<FlaskConical size={48} className='text-gray-300 mb-4 stroke-[1.5]' />}
+                            title='Không tìm thấy công thức nào'
+                            subtitle='Hãy thêm công thức mới hoặc thay đổi từ khoá tìm kiếm.'
+                            onReset={() => setSearchQuery('')}
+                          />
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
-            ) : (
-              <EmptyState
-                icon={<FlaskConical size={48} className='text-gray-300 mb-4 stroke-[1.5]' />}
-                title='Không tìm thấy công thức nào'
-                subtitle='Hãy thêm công thức mới hoặc thay đổi từ khoá tìm kiếm.'
-                onReset={() => setSearchQuery('')}
-              />
             )
           )}
         </div>
@@ -882,7 +901,7 @@ export default function IngredientPage() {
                     <option value=''>-- Chọn sản phẩm --</option>
                     {products.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} ({p.productCode})
+                        {p.name}
                       </option>
                     ))}
                   </select>
@@ -991,7 +1010,7 @@ export default function IngredientPage() {
               </div>
               <button
                 onClick={() => setViewingRecipe(null)}
-                className='p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mt-0.5'
+                className='p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors mt-0.5'
               >
                 <X size={18} />
               </button>
@@ -1104,12 +1123,6 @@ function EmptyState({
       {icon}
       <p className='text-gray-500 font-bold text-[15px] mb-2'>{title}</p>
       <p className='text-gray-400 text-[13px] mb-4 text-center max-w-xs'>{subtitle}</p>
-      <button
-        onClick={onReset}
-        className='px-4 py-2 bg-[#D32F2F] text-white text-[13px] font-bold rounded-[8px] hover:bg-[#B71C1C] transition-colors shadow-xs'
-      >
-        Đặt lại bộ lọc
-      </button>
     </div>
   )
 }
