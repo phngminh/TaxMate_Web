@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from 'react'
-import { ArrowUpCircle, ArrowDownCircle, MoreVertical, RotateCcw, TrendingUp, Plus, ChevronRight } from 'lucide-react'
+import { ArrowUpCircle, ArrowDownCircle, MoreVertical, RotateCcw, TrendingUp, TrendingDown, Plus, ChevronRight, Download, Loader2 } from 'lucide-react'
 import { useBusiness } from '../../contexts/BusinessContext'
-import { getAllExpenses, createExpense, getExpenseCategories, updateExpense, deleteExpense } from '../../apis/expense.api'
-import { getAllIncomes, createIncome, getIncomeCategories, updateIncome, deleteIncome } from '../../apis/income.api'
+import { getAllExpenses, createExpense, getExpenseCategories, updateExpense, deleteExpense, createExpenseCategory } from '../../apis/expense.api'
+import { getAllIncomes, createIncome, getIncomeCategories, updateIncome, deleteIncome, createIncomeCategory } from '../../apis/income.api'
+import { exportS1a } from '../../apis/taxBook.api'
 import { toast } from 'react-toastify'
 import type { ExpenseCategory } from '../../types/expense.type'
 import type { IncomeCategory } from '../../types/income.type'
@@ -95,6 +96,8 @@ export default function Expense() {
 
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false)
   const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false)
+  const [isAddExpenseCategoryOpen, setIsAddExpenseCategoryOpen] = useState(false)
+  const [isAddIncomeCategoryOpen, setIsAddIncomeCategoryOpen] = useState(false)
 
   const [editingRecord, setEditingRecord] = useState<ExpenseRecord | null>(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
@@ -103,6 +106,70 @@ export default function Expense() {
   const [apiRecords, setApiRecords] = useState<ExpenseRecord[]>([])
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([])
   const [incomeCategories, setIncomeCategories] = useState<IncomeCategory[]>([])
+
+  const [isExporting, setIsExporting] = useState(false)
+
+  const handleExportS1a = async () => {
+    if (!businessId) {
+      toast.error('Không tìm thấy ID cơ sở kinh doanh.')
+      return
+    }
+    setIsExporting(true)
+    try {
+      let year = new Date().getFullYear()
+      let month = new Date().getMonth() + 1
+      if (dateFilter) {
+        const d = new Date(dateFilter)
+        year = d.getFullYear()
+        month = d.getMonth() + 1
+      }
+      
+      const blob = await exportS1a(businessId, year, month)
+      const url = window.URL.createObjectURL(new Blob([blob]))
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `S1a-HKD_${year}_${month}.docx`)
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      toast.success('Xuất file S1a thành công!')
+    } catch (error) {
+      console.error(error)
+      toast.error('Có lỗi xảy ra khi xuất file S1a')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const handleAddExpenseCategory = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!businessId) return
+    const fd = new FormData(e.currentTarget)
+    const name = fd.get('categoryName') as string
+    try {
+      await createExpenseCategory(businessId, { categoryName: name })
+      toast.success('Thêm loại chi thành công!')
+      setIsAddExpenseCategoryOpen(false)
+      fetchData()
+    } catch (error) {
+      toast.error('Có lỗi xảy ra khi thêm loại chi')
+    }
+  }
+
+  const handleAddIncomeCategory = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    if (!businessId) return
+    const fd = new FormData(e.currentTarget)
+    const name = fd.get('categoryName') as string
+    try {
+      await createIncomeCategory(businessId, { categoryName: name })
+      toast.success('Thêm loại thu thành công!')
+      setIsAddIncomeCategoryOpen(false)
+      fetchData()
+    } catch (error) {
+      toast.error('Có lỗi xảy ra khi thêm loại thu')
+    }
+  }
 
   const fetchData = async () => {
     if (!businessId) {
@@ -236,6 +303,46 @@ export default function Expense() {
 
   const totalExpense = expenses.reduce((s, r) => s + Math.abs(r.amount), 0)
   const totalIncome = incomes.reduce((s, r) => s + r.amount, 0)
+
+  const { expenseGrowth, incomeGrowth } = useMemo(() => {
+    const now = new Date()
+    const currentMonth = now.getMonth()
+    const currentYear = now.getFullYear()
+    
+    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1
+    const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear
+
+    let currExp = 0, prevExp = 0, currInc = 0, prevInc = 0
+
+    apiRecords.forEach(r => {
+      const d = new Date(r.originalDateStr)
+      const m = d.getMonth()
+      const y = d.getFullYear()
+      if (y === currentYear && m === currentMonth) {
+        if (r.type === 'expense') currExp += Math.abs(r.amount)
+        else currInc += r.amount
+      } else if (y === prevYear && m === prevMonth) {
+        if (r.type === 'expense') prevExp += Math.abs(r.amount)
+        else prevInc += r.amount
+      }
+    })
+
+    const calcGrowth = (curr: number, prev: number) => {
+      if (prev === 0) return { percent: curr > 0 ? 100 : 0, diff: curr, isUp: curr >= 0 }
+      const diff = curr - prev
+      const percent = (Math.abs(diff) / prev) * 100
+      return {
+        percent: Number(percent.toFixed(1)),
+        diff: Math.abs(diff),
+        isUp: diff >= 0
+      }
+    }
+
+    return {
+      expenseGrowth: calcGrowth(currExp, prevExp),
+      incomeGrowth: calcGrowth(currInc, prevInc)
+    }
+  }, [apiRecords])
 
   const fmt = (n: number) => n.toLocaleString('vi-VN')
 
@@ -407,6 +514,17 @@ export default function Expense() {
         </div>
 
         <div className='grow p-6 overflow-y-auto flex flex-col gap-5'>
+          <div className='flex items-center justify-end w-full'>
+            <button
+              onClick={handleExportS1a}
+              disabled={isExporting}
+              className='flex items-center gap-2 border-2 border-indigo-100 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-200 font-bold py-2 px-4 rounded-[8px] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm'
+            >
+              {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              Xuất Sổ S1a
+            </button>
+          </div>
+
           <div className='grid grid-cols-2 gap-5'>
             <div className='bg-white rounded-[14px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.03)] px-7 py-5'>
               <div className='flex items-start justify-between'>
@@ -419,10 +537,16 @@ export default function Expense() {
                     {fmt(totalExpense)}
                   </p>
                   <p className='text-[12.5px] text-gray-400 mt-2 flex items-center gap-1.5'>
-                    <TrendingUp size={13} className='text-orange-400' />
+                    {expenseGrowth.isUp ? (
+                      <TrendingUp size={13} className='text-orange-400' />
+                    ) : (
+                      <TrendingDown size={13} className='text-emerald-400' />
+                    )}
                     So với tháng trước{' '}
-                    <span className='text-orange-500 font-bold'>↑ 8.5%</span>{' '}
-                    <span className='text-gray-400'>(922.000)</span>
+                    <span className={`font-bold ${expenseGrowth.isUp ? 'text-orange-500' : 'text-emerald-500'}`}>
+                      {expenseGrowth.isUp ? '↑' : '↓'} {expenseGrowth.percent}%
+                    </span>{' '}
+                    <span className='text-gray-400'>({fmt(expenseGrowth.diff)})</span>
                   </p>
                 </div>
               </div>
@@ -439,10 +563,16 @@ export default function Expense() {
                     {fmt(totalIncome)}
                   </p>
                   <p className='text-[12.5px] text-gray-400 mt-2 flex items-center gap-1.5'>
-                    <TrendingUp size={13} className='text-emerald-400' />
+                    {incomeGrowth.isUp ? (
+                      <TrendingUp size={13} className='text-emerald-400' />
+                    ) : (
+                      <TrendingDown size={13} className='text-orange-400' />
+                    )}
                     So với tháng trước{' '}
-                    <span className='text-emerald-500 font-bold'>↑ 12.7%</span>{' '}
-                    <span className='text-gray-400'>(1.580.000)</span>
+                    <span className={`font-bold ${incomeGrowth.isUp ? 'text-emerald-500' : 'text-orange-500'}`}>
+                      {incomeGrowth.isUp ? '↑' : '↓'} {incomeGrowth.percent}%
+                    </span>{' '}
+                    <span className='text-gray-400'>({fmt(incomeGrowth.diff)})</span>
                   </p>
                 </div>
               </div>
@@ -528,14 +658,21 @@ export default function Expense() {
                 </table>
               </div>
 
-              <div className='px-5 pb-5 pt-2'>
+              <div className='px-5 pb-5 pt-2 flex gap-3'>
                 <button
                   onClick={() => setIsAddExpenseOpen(true)}
-                  className='w-full flex items-center justify-center gap-2.5 py-3 rounded-[10px] text-[14px] font-bold text-white transition-all shadow-[0_4px_14px_rgba(249,115,22,0.35)] hover:shadow-[0_6px_18px_rgba(249,115,22,0.45)] active:scale-[0.98]'
+                  className='flex-1 flex items-center justify-center gap-2.5 py-3 rounded-[10px] text-[14px] font-bold text-white transition-all shadow-[0_4px_14px_rgba(249,115,22,0.35)] hover:shadow-[0_6px_18px_rgba(249,115,22,0.45)] active:scale-[0.98]'
                   style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}
                 >
                   <Plus size={17} strokeWidth={2.5} />
                   Thêm khoản chi
+                </button>
+                <button
+                  onClick={() => setIsAddExpenseCategoryOpen(true)}
+                  className='flex items-center justify-center gap-2 px-4 py-3 rounded-[10px] text-[14px] font-bold text-orange-600 bg-orange-50 border border-orange-200 transition-all hover:bg-orange-100 active:scale-[0.98]'
+                >
+                  <Plus size={17} strokeWidth={2.5} />
+                  Loại chi
                 </button>
               </div>
             </div>
@@ -617,14 +754,21 @@ export default function Expense() {
                 </table>
               </div>
 
-              <div className='px-5 pb-5 pt-2'>
+              <div className='px-5 pb-5 pt-2 flex gap-3'>
                 <button
                   onClick={() => setIsAddIncomeOpen(true)}
-                  className='w-full flex items-center justify-center gap-2.5 py-3 rounded-[10px] text-[14px] font-bold text-white transition-all shadow-[0_4px_14px_rgba(16,185,129,0.35)] hover:shadow-[0_6px_18px_rgba(16,185,129,0.45)] active:scale-[0.98]'
+                  className='flex-1 flex items-center justify-center gap-2.5 py-3 rounded-[10px] text-[14px] font-bold text-white transition-all shadow-[0_4px_14px_rgba(16,185,129,0.35)] hover:shadow-[0_6px_18px_rgba(16,185,129,0.45)] active:scale-[0.98]'
                   style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
                 >
                   <Plus size={17} strokeWidth={2.5} />
                   Thêm khoản thu
+                </button>
+                <button
+                  onClick={() => setIsAddIncomeCategoryOpen(true)}
+                  className='flex items-center justify-center gap-2 px-4 py-3 rounded-[10px] text-[14px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 transition-all hover:bg-emerald-100 active:scale-[0.98]'
+                >
+                  <Plus size={17} strokeWidth={2.5} />
+                  Loại thu
                 </button>
               </div>
             </div>
@@ -818,6 +962,54 @@ export default function Expense() {
                 Xác nhận
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isAddExpenseCategoryOpen && (
+        <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
+          <div className='bg-white rounded-[16px] shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-200'>
+            <div className='flex items-center justify-between px-7 py-4 border-b border-orange-100' style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #fff 100%)' }}>
+              <h3 className='text-[15px] font-bold text-gray-900 flex items-center gap-2'>
+                <ArrowUpCircle size={18} className='text-orange-500' />
+                Thêm loại chi
+              </h3>
+              <button onClick={() => setIsAddExpenseCategoryOpen(false)} className='p-1 text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none'>✕</button>
+            </div>
+            <form className='p-6 flex flex-col gap-4' onSubmit={handleAddExpenseCategory}>
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-[13px] font-bold text-gray-600'>Tên loại chi <span className='text-red-500'>*</span></label>
+                <input name='categoryName' type='text' required placeholder='Ví dụ: Tiền điện, nước...' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800' />
+              </div>
+              <div className='flex items-center justify-end gap-3 mt-1 pt-4 border-t border-gray-100'>
+                <button type='button' onClick={() => setIsAddExpenseCategoryOpen(false)} className='px-6 py-2 border-2 border-gray-200 text-gray-600 text-[13px] font-bold rounded-[8px] hover:bg-gray-50 transition-colors'>Hủy</button>
+                <button type='submit' className='px-6 py-2 text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs' style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}>Lưu</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isAddIncomeCategoryOpen && (
+        <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
+          <div className='bg-white rounded-[16px] shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-200'>
+            <div className='flex items-center justify-between px-7 py-4 border-b border-emerald-100' style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #fff 100%)' }}>
+              <h3 className='text-[15px] font-bold text-gray-900 flex items-center gap-2'>
+                <ArrowDownCircle size={18} className='text-emerald-500' />
+                Thêm loại thu
+              </h3>
+              <button onClick={() => setIsAddIncomeCategoryOpen(false)} className='p-1 text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none'>✕</button>
+            </div>
+            <form className='p-6 flex flex-col gap-4' onSubmit={handleAddIncomeCategory}>
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-[13px] font-bold text-gray-600'>Tên loại thu <span className='text-red-500'>*</span></label>
+                <input name='categoryName' type='text' required placeholder='Ví dụ: Doanh thu, Bán hàng...' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800' />
+              </div>
+              <div className='flex items-center justify-end gap-3 mt-1 pt-4 border-t border-gray-100'>
+                <button type='button' onClick={() => setIsAddIncomeCategoryOpen(false)} className='px-6 py-2 border-2 border-gray-200 text-gray-600 text-[13px] font-bold rounded-[8px] hover:bg-gray-50 transition-colors'>Hủy</button>
+                <button type='submit' className='px-6 py-2 text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs' style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>Lưu</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

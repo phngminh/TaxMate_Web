@@ -1,9 +1,14 @@
-import type { ExpenseDTO, CreateExpenseRequest, UpdateExpenseRequest, ExpenseCategory } from '../types/expense.type'
+import type { ExpenseDTO, CreateExpenseRequest, UpdateExpenseRequest, ExpenseCategory, CreateExpenseCategoryRequest } from '../types/expense.type'
 import type { ApiResponse, PagedResult } from '../types/common.type'
 import http from '../utils/http'
 
 export const getExpenseCategories = async (businessId: string) => {
   const response = await http.get<ApiResponse<ExpenseCategory[]>>(`/ExpenseCategory/business/${businessId}`)
+  return response.data
+}
+
+export const createExpenseCategory = async (businessId: string, body: CreateExpenseCategoryRequest) => {
+  const response = await http.post<ApiResponse<ExpenseCategory>>(`/ExpenseCategory/business/${businessId}`, body)
   return response.data
 }
 

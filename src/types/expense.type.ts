@@ -8,6 +8,11 @@ export interface ExpenseCategory {
   updatedAt: string
 }
 
+export interface CreateExpenseCategoryRequest {
+  categoryName: string
+  description?: string
+}
+
 export interface ExpenseDTO {
   expenseId: string
   businessId: string
