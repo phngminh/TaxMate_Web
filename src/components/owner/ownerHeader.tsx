@@ -1,8 +1,8 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import imgLogo from '../../assets/logo3.png'
 import path from '../../constants/path'
-import { Bell, User, HeadphonesIcon, Heart, Store, Settings, LogOut, Plus, UtensilsCrossed, Handshake, FileDown } from 'lucide-react'
+import { Bell, User, HeadphonesIcon, Heart, Store, Settings, LogOut, Plus, UtensilsCrossed, Handshake, FileDown, ChevronDown } from 'lucide-react'
 import { useBusiness } from '../../contexts/BusinessContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
@@ -11,9 +11,15 @@ import BusinessModal from './addBusinessModal'
 import { getCurrentSubscription } from '../../apis/subscription.api'
 import type { UserSubscriptionResponse } from '../../types/subscription.type'
 import http from '../../utils/http'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../../components/ui/dropdown-menu'
 
 function NavItem({ label, isActive }: {
-  label: string
+  label: ReactNode
   isActive: boolean
 }) {
   return (
@@ -41,6 +47,7 @@ const menuItems = [
 ]
 
 export default function OwnerHeader() {
+  const [expenseOpen, setExpenseOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [showBusinessModal, setShowBusinessModal] = useState(false)
   const [showAddBusinessModal, setShowAddBusinessModal] = useState(false)
@@ -340,11 +347,57 @@ export default function OwnerHeader() {
             )}
           </NavLink>
 
-          <NavLink to={path.BUSINESS_OWNER_EXPENSES}>
-            {({ isActive }) => (
-              <NavItem label='Thu chi' isActive={isActive} />
-            )}
-          </NavLink>
+          <DropdownMenu
+            open={expenseOpen}
+            onOpenChange={setExpenseOpen}
+          >
+            <DropdownMenuTrigger>
+              <div className='cursor-pointer'>
+                <NavItem
+                  isActive={expenseOpen}
+                  label={
+                    <div className='flex items-center gap-1'>
+                      <span>Thu Chi</span>
+
+                      <ChevronDown
+                        size={14}
+                        className={`transition-transform duration-200 ${
+                          expenseOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </div>
+                  }
+                />
+              </div>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent
+              align='start'
+              sideOffset={8}
+              className='w-56 rounded-md border border-gray-200 bg-white p-1 shadow-xl z-9999 animate-in fade-in-0 zoom-in-95'
+            >
+              <DropdownMenuItem
+                className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
+                onClick={() => navigate(path.BUSINESS_OWNER_EXPENSES)}
+              >
+                Sổ quỹ Thu - Chi
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
+                onClick={() => navigate(path.BUSINESS_OWNER_PURCHASE_EXPENSES)}
+              >
+                Hóa đơn nhập kho
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
+                onClick={() => navigate(path.BUSINESS_OWNER_SUPPLIER)}
+              >
+                Đối tác Nhà cung cấp
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <NavLink to={path.BUSINESS_OWNER_REPORTS}>
             {({ isActive }) => (
