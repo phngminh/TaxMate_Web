@@ -8,11 +8,6 @@ export interface IncomeCategory {
   updatedAt: string
 }
 
-export interface CreateIncomeCategoryRequest {
-  categoryName: string
-  description?: string
-}
-
 export interface IncomeDTO {
   incomeId: string
   businessId: string

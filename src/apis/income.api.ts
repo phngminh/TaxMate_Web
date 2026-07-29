@@ -1,14 +1,9 @@
-import type { IncomeDTO, CreateIncomeRequest, UpdateIncomeRequest, IncomeCategory, CreateIncomeCategoryRequest } from '../types/income.type'
+import type { IncomeDTO, CreateIncomeRequest, UpdateIncomeRequest, IncomeCategory } from '../types/income.type'
 import type { ApiResponse, PagedResult } from '../types/common.type'
 import http from '../utils/http'
 
 export const getIncomeCategories = async (businessId: string) => {
   const response = await http.get<ApiResponse<IncomeCategory[]>>(`/IncomeCategory/business/${businessId}`)
-  return response.data
-}
-
-export const createIncomeCategory = async (businessId: string, body: CreateIncomeCategoryRequest) => {
-  const response = await http.post<ApiResponse<IncomeCategory>>(`/IncomeCategory/business/${businessId}`, body)
   return response.data
 }
 
