@@ -29,7 +29,7 @@ import {
   updateProductIngredient,
   deleteProductIngredient,
 } from '../../apis/product.ingredient.api'
-import { getAllProducts } from '../../apis/product.api'
+import { getAllProducts, getProductsWithRecipe } from '../../apis/product.api'
 import { useBusiness } from '../../contexts/BusinessContext'
 import ConfirmModal from '../../components/ui/confirm-modal'
 
@@ -121,7 +121,8 @@ export default function IngredientPage() {
     if (!businessId) return
     setLoadingRecipes(true)
     try {
-      const productRes = await getAllProducts(businessId, 1, 100)
+      // getProductsWithRecipe: chỉ lấy sản phẩm đã có công thức nguyên liệu (hasRecipe=true)
+      const productRes = await getProductsWithRecipe(businessId)
       const productList = productRes.data.items
       setProducts(productList)
 

@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
-  ArrowUpCircle,
-  RotateCcw,
   Plus,
   X,
   Loader2,
@@ -10,18 +9,13 @@ import {
   Edit,
   ClipboardList,
   UserPlus,
-  Coins,
-  Package,
-  Calendar,
-  FileText
+  Package
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useBusiness } from '../../contexts/BusinessContext'
 import {
-  getExpenses,
-  getExpenseById,
+  getAllExpenses,
   createExpense,
-  updateExpense,
   deleteExpense,
   getExpenseCategories,
   createExpenseCategory
@@ -31,7 +25,7 @@ import { getIngredientPurchases, createIngredientPurchase, deleteIngredientPurch
 import { getAllIngredients } from '../../apis/ingredient.api'
 import { getAllProducts, updateProductCostPrice } from '../../apis/product.api'
 import type { Supplier } from '../../types/supplier.type'
-import type { ExpenseCategoryDTO, ExpenseDTO } from '../../types/expense.type'
+import type { ExpenseDTO, ExpenseCategory } from '../../types/expense.type'
 import type { Ingredient } from '../../types/ingredient.type'
 import type { Product } from '../../types/product.type'
 import type { IngredientPurchaseResponse } from '../../types/ingredientPurchase.type'
@@ -48,9 +42,11 @@ interface PurchaseLineItem {
 export default function PurchasePage() {
   const { currentBusiness } = useBusiness()
   const businessId = currentBusiness?.id
+  const location = useLocation()
 
-  // Active tab state: 'ledger' | 'purchases' | 'suppliers'
-  const [activeTab, setActiveTab] = useState<'ledger' | 'purchases' | 'suppliers'>('ledger')
+  // Determine active tab view directly from URL route
+  const isSupplierView = location.pathname.includes('/supplier')
+  const activeTab = isSupplierView ? 'suppliers' : 'purchases'
 
   // Global loading
   const [loading, setLoading] = useState(true)
@@ -58,7 +54,6 @@ export default function PurchasePage() {
 
   // Data lists
   const [expenses, setExpenses] = useState<ExpenseDTO[]>([])
-  const [categories, setCategories] = useState<ExpenseCategoryDTO[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
   const [materialPurchases, setMaterialPurchases] = useState<IngredientPurchaseResponse[]>([])
   
@@ -67,22 +62,13 @@ export default function PurchasePage() {
   const [dbProducts, setDbProducts] = useState<Product[]>([])
 
   // Modal control states
-  const [showAddLedgerModal, setShowAddLedgerModal] = useState(false)
   const [showAddPurchaseModal, setShowAddPurchaseModal] = useState(false)
   const [showSupplierModal, setShowSupplierModal] = useState(false)
   const [showSupplierDetailModal, setShowSupplierDetailModal] = useState(false)
   const [showPurchaseDetailModal, setShowPurchaseDetailModal] = useState(false)
 
   // --- FORM STATES ---
-  // A. Operational Expense Form
-  const [ledgerTitle, setLedgerTitle] = useState('')
-  const [ledgerAmount, setLedgerAmount] = useState('')
-  const [ledgerCategoryId, setLedgerCategoryId] = useState('')
-  const [ledgerDate, setLedgerDate] = useState(new Date().toISOString().slice(0, 10))
-  const [ledgerMethod, setLedgerMethod] = useState('Cash')
-  const [ledgerNote, setLedgerNote] = useState('')
-
-  // B. Supplier Form (Add/Edit)
+  // A. Supplier Form (Add/Edit)
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null)
   const [supName, setSupName] = useState('')
   const [supContact, setSupContact] = useState('')
@@ -109,20 +95,16 @@ export default function PurchasePage() {
 
   // 1. Fetch data depending on active tab
   const loadData = async () => {
-    if (!businessId) return
+    if (!businessId) {
+      setLoading(false)
+      return
+    }
     try {
       setLoading(true)
-      if (activeTab === 'ledger') {
-        const [expRes, catRes] = await Promise.all([
-          getExpenses(businessId, { pageNumber: 1, pageSize: 100 }),
-          getExpenseCategories(businessId)
-        ])
-        if (expRes.success) setExpenses(expRes.data.items || [])
-        if (catRes.success) setCategories(catRes.data || [])
-      } else if (activeTab === 'purchases') {
+      if (activeTab === 'purchases') {
         const [matRes, expRes, supRes, ingRes, prodRes] = await Promise.all([
           getIngredientPurchases(businessId),
-          getExpenses(businessId, { pageNumber: 1, pageSize: 100 }),
+          getAllExpenses(businessId, 1, 100),
           getSuppliers(businessId),
           getAllIngredients(businessId),
           getAllProducts(businessId, 1, 100)
@@ -164,7 +146,7 @@ export default function PurchasePage() {
   }, [showAddPurchaseModal, businessId])
 
   // Get or Create "Chi phí nhập hàng" Category dynamically to prevent errors
-  const getOrCreateImportCategory = async (cats: ExpenseCategoryDTO[]) => {
+  const getOrCreateImportCategory = async (cats: ExpenseCategory[]) => {
     if (!businessId) throw new Error('Missing businessId')
     
     // Find existing category
@@ -189,44 +171,6 @@ export default function PurchasePage() {
   }
 
   // --- ACTIONS HANDLERS ---
-  // A. Add Operational Expense
-  const handleAddLedgerExpense = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!businessId) return
-
-    const amountNum = parseFloat(ledgerAmount.replace(/\D/g, ''))
-    if (isNaN(amountNum) || amountNum <= 0) {
-      toast.error('Vui lòng nhập số tiền hợp lệ')
-      return
-    }
-    if (!ledgerTitle.trim()) {
-      toast.error('Vui lòng nhập nội dung chi phí')
-      return
-    }
-
-    try {
-      setActionLoading(true)
-      const res = await createExpense(businessId, {
-        expenseCategoryId: ledgerCategoryId || categories[0]?.expenseCategoryId,
-        expenseTitle: ledgerTitle.trim(),
-        amount: amountNum,
-        expenseDate: new Date(ledgerDate).toISOString(),
-        paymentMethod: ledgerMethod,
-        note: ledgerNote.trim() || null
-      })
-
-      if (res.success) {
-        toast.success('Ghi nhận khoản chi thành công!')
-        setShowAddLedgerModal(false)
-        resetLedgerForm()
-        loadData()
-      }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Không thể lưu khoản chi.')
-    } finally {
-      setActionLoading(false)
-    }
-  }
 
   // B. Add/Edit Supplier
   const handleSaveSupplier = async (e: React.FormEvent) => {
@@ -427,14 +371,6 @@ export default function PurchasePage() {
   }
 
   // --- HELPERS ---
-  const resetLedgerForm = () => {
-    setLedgerTitle('')
-    setLedgerAmount('')
-    setLedgerCategoryId(categories[0]?.expenseCategoryId || '')
-    setLedgerDate(new Date().toISOString().slice(0, 10))
-    setLedgerMethod('Cash')
-    setLedgerNote('')
-  }
 
   const resetSupplierForm = () => {
     setEditingSupplier(null)
@@ -553,31 +489,24 @@ export default function PurchasePage() {
   return (
     <div className='flex flex-col bg-[#f8f9fa] min-h-[calc(100vh-51px)] w-full'>
       <div className='flex items-center justify-between px-8 py-4 gap-4 bg-white border-b border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.02)]'>
-        <div className='ml-72 flex-1'>
+        <div className='flex-1'>
           <h1 className='text-[20px] font-black text-gray-900 flex items-center gap-2'>
-            <Coins className='text-[#D32F2F] size-5' />
-            Quản lý Chi phí & Nhập kho
+            {isSupplierView ? (
+              <Building2 className='text-[#D32F2F] size-5' />
+            ) : (
+              <Package className='text-[#D32F2F] size-5' />
+            )}
+            {isSupplierView ? 'Quản lý Đối tác Nhà cung cấp' : 'Quản lý Hóa đơn Nhập kho'}
           </h1>
           <p className='text-gray-400 text-xs mt-0.5 font-medium'>
-            Quản lý dòng tiền chi tiêu vận hành và nhập nguyên vật liệu đầu vào của cửa hàng
+            {isSupplierView
+              ? 'Quản lý thông tin và danh sách các nhà cung cấp sản phẩm & nguyên vật liệu'
+              : 'Quản lý lịch sử nhập sản phẩm, nguyên vật liệu kho và cập nhật giá vốn hàng bán'}
           </p>
         </div>
 
         {/* Action buttons depending on tab */}
         <div className='flex gap-3'>
-          {activeTab === 'ledger' && (
-            <div className='flex items-center bg-[#D32F2F] text-white rounded-[10px] overflow-hidden shadow-[0px_4px_10px_rgba(211,47,47,0.2)] hover:shadow-[0px_6px_14px_rgba(211,47,47,0.3)] transition-all'>
-              <button
-                onClick={() => {
-                  setLedgerCategoryId(categories[0]?.expenseCategoryId || '')
-                  setShowAddLedgerModal(true)
-                }}
-                className='px-5 py-2.5 text-[14px] font-bold hover:bg-[#B71C1C] active:bg-[#991B1B] transition-colors flex items-center gap-2'
-              >
-                <Plus size={16} strokeWidth={2.5} /> Thêm khoản chi
-              </button>
-            </div>
-          )}
           {activeTab === 'purchases' && (
             <div className='flex items-center bg-[#D32F2F] text-white rounded-[10px] overflow-hidden shadow-[0px_4px_10px_rgba(211,47,47,0.2)] hover:shadow-[0px_6px_14px_rgba(211,47,47,0.3)] transition-all'>
               <button
@@ -607,115 +536,16 @@ export default function PurchasePage() {
         </div>
       </div>
 
-      {/* MAIN BODY */}
-      <div className='flex grow w-full'>
-        {/* SIDEBAR */}
-        <div className='w-72 bg-white border-r border-[#ffe5e5] p-6 flex flex-col gap-4 shrink-0'>
-          <span className='text-[13px] font-bold text-gray-500 uppercase tracking-wide'>Danh mục</span>
-          <div className='flex flex-col gap-1'>
-            {[
-              { val: 'ledger', label: 'Sổ quỹ thu chi', icon: Coins },
-              { val: 'purchases', label: 'Hóa đơn Nhập kho', icon: Package },
-              { val: 'suppliers', label: 'Đối tác Nhà cung cấp', icon: Building2 }
-            ].map(t => {
-              const Icon = t.icon
-              const isActive = activeTab === t.val
-              return (
-                <button
-                  key={t.val}
-                  onClick={() => setActiveTab(t.val as any)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-[10px] text-[13.5px] font-semibold transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-[#eef2ff] text-[#4c51bf]'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
-                >
-                  <Icon size={17} className={isActive ? 'text-[#4c51bf]' : 'text-gray-400'} />
-                  {t.label}
-                </button>
-              )
-            })}
+      {/* MAIN BODY (FULL WIDTH) */}
+      <div className='flex grow w-full p-8 overflow-x-auto'>
+        {loading ? (
+          <div className='flex justify-center items-center py-20 w-full'>
+            <Loader2 className='animate-spin text-[#D32F2F] size-10' />
           </div>
-        </div>
-
-        {/* TAB CONTENTS */}
-        <div className='grow p-8 overflow-x-auto'>
-          {loading ? (
-            <div className='flex justify-center items-center py-20'>
-              <Loader2 className='animate-spin text-[#D32F2F] size-10' />
-            </div>
-          ) : (
-            <>
-              {/* TAB 1: LEDGER */}
-              {activeTab === 'ledger' && (
-                <div className='overflow-x-auto w-full'>
-                  {expenses.length > 0 ? (
-                    <table className='w-full text-left border-collapse'>
-                      <thead>
-                        <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13px] font-black border-b border-[#cbd5e1]/40 select-none'>
-                          <th className='py-3.5 px-5 font-bold'>Nội dung khoản chi</th>
-                          <th className='py-3.5 px-5 font-bold'>Danh mục</th>
-                          <th className='py-3.5 px-5 font-bold'>Phương thức</th>
-                          <th className='py-3.5 px-5 font-bold'>Ngày lập</th>
-                          <th className='py-3.5 px-5 font-bold text-right'>Số tiền chi</th>
-                          <th className='py-3.5 px-5 font-bold text-center w-24'>Thao tác</th>
-                        </tr>
-                      </thead>
-                      <tbody className='divide-y divide-gray-100 text-xs font-semibold text-gray-600'>
-                        {expenses
-                          .filter(e => !e.categoryName.toLowerCase().includes('nhập hàng'))
-                          .map(e => (
-                            <tr key={e.expenseId} className='hover:bg-[#fcfdfe] transition-colors'>
-                              <td className='py-4 px-5 text-gray-900 font-bold'>{e.expenseTitle}</td>
-                              <td className='py-4 px-5'>
-                                <span className='bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full border border-orange-100 font-bold text-[10px]'>
-                                  {e.categoryName}
-                                </span>
-                              </td>
-                              <td className='py-4 px-5'>{e.paymentMethod === 'Cash' ? 'Tiền mặt' : e.paymentMethod === 'Transfer' ? 'Chuyển khoản' : 'Thẻ'}</td>
-                              <td className='py-4 px-5 font-mono'>{new Date(e.expenseDate).toLocaleDateString('vi-VN')}</td>
-                              <td className='py-4 px-5 text-right font-black text-orange-600 font-mono'>-{formatPrice(e.amount)} đ</td>
-                              <td className='py-4 px-5 text-center'>
-                                <button
-                                  onClick={async () => {
-                                    try {
-                                      setActionLoading(true)
-                                      const detail = await getExpenseById(e.expenseId)
-                                      if (detail.success) {
-                                        setSelectedExpenseDetail(detail.data)
-                                        setShowPurchaseDetailModal(true)
-                                      }
-                                    } catch (err) {
-                                      toast.error('Không thể xem chi tiết.')
-                                    } finally {
-                                      setActionLoading(false)
-                                    }
-                                  }}
-                                  className='text-slate-400 hover:text-blue-600 p-1 hover:bg-blue-50 rounded-md transition-colors mr-2 cursor-pointer'
-                                >
-                                  <ClipboardList size={15} />
-                                </button>
-                                <button
-                                  onClick={() => handleDeletePurchase('Product', e.expenseId)}
-                                  className='text-slate-400 hover:text-[#b90a0a] p-1 hover:bg-red-50 rounded-md transition-colors cursor-pointer'
-                                >
-                                  <Trash2 size={15} />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <div className='text-center py-20 text-slate-400 text-xs font-bold'>
-                      Không có khoản chi vận hành nào.
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* TAB 2: PURCHASES */}
-              {activeTab === 'purchases' && (
+        ) : (
+          <div className='w-full'>
+            {/* PURCHASES VIEW */}
+            {activeTab === 'purchases' && (
                 <div className='overflow-x-auto w-full'>
                   {combinedPurchases.length > 0 ? (
                     <table className='w-full text-left border-collapse'>
@@ -753,9 +583,9 @@ export default function PurchasePage() {
                                   try {
                                     setActionLoading(true)
                                     if (p.type === 'Product') {
-                                      const detail = await getExpenseById(p.id)
-                                      if (detail.success) {
-                                        setSelectedExpenseDetail(detail.data)
+                                      const expObj = expenses.find(e => e.expenseId === p.id)
+                                      if (expObj) {
+                                        setSelectedExpenseDetail(expObj)
                                         setSelectedMaterialDetail(null)
                                         setShowPurchaseDetailModal(true)
                                       }
@@ -852,142 +682,9 @@ export default function PurchasePage() {
                   )}
                 </div>
               )}
-            </>
+            </div>
           )}
         </div>
-      </div>
-
-      {/* MODAL 1 - THÊM CHI PHÍ VẬN HÀNH */}
-      {showAddLedgerModal && (
-        <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
-          <div className='bg-white rounded-[16px] shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200'>
-            <div className='flex items-center justify-between px-7 py-4 border-b border-orange-100 bg-orange-50/50'>
-              <h3 className='text-[15px] font-bold text-gray-900 flex items-center gap-2'>
-                <ArrowUpCircle size={18} className='text-orange-500 font-bold' />
-                Ghi nhận khoản chi vận hành
-              </h3>
-              <button
-                onClick={() => {
-                  setShowAddLedgerModal(false)
-                  resetLedgerForm()
-                }}
-                className='p-1 text-gray-400 hover:text-gray-600 transition-colors text-lg leading-none cursor-pointer'
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleAddLedgerExpense} className='p-6 flex flex-col gap-4'>
-              <div className='flex flex-col gap-1.5'>
-                <label className='text-[13px] font-bold text-gray-600'>
-                  Nội dung chi phí <span className='text-red-500'>*</span>
-                </label>
-                <input
-                  type='text'
-                  required
-                  placeholder='Ví dụ: Tiền điện nước tháng 6...'
-                  value={ledgerTitle}
-                  onChange={e => setLedgerTitle(e.target.value)}
-                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800'
-                />
-              </div>
-
-              <div className='grid grid-cols-2 gap-4'>
-                <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Danh mục chi</label>
-                  <select
-                    value={ledgerCategoryId}
-                    onChange={e => setLedgerCategoryId(e.target.value)}
-                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-orange-400 bg-white transition-all font-medium text-gray-800 cursor-pointer'
-                  >
-                    {categories
-                      .filter(x => !(x.categoryName || '').toLowerCase().includes('nhập hàng'))
-                      .map(cat => (
-                        <option key={cat.expenseCategoryId} value={cat.expenseCategoryId}>
-                          {cat.categoryName}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>
-                    Số tiền (đ) <span className='text-red-500'>*</span>
-                  </label>
-                  <input
-                    type='text'
-                    required
-                    placeholder='0'
-                    value={ledgerAmount}
-                    onChange={e => {
-                      const clean = e.target.value.replace(/\D/g, '')
-                      setLedgerAmount(clean === '' ? '' : parseInt(clean).toLocaleString('vi-VN'))
-                    }}
-                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 text-right font-mono'
-                  />
-                </div>
-              </div>
-
-              <div className='grid grid-cols-2 gap-4'>
-                <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
-                  <select
-                    value={ledgerMethod}
-                    onChange={e => setLedgerMethod(e.target.value)}
-                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-orange-400 bg-white transition-all font-medium text-gray-800 cursor-pointer'
-                  >
-                    <option value='Cash'>Tiền mặt</option>
-                    <option value='Transfer'>Chuyển khoản</option>
-                    <option value='EWallet'>Ví điện tử / Thẻ</option>
-                  </select>
-                </div>
-
-                <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Ngày chi</label>
-                  <input
-                    type='date'
-                    value={ledgerDate}
-                    onChange={e => setLedgerDate(e.target.value)}
-                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 font-mono'
-                  />
-                </div>
-              </div>
-
-              <div className='flex flex-col gap-1.5'>
-                <label className='text-[13px] font-bold text-gray-600'>Ghi chú / Chi tiết</label>
-                <textarea
-                  placeholder='Nhập mô tả thêm...'
-                  value={ledgerNote}
-                  onChange={e => setLedgerNote(e.target.value)}
-                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 h-20 resize-none'
-                />
-              </div>
-
-              <div className='flex items-center justify-end gap-3 mt-1 pt-4 border-t border-gray-100 select-none'>
-                <button
-                  type='button'
-                  onClick={() => {
-                    setShowAddLedgerModal(false)
-                    resetLedgerForm()
-                  }}
-                  className='px-6 py-2 border border-gray-200 text-gray-600 text-[13px] font-bold rounded-[8px] hover:bg-gray-50 transition-colors cursor-pointer'
-                  disabled={actionLoading}
-                >
-                  Hủy
-                </button>
-                <button
-                  type='submit'
-                  className='px-6 py-2 text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs bg-orange-500 hover:bg-orange-600 flex items-center gap-1.5 cursor-pointer'
-                  disabled={actionLoading}
-                >
-                  {actionLoading && <Loader2 size={13} className='animate-spin' />}
-                  Ghi nhận
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* MODAL 2 - NHÀ CUNG CẤP FORM (THÊM / SỬA) */}
       {showSupplierModal && (

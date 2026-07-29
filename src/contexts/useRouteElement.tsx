@@ -68,11 +68,7 @@ export default function useRouteElements() {
       element: <ProtectedRoute allowedRoles={['Owner']} />,
       children: [
         {
-          element: (
-            <BusinessProvider>
-              <OwnerLayout />
-            </BusinessProvider>
-          ),
+          element: <OwnerLayout />,
           children: [
             { index: true, element: <Navigate to={path.BUSINESS_OWNER_HOME} replace /> },
             { path: path.BUSINESS_OWNER_HOME, element: <Home /> },
@@ -90,10 +86,7 @@ export default function useRouteElements() {
         },
         { 
           path: path.BUSINESS_OWNER_POS, 
-          element: 
-            <BusinessProvider>
-              <POS />
-            </BusinessProvider>
+          element: <POS />
         },
       ]
     },

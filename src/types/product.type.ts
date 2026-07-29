@@ -10,6 +10,7 @@ export interface Product {
   stockQuantity?: number
   imageUrl?: string
   status: string
+  hasRecipe: boolean
   createdAt: string
   updatedAt: string
 }
