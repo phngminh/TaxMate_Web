@@ -1,27 +1,30 @@
 import type { ApiResponse, PagedResult } from '../types/common.type'
-import type { Order, OrderDetail, CreateOrderRequest, AddOrderItemRequest, UpdateOrderItemRequest } from '../types/order.type'
+import type { Order, OrderDetail, CreateOrderRequest, AddOrderItemRequest, UpdateOrderItemRequest, CheckoutRequest } from '../types/order.type'
 import http from '../utils/http'
 
 export const createOrder = async (businessId: string, body: CreateOrderRequest) => {
-  const response = await http.post<ApiResponse<string>>(`/api/Order/business/${businessId}`, body)
+  const response = await http.post<ApiResponse<string>>(`/Order/business/${businessId}`, body)
   return response.data
 }
 
 export const getOrderById = async (id: string) => {
-  const response = await http.get<ApiResponse<OrderDetail>>(`/api/Order/${id}`)
+  const response = await http.get<ApiResponse<OrderDetail>>(`/Order/${id}`)
   return response.data
 }
 
 export const getOrders = async (
   businessId: string,
-  page = 1,
-  pageSize = 20
+  params?: {
+    page?: number
+    pageSize?: number
+    status?: string | null
+    paymentMethod?: string | null
+    minAmount?: number | null
+    maxAmount?: number | null
+  }
 ) => {
   const response = await http.get<ApiResponse<PagedResult<Order>>>(`/Order/business/${businessId}`, {
-    params: {
-      page,
-      pageSize
-    }
+    params
   })
   return response.data
 }
@@ -45,8 +48,17 @@ export const removeOrderItem = async (orderId: string, itemId: string) => {
   return response.data
 }
 
-
 export const cancelOrder = async (orderId: string) => {
   const response = await http.post<ApiResponse<string>>(`/Order/${orderId}/cancel`)
   return response.data
 }
+
+export const checkoutOrder = async (orderId: string, body: CheckoutRequest) => {
+  const response = await http.post<ApiResponse<any>>(`/Order/${orderId}/checkout`, body)
+  return response.data
+}
+
+export const confirmPayment = async (orderId: string) => {
+  const response = await http.post<ApiResponse<any>>(`/Order/${orderId}/confirm-payment`)
+  return response.data
+}

@@ -4,7 +4,7 @@ import ProtectedRoute from './ProtectedRoute'
 import BusinessOwnerLoginPage from '../pages/auth/BusinessOwnerLoginPage'
 import BusinessOwnerRegisterPage from '../pages/auth/BusinessOwnerRegisterPage'
 import Home from '../pages/businessOwner/home'
-import Product from '../pages/businessOwner/product'
+import Product from '../pages/businessOwner/product/productList'
 import OwnerLayout from '../components/owner/ownerLayout'
 import LandingPage from '../pages/landingPage/LandingPage'
 import Ingredient from '../pages/businessOwner/ingredient'
@@ -20,6 +20,9 @@ import SubscriptionPage from '../pages/landingPage/subscription'
 import { BusinessProvider } from './BusinessContext'
 import BusinessList from '../pages/admin/user/business'
 import Expense from '../pages/businessOwner/expense'
+import BankConfig from '../pages/businessOwner/bankConfig'
+import EInvoiceConfig from '../pages/businessOwner/einvoiceConfig'
+import OwnerSubscription from '../pages/businessOwner/ownerSubscription'
 import Report from '../pages/businessOwner/report'
 
 export default function useRouteElements() {
@@ -46,7 +49,10 @@ export default function useRouteElements() {
             { path: path.BUSINESS_OWNER_INGREDIENTS, element: <Ingredient /> },
             { path: path.BUSINESS_OWNER_ORDERS, element: <Order /> },
             { path: path.BUSINESS_OWNER_EXPENSES, element: <Expense /> },
-            { path: path.BUSINESS_OWNER_REPORTS, element: <Report /> }
+            { path: path.BUSINESS_OWNER_REPORTS, element: <Report /> },
+            { path: path.BUSINESS_OWNER_BANK_CONFIG, element: <BankConfig /> },
+            { path: path.BUSINESS_OWNER_EINVOICE_CONFIG, element: <EInvoiceConfig /> },
+            { path: path.BUSINESS_OWNER_SUBSCRIPTION, element: <OwnerSubscription /> }
           ]
         },
         { 
@@ -61,7 +67,12 @@ export default function useRouteElements() {
     //================ Admin routes ================
     {
       path: path.BASE_ADMIN,
-      // element: <ProtectedRoute allowedRoles={['Admin']} />,
+      element: (
+        <ProtectedRoute
+          allowedRoles={['Admin']}
+          redirectTo={path.BUSINESS_OWNER_LOGIN}
+        />
+      ),
       children: [
         {
           element: <AdminLayout />,
