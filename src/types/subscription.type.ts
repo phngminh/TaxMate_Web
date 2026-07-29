@@ -1,18 +1,21 @@
 export interface PlanFeature {
   id: string
-  name: string
-  included: boolean
+  featureKey: string
+  featureName: string
+  isEnabled: boolean
 }
 
-export interface Plan {
+export interface SubscriptionPlan {
   id: string
   name: string
-  price: number
-  period: 'month' | 'year'
-  description: string
-  activeUsers: number
-  features: PlanFeature[]
+  description?: string
+  monthlyPrice: number
+  annualPrice: number
+  maxProducts?: number
+  maxTransactionsPerMonth?: number
   isActive: boolean
+  sortOrder: number
+  features: PlanFeature[]
 }
 
 export interface PlanFeatureResponse {
@@ -29,10 +32,45 @@ export interface SubscriptionPlanResponse {
   monthlyPrice: number
   annualPrice: number
   maxProducts: number | null
-  maxTransactionsPerMonth: number |null
+  maxTransactionsPerMonth: number | null
   isActive: boolean
   sortOrder: number
   features: PlanFeatureResponse[]
+}
+
+export interface CreatePlanFeatureRequest {
+  featureKey: string
+  featureName: string
+  isEnabled: boolean
+}
+
+export interface UpdatePlanFeatureRequest {
+  id?: string | null
+  featureKey: string
+  featureName: string
+  isEnabled: boolean
+}
+
+export interface CreateSubscriptionPlanRequest {
+  name: string
+  description?: string | null
+  monthlyPrice: number
+  annualPrice: number
+  maxProducts?: number | null
+  maxTransactionsPerMonth?: number | null
+  sortOrder: number
+  features: CreatePlanFeatureRequest[]
+}
+
+export interface UpdateSubscriptionPlanRequest {
+  name: string
+  description?: string | null
+  monthlyPrice: number
+  annualPrice: number
+  maxProducts?: number | null
+  maxTransactionsPerMonth?: number | null
+  sortOrder: number
+  features: UpdatePlanFeatureRequest[]
 }
 
 export interface UserSubscriptionResponse {
@@ -56,6 +94,8 @@ export interface SubscribeRequest {
   subscriptionPlanId: string
   billingCycle: 'Monthly' | 'Annual'
   autoRenew: boolean
+  returnUrl?: string
+  cancelUrl?: string
 }
 
 export interface SubscribeResponse {

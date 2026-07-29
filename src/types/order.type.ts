@@ -15,6 +15,10 @@ export interface OrderDetail {
   status: string
   note?: string
   invoiceNumber?: string
+  taxAuthorityCode?: string
+  officialPdfUrl?: string
+  officialXmlUrl?: string
+  invoiceStatus?: string
 
   subTotal: number
 
@@ -36,6 +40,7 @@ export interface OrderDetail {
 export interface OrderItem {
   transactionItemId: string
   productId?: string
+  productCode?: string
   productName: string
   unit?: string
   unitPrice: number
@@ -75,4 +80,18 @@ export interface UpdateOrderItemRequest {
   discountType?: string
   discountValue?: number
   note?: string
+}
+
+export interface PaymentEntry {
+  paymentMethod: 'Cash' | 'Transfer' | 'EWallet'
+  amount: number
+  paymentAccountId?: string | null
+}
+
+export interface CheckoutRequest {
+  payments: PaymentEntry[]
+  buyerTaxCode?: string | null
+  buyerCompanyName?: string | null
+  buyerAddress?: string | null
+  buyerEmail?: string | null
 }
