@@ -242,7 +242,7 @@ export default function ProfitReport({ businessId }: Props) {
             <div className='text-[#1f2937] text-[15px] font-bold mb-4'>Xu hướng lợi nhuận hàng tháng</div>
 
             {profitData!.profitTrend && profitData!.profitTrend.length > 0 ? (
-              <div style={{ height: 260, width: '100%' }}>
+              <div style={{ height: 300, width: '100%' }}>
                 <ResponsiveContainer width='100%' height='100%'>
                   <LineChart data={profitData!.profitTrend} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
                     <CartesianGrid strokeDasharray='4 2' stroke='#F3F4F6' vertical={false} />
