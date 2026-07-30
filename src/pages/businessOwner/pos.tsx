@@ -6,7 +6,7 @@ import http from '../../utils/http'
 import { useBusiness } from '../../contexts/BusinessContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { getAllProducts, createProduct } from '../../apis/product.api'
-import { getProductCategories } from '../../apis/productCategory.api'
+import { getProductCategories } from '../../apis/product.category.api'
 import {
   createOrder,
   getOrderById,
@@ -20,7 +20,7 @@ import {
 import { getPaymentAccounts, createPaymentAccount, createSePayMockPayment } from '../../apis/paymentAccount.api'
 import { getEInvoiceConfig } from '../../apis/einvoice.api'
 import type { Product } from '../../types/product.type'
-import type { ProductCategory } from '../../types/productCategory.type'
+import type { ProductCategory } from '../../types/product.category.type'
 import type { PaymentAccount } from '../../types/paymentAccount.type'
 import { useNavigate } from 'react-router-dom'
 import path from '../../constants/path'

@@ -56,7 +56,8 @@ export default function Product() {
   const isEditing = isEditProductModalOpen || isEditServiceModalOpen
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const isFirstRender = useRef(true)
+  const [showQuickCategoryForm, setShowQuickCategoryForm] = useState(false)
+  const [quickCategoryName, setQuickCategoryName] = useState('')
 
   const [isCreateCategoryModalOpen, setIsCreateCategoryModalOpen] = useState(false)
   const [categoryForm, setCategoryForm] = useState({
@@ -436,6 +437,32 @@ export default function Product() {
     setSearchQuery('')
     setSelectedCategory('all')
     setSelectedStatus('all')
+  }
+
+  const handleQuickAddCategory = async () => {
+    if (!businessId || !quickCategoryName.trim()) return
+
+    try {
+      const res = await createProductCategory(businessId, {
+        name: quickCategoryName
+      })
+
+      if (res.success) {
+        setCategories(prev => [...prev, res.data])
+
+        setProductForm(prev => ({
+          ...prev,
+          productCategoryId: res.data.id
+        }))
+
+        setQuickCategoryName('')
+        setShowQuickCategoryForm(false)
+
+        toast.success('Đã tạo danh mục.')
+      }
+    } catch {
+      toast.error('Không thể tạo danh mục.')
+    }
   }
 
   return (
@@ -842,6 +869,11 @@ export default function Product() {
         isEditing={isEditing}
         isProduct={isProduct}
         isSubmitting={isSubmitting}
+        handleQuickAddCategory={handleQuickAddCategory}
+        showQuickCategoryForm={showQuickCategoryForm}
+        setShowQuickCategoryForm={setShowQuickCategoryForm}
+        quickCategoryName={quickCategoryName}
+        setQuickCategoryName={setQuickCategoryName}
       />
 
       <CategoryModal
