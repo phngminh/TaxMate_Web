@@ -74,23 +74,29 @@ export default function OwnerHeader() {
   const navigate = useNavigate()
   const { user, logout } = useAuth()
 
-  const checkBusinessProfile = async () => {
+  useEffect(() => {
     if (!user) return
 
-    try {
-      const res = await getBusinessProfiles(user.id)
-      console.log('Business profiles:', res.data.items)
-      if (res.data.items.length === 0) {
-        setShowBusinessModal(true)
-      }
-    } catch (error) {
-      console.error(error)
-    }
-  }
+    const fetchBusiness = async () => {
+      if (!user) return
 
-  useEffect(() => {
-    checkBusinessProfile()
-  }, [])
+      try {
+        const res = await getBusinessProfiles(user.id)
+        const items = res.data.items
+        setBusinesses(items)
+
+        if (items.length > 0) {
+          setCurrentBusiness(items[0])
+        } else {
+          setShowBusinessModal(true)
+        }
+      } catch (error) {
+        console.error(error)
+      }
+    }
+
+    fetchBusiness()
+  }, [user])
 
   useEffect(() => {
     const fetchCurrentSubscription = async () => {
@@ -459,6 +465,9 @@ export default function OwnerHeader() {
                         openExportS1aModal()
                       } else if (label === 'Xuất S2A-HKD') {
                         openExportS2aModal()
+                      } else if (label === 'Gói của tôi') {
+                        navigate(path.BUSINESS_OWNER_SUBSCRIPTION)
+                        setProfileOpen(false)
                       }
                     }}
                   >

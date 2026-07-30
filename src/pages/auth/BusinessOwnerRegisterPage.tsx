@@ -110,7 +110,7 @@ export default function BusinessOwnerRegisterPage() {
     <div className={`flex min-h-screen w-full flex-col lg:flex-row ${slideClass}`}>
       {/* Register form */}
       <div className='flex min-h-screen flex-1 items-center justify-center bg-white px-6 py-10 sm:px-10 sm:py-12 lg:px-14'>
-        <div className='w-full max-w-[400px] space-y-8'>
+        <div className='w-full max-w-100 space-y-8'>
           <header className='space-y-2 text-center'>
             <h2 className='text-2xl font-bold text-taxmate-red sm:text-[1.75rem]'>
               Đăng ký tài khoản
@@ -262,7 +262,7 @@ export default function BusinessOwnerRegisterPage() {
       </div>
 
       {/* Hero panel */}
-      <div className='relative flex min-h-[220px] flex-col overflow-hidden bg-taxmate-red lg:min-h-screen lg:w-[45%]'>
+      <div className='relative flex min-h-55 flex-col overflow-hidden bg-taxmate-red lg:min-h-screen lg:w-[45%]'>
         <img
           src={heroBg}
           alt=''
@@ -286,7 +286,7 @@ export default function BusinessOwnerRegisterPage() {
               <h1 className='text-2xl font-bold leading-snug text-white sm:text-3xl lg:text-[2.5rem] lg:leading-tight'>
                 Quản lý bán hàng và hỗ trợ nghĩa vụ thuế cho hộ kinh doanh nhỏ
               </h1>
-              <div className='mt-8 h-px w-[100px] bg-white' />
+              <div className='mt-8 h-px w-25 bg-white' />
             </div>
           </div>
         </div>

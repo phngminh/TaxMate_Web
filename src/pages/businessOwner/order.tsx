@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Eye, Search, FileDown, Box, X, Scan, RotateCcw, Loader2 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useBusiness } from '../../contexts/BusinessContext'
@@ -20,6 +20,8 @@ export default function OrderPage() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [paymentFilter, setPaymentFilter] = useState('all')
   const [timeFilter, setTimeFilter] = useState('Tháng này')
+  const [customDate, setCustomDate] = useState('')
+  const inputRef = useRef<HTMLInputElement>(null)
 
   // Pagination (simple load more or fixed page size for POS list)
   const [page, setPage] = useState(1)
@@ -116,7 +118,16 @@ export default function OrderPage() {
         const isThisYear = orderDate.getFullYear() === now.getFullYear()
         if (!isThisYear) return false
       } else if (timeFilter === 'Tùy chọn') {
-        
+        if (customDate) {
+          const selectedDate = new Date(customDate)
+
+          const isSameDate =
+            orderDate.getDate() === selectedDate.getDate() &&
+            orderDate.getMonth() === selectedDate.getMonth() &&
+            orderDate.getFullYear() === selectedDate.getFullYear()
+
+          if (!isSameDate) return false
+        }
       }
 
       return true
@@ -287,31 +298,61 @@ export default function OrderPage() {
           {/* Thời gian */}
           <div className='flex flex-col gap-3'>
             <span className='text-[13px] font-bold text-gray-500'>Thời gian</span>
+
             <div className='flex flex-col gap-3.5'>
               {['Hôm nay', '7 ngày qua', '30 ngày qua', 'Tháng này', 'Tháng trước', 'Năm nay', 'Tùy chọn'].map(opt => (
-                <label key={opt} className='flex items-center gap-3 cursor-pointer group text-[13.5px] text-gray-700 select-none'>
+                <label
+                  key={opt}
+                  className='flex items-center gap-3 cursor-pointer group text-[13.5px] text-gray-700 select-none'
+                >
                   <input
                     type='radio'
                     name='timeFilter'
                     checked={timeFilter === opt}
-                    onChange={() => setTimeFilter(opt)}
+                    onChange={() => {
+                      if (opt === 'Tùy chọn') {
+                        inputRef.current?.showPicker?.()
+                      } else {
+                        setTimeFilter(opt)
+                      }
+                    }}
                     className='sr-only'
                   />
-                  <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                    timeFilter === opt
-                      ? 'border-[#D32F2F] bg-white'
-                      : 'border-gray-300 group-hover:border-gray-400 bg-white'
-                  }`}>
+
+                  <div
+                    className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                      timeFilter === opt
+                        ? 'border-[#D32F2F] bg-white'
+                        : 'border-gray-300 group-hover:border-gray-400 bg-white'
+                    }`}
+                  >
                     {timeFilter === opt && (
                       <div className='size-2.5 rounded-full bg-[#D32F2F]' />
                     )}
                   </div>
-                  <span className={`${timeFilter === opt ? 'font-bold text-[#D32F2F]' : 'text-gray-600 font-medium'}`}>
+
+                  <span
+                    className={`${
+                      timeFilter === opt
+                        ? 'font-bold text-[#D32F2F]'
+                        : 'text-gray-600 font-medium'
+                    }`}
+                  >
                     {opt}
                   </span>
                 </label>
               ))}
             </div>
+
+            <input
+              ref={inputRef}
+              type='date'
+              className='absolute opacity-0 w-0 h-0 mt-40'
+              onChange={(e) => {
+                setCustomDate(e.target.value)
+                setTimeFilter('Tùy chọn')
+              }}
+            />
           </div>
 
           {/* Reset Filters */}

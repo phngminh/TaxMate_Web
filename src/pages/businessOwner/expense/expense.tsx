@@ -24,7 +24,6 @@ interface ExpenseRecord {
 }
 
 
-
 function CategoryBadge({ label, color }: { label: string; color: string }) {
   const styles =
     color === 'orange'
@@ -464,7 +463,7 @@ export default function Expense() {
   return (
     <div className='flex flex-col w-full bg-[#f8f9fa] h-[calc(100vh-51px)] overflow-hidden'>
       <div className='flex grow w-full overflow-hidden'>
-        <div className='w-64 bg-white border-r border-[#ffe5e5] p-6 flex flex-col gap-6 shrink-0 overflow-y-auto'>
+        <div className='w-64 bg-white border-r border-[#ffe5e5] p-6 flex flex-col gap-6 shrink-0 overflow-y-auto mt-22'>
           <FilterGroup
             title='Giá trị đơn'
             name='priceFilter'
@@ -518,7 +517,7 @@ export default function Expense() {
             <button
               onClick={handleExportS1a}
               disabled={isExporting}
-              className='flex items-center gap-2 border-2 border-indigo-100 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-200 font-bold py-2 px-4 rounded-[8px] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm'
+              className='flex items-center gap-2 border-2 border-indigo-100 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-200 font-bold py-2 px-4 rounded-[8px] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-sm'
             >
               {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
               Xuất Sổ S1a
