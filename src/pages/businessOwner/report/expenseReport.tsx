@@ -261,7 +261,7 @@ export default function ExpenseReport({ businessId }: Props) {
               </div>
 
               {cashFlowData!.cashFlowTrend && cashFlowData!.cashFlowTrend.length > 0 ? (
-                <div style={{ height: 260, width: '100%' }}>
+                <div style={{ height: 300, width: '100%' }}>
                   <ResponsiveContainer width='100%' height='100%'>
                     <BarChart data={cashFlowData!.cashFlowTrend} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray='4 2' stroke='#F3F4F6' vertical={false} />

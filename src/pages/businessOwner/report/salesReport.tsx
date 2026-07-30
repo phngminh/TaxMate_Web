@@ -257,7 +257,7 @@ export default function SalesReport({ businessId }: Props) {
               </div>
 
               {dashboardData.salesTrend && dashboardData.salesTrend.length > 0 ? (
-                <div style={{ height: 260, width: '100%' }}>
+                <div style={{ height: 300, width: '100%' }}>
                   <ResponsiveContainer width='100%' height='100%'>
                     <LineChart data={dashboardData.salesTrend} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray='4 2' stroke='#F3F4F6' vertical={false} />
@@ -408,7 +408,7 @@ export default function SalesReport({ businessId }: Props) {
                   })}
                 </div>
               ) : (
-                <div className='flex items-center justify-center text-gray-400 text-[13px] min-h-30'>
+                <div className='flex items-center justify-center text-gray-400 text-[13px] min-h-30 mt-18'>
                   Không có dữ liệu sản phẩm bán chạy
                 </div>
               )}
