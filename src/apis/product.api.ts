@@ -8,7 +8,8 @@ export const getAllProducts = async (
   pageSize = 5,
   search?: string,
   status?: string,
-  productCategoryId?: string
+  productCategoryId?: string,
+  hasRecipe?: boolean
 ) => {
   const response = await http.get<ApiResponse<PagedResult<Product>>>(`/Product/business/${businessId}`,
     {
@@ -17,11 +18,21 @@ export const getAllProducts = async (
         pageSize,
         search,
         status,
-        productCategoryId
+        productCategoryId,
+        hasRecipe
       }
     }
   )
   return response.data
+}
+
+// Wrapper chuyên dụng cho tab Công thức — chỉ lấy sản phẩm đã có công thức nguyên liệu
+export const getProductsWithRecipe = async (
+  businessId: string,
+  pageNumber = 1,
+  pageSize = 100
+) => {
+  return getAllProducts(businessId, pageNumber, pageSize, undefined, undefined, undefined, true)
 }
 
 export const getProductById = async (id: string) => {
@@ -46,5 +57,13 @@ export const toggleProductStatus = async (id: string) => {
 
 export const deleteProduct = async (id: string) => {
   const response = await http.delete<ApiResponse<object>>(`/Product/${id}`)
+  return response.data
+}
+
+export const updateProductCostPrice = async (
+  id: string,
+  body: { incomingQuantity: number; incomingCostPrice: number }
+) => {
+  const response = await http.patch<ApiResponse<Product>>(`/Product/${id}/cost-price`, body)
   return response.data
 }

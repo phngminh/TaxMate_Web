@@ -4,6 +4,7 @@ export interface Ingredient {
   name: string
   unit?: string
   estimatedPrice?: number
+  stockQuantity?: number
   isDeleted: boolean
   createdAt: string
   updatedAt: string

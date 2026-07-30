@@ -1,6 +1,8 @@
 import { Loader2, ShoppingBag, ImagePlus } from 'lucide-react'
 import type { ProductForm } from '../../../types/product.type'
-import type { Dispatch, SetStateAction } from 'react'
+import { useState, type Dispatch, type SetStateAction } from 'react'
+import { createProductCategory } from '../../../apis/product.category.api'
+import { toast } from 'react-toastify'
 
 interface ProductModalProps {
   open: boolean
@@ -17,6 +19,12 @@ interface ProductModalProps {
   isProduct: boolean
 
   isSubmitting: boolean
+
+  handleQuickAddCategory: () => void
+  showQuickCategoryForm: boolean
+  setShowQuickCategoryForm: Dispatch<SetStateAction<boolean>>
+  quickCategoryName: string
+  setQuickCategoryName: Dispatch<SetStateAction<string>>
 }
 
 export default function ProductModal({
@@ -29,7 +37,13 @@ export default function ProductModal({
   handleImage,
   isEditing,
   isProduct,
-  isSubmitting
+  isSubmitting,
+
+  handleQuickAddCategory,
+  showQuickCategoryForm,
+  setShowQuickCategoryForm,
+  quickCategoryName,
+  setQuickCategoryName
 }: ProductModalProps) {
   if (!open) return null
   const itemLabel = isProduct ? 'sản phẩm' : 'dịch vụ'
@@ -105,24 +119,55 @@ export default function ProductModal({
           </div>
 
           <div className='grid grid-cols-2 gap-4'>
-            <div className='flex flex-col gap-1.5'>
-              <label className='text-[13px] font-bold text-gray-600'>
-                Danh mục
-              </label>
+            <div className='flex flex-col gap-1.5 relative'>
+              <div className='flex items-center justify-between'>
+                <label className='text-[13px] font-bold text-gray-600'>
+                  Danh mục
+                </label>
+
+                <button
+                  type='button'
+                  onClick={() => setShowQuickCategoryForm(!showQuickCategoryForm)}
+                  className='text-[11px] font-bold text-[#D32F2F] hover:underline'
+                >
+                  + Tạo nhanh
+                </button>
+              </div>
+
+              {showQuickCategoryForm && (
+                <div className='absolute z-20 left-0 right-0 top-7 bg-white border border-gray-200 rounded-lg p-3 shadow-md flex flex-col gap-2'>
+                  <input
+                    type='text'
+                    placeholder='Tên danh mục...'
+                    value={quickCategoryName}
+                    onChange={e => setQuickCategoryName(e.target.value)}
+                    className='border border-gray-200 rounded-md p-2 text-xs outline-hidden focus:border-[#D32F2F]'
+                  />
+
+                  <button
+                    type='button'
+                    onClick={handleQuickAddCategory}
+                    className='bg-[#D32F2F] text-white py-2 rounded text-xs font-bold hover:bg-taxmate-red'
+                  >
+                    Tạo nhanh
+                  </button>
+                </div>
+              )}
+
               <select
                 value={productForm.productCategoryId}
-                onChange={(e) => setProductForm(prev => ({ ...prev, productCategoryId: e.target.value }))}
+                onChange={(e) =>
+                  setProductForm(prev => ({
+                    ...prev,
+                    productCategoryId: e.target.value
+                  }))
+                }
                 className='w-full border border-gray-200 bg-white rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
               >
-                <option value=''>
-                  Chọn danh mục
-                </option>
+                <option value=''>Chọn danh mục</option>
 
                 {categories.map(category => (
-                  <option
-                    key={category.id}
-                    value={category.id}
-                  >
+                  <option key={category.id} value={category.id}>
                     {category.name}
                   </option>
                 ))}
@@ -133,6 +178,7 @@ export default function ProductModal({
               <label className='text-[13px] font-bold text-gray-600'>
                 Đơn vị tính
               </label>
+
               <input
                 type='text'
                 placeholder={
@@ -141,7 +187,12 @@ export default function ProductModal({
                     : 'Ví dụ: Giờ, Lần...'
                 }
                 value={productForm.unit}
-                onChange={(e) => setProductForm(prev => ({ ...prev, unit: e.target.value }))}
+                onChange={(e) =>
+                  setProductForm(prev => ({
+                    ...prev,
+                    unit: e.target.value
+                  }))
+                }
                 className='w-full border border-gray-200 bg-white rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
               />
             </div>

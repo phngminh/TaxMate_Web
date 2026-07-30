@@ -20,6 +20,7 @@ import SubscriptionPage from '../pages/landingPage/subscription'
 import { BusinessProvider } from './BusinessContext'
 import BusinessList from '../pages/admin/user/business'
 import Expense from '../pages/businessOwner/expense/expense'
+import Purchase from '../pages/businessOwner/purchase'
 import BankConfig from '../pages/businessOwner/bankConfig'
 import EInvoiceConfig from '../pages/businessOwner/einvoiceConfig'
 import OwnerSubscription from '../pages/businessOwner/ownerSubscription'
@@ -67,11 +68,7 @@ export default function useRouteElements() {
       element: <ProtectedRoute allowedRoles={['Owner']} />,
       children: [
         {
-          element: (
-            <BusinessProvider>
-              <OwnerLayout />
-            </BusinessProvider>
-          ),
+          element: <OwnerLayout />,
           children: [
             { index: true, element: <Navigate to={path.BUSINESS_OWNER_HOME} replace /> },
             { path: path.BUSINESS_OWNER_HOME, element: <Home /> },
@@ -79,8 +76,8 @@ export default function useRouteElements() {
             { path: path.BUSINESS_OWNER_INGREDIENTS, element: <Ingredient /> },
             { path: path.BUSINESS_OWNER_ORDERS, element: <Order /> },
             { path: path.BUSINESS_OWNER_EXPENSES, element: <Expense /> },
-            { path: path.BUSINESS_OWNER_PURCHASE_EXPENSES, element: <Expense /> },
-            { path: path.BUSINESS_OWNER_SUPPLIER, element: <Expense /> },
+            { path: path.BUSINESS_OWNER_PURCHASE_EXPENSES, element: <Purchase /> },
+            { path: path.BUSINESS_OWNER_SUPPLIER, element: <Purchase /> },
             { path: path.BUSINESS_OWNER_REPORTS, element: <Report /> },
             { path: path.BUSINESS_OWNER_BANK_CONFIG, element: <BankConfig /> },
             { path: path.BUSINESS_OWNER_EINVOICE_CONFIG, element: <EInvoiceConfig /> },
@@ -89,10 +86,7 @@ export default function useRouteElements() {
         },
         { 
           path: path.BUSINESS_OWNER_POS, 
-          element: 
-            <BusinessProvider>
-              <POS />
-            </BusinessProvider>
+          element: <POS />
         },
       ]
     },

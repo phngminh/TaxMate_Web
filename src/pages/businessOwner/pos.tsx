@@ -6,7 +6,7 @@ import http from '../../utils/http'
 import { useBusiness } from '../../contexts/BusinessContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { getAllProducts, createProduct } from '../../apis/product.api'
-import { getProductCategories } from '../../apis/productCategory.api'
+import { getProductCategories } from '../../apis/product.category.api'
 import {
   createOrder,
   getOrderById,
@@ -20,7 +20,7 @@ import {
 import { getPaymentAccounts, createPaymentAccount, createSePayMockPayment } from '../../apis/paymentAccount.api'
 import { getEInvoiceConfig } from '../../apis/einvoice.api'
 import type { Product } from '../../types/product.type'
-import type { ProductCategory } from '../../types/productCategory.type'
+import type { ProductCategory } from '../../types/product.category.type'
 import type { PaymentAccount } from '../../types/paymentAccount.type'
 import { useNavigate } from 'react-router-dom'
 import path from '../../constants/path'
@@ -1285,9 +1285,11 @@ export default function POS() {
               )}
               {successInvoiceStatus && (
                 <div className='flex justify-between'>
-                  <span>Trạng thái HĐĐT:</span>
+                  <span>{successOfficialPdfUrl || successTaxAuthorityCode ? 'Trạng thái HĐĐT:' : 'Trạng thái hóa đơn:'}</span>
                   <span className={`font-bold ${successInvoiceStatus === 'Issued' ? 'text-emerald-600' : 'text-slate-500'}`}>
-                    {successInvoiceStatus === 'Issued' ? 'Đã phát hành hóa đơn đỏ' : 'Chờ xử lý'}
+                    {successInvoiceStatus === 'Issued'
+                      ? (successOfficialPdfUrl || successTaxAuthorityCode ? 'Đã phát hành hóa đơn đỏ' : 'Đã xuất hóa đơn bán lẻ')
+                      : 'Chờ xử lý'}
                   </span>
                 </div>
               )}
