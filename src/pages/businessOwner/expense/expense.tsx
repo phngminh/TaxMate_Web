@@ -1,9 +1,8 @@
 import { useState, useMemo, useEffect } from 'react'
-import { ArrowUpCircle, ArrowDownCircle, MoreVertical, RotateCcw, TrendingUp, TrendingDown, Plus, ChevronRight, Download, Loader2 } from 'lucide-react'
+import { ArrowUpCircle, ArrowDownCircle, MoreVertical, RotateCcw, Plus, ChevronRight } from 'lucide-react'
 import { useBusiness } from '../../../contexts/BusinessContext'
 import { getAllExpenses, createExpense, getExpenseCategories, updateExpense, deleteExpense, createExpenseCategory } from '../../../apis/expense.api'
 import { getAllIncomes, createIncome, getIncomeCategories, updateIncome, deleteIncome, createIncomeCategory } from '../../../apis/income.api'
-import { exportS1a } from '../../../apis/taxBook.api'
 import { toast } from 'react-toastify'
 import type { ExpenseCategory } from '../../../types/expense.type'
 import type { IncomeCategory } from '../../../types/income.type'
@@ -91,7 +90,12 @@ export default function Expense() {
   const [priceFilter, setPriceFilter] = useState('all')
   const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('Tất cả')
   const [incomeCategoryFilter, setIncomeCategoryFilter] = useState('Tất cả')
-  const [dateFilter, setDateFilter] = useState('')
+
+  const currentYear = new Date().getFullYear()
+  const currentMonth = new Date().getMonth()
+  const currentQuarter = Math.floor(currentMonth / 3) + 1
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear)
+  const [selectedQuarter, setSelectedQuarter] = useState<number>(currentQuarter)
 
   const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false)
   const [isAddIncomeOpen, setIsAddIncomeOpen] = useState(false)
@@ -105,40 +109,6 @@ export default function Expense() {
   const [apiRecords, setApiRecords] = useState<ExpenseRecord[]>([])
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([])
   const [incomeCategories, setIncomeCategories] = useState<IncomeCategory[]>([])
-
-  const [isExporting, setIsExporting] = useState(false)
-
-  const handleExportS1a = async () => {
-    if (!businessId) {
-      toast.error('Không tìm thấy ID cơ sở kinh doanh.')
-      return
-    }
-    setIsExporting(true)
-    try {
-      let year = new Date().getFullYear()
-      let month = new Date().getMonth() + 1
-      if (dateFilter) {
-        const d = new Date(dateFilter)
-        year = d.getFullYear()
-        month = d.getMonth() + 1
-      }
-      
-      const blob = await exportS1a(businessId, year, month)
-      const url = window.URL.createObjectURL(new Blob([blob]))
-      const link = document.createElement('a')
-      link.href = url
-      link.setAttribute('download', `S1a-HKD_${year}_${month}.docx`)
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      toast.success('Xuất file S1a thành công!')
-    } catch (error) {
-      console.error(error)
-      toast.error('Có lỗi xảy ra khi xuất file S1a')
-    } finally {
-      setIsExporting(false)
-    }
-  }
 
   const handleAddExpenseCategory = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -251,10 +221,11 @@ export default function Expense() {
     setPriceFilter('all')
     setExpenseCategoryFilter('Tất cả')
     setIncomeCategoryFilter('Tất cả')
-    setDateFilter('')
+    setSelectedYear(currentYear)
+    setSelectedQuarter(currentQuarter)
   }
 
-  const isFiltered = priceFilter !== 'all' || expenseCategoryFilter !== 'Tất cả' || incomeCategoryFilter !== 'Tất cả' || dateFilter !== ''
+  const isFiltered = priceFilter !== 'all' || expenseCategoryFilter !== 'Tất cả' || incomeCategoryFilter !== 'Tất cả' || selectedYear !== currentYear || selectedQuarter !== currentQuarter
 
   const expenses = useMemo(() => {
     return apiRecords.filter((r) => {
@@ -264,12 +235,12 @@ export default function Expense() {
       if (expenseCategoryFilter !== 'Tất cả') {
         if (r.category !== expenseCategoryFilter) return false
       }
-      if (dateFilter) {
-        if (r.date !== new Date(dateFilter).toLocaleDateString('vi-VN')) return false
-      }
+      const d = new Date(r.originalDateStr)
+      if (d.getFullYear() !== selectedYear) return false
+      if (selectedQuarter > 0 && Math.floor(d.getMonth() / 3) + 1 !== selectedQuarter) return false
       return true
     })
-  }, [apiRecords, priceFilter, expenseCategoryFilter, dateFilter])
+  }, [apiRecords, priceFilter, expenseCategoryFilter, selectedYear, selectedQuarter])
 
   const incomes = useMemo(() => {
     return apiRecords.filter((r) => {
@@ -279,12 +250,12 @@ export default function Expense() {
       if (incomeCategoryFilter !== 'Tất cả') {
         if (r.category !== incomeCategoryFilter) return false
       }
-      if (dateFilter) {
-        if (r.date !== new Date(dateFilter).toLocaleDateString('vi-VN')) return false
-      }
+      const d = new Date(r.originalDateStr)
+      if (d.getFullYear() !== selectedYear) return false
+      if (selectedQuarter > 0 && Math.floor(d.getMonth() / 3) + 1 !== selectedQuarter) return false
       return true
     })
-  }, [apiRecords, priceFilter, incomeCategoryFilter, dateFilter])
+  }, [apiRecords, priceFilter, incomeCategoryFilter, selectedYear, selectedQuarter])
 
   const ITEMS_PER_PAGE = 5
   const [expensePage, setExpensePage] = useState(1)
@@ -297,51 +268,13 @@ export default function Expense() {
   const incomeTotalPages = Math.ceil(incomes.length / ITEMS_PER_PAGE)
   const paginatedIncomes = showAllIncomes ? incomes : incomes.slice((incomePage - 1) * ITEMS_PER_PAGE, incomePage * ITEMS_PER_PAGE)
 
-  useEffect(() => { setExpensePage(1) }, [priceFilter, expenseCategoryFilter, dateFilter])
-  useEffect(() => { setIncomePage(1) }, [priceFilter, incomeCategoryFilter, dateFilter])
+  useEffect(() => { setExpensePage(1) }, [priceFilter, expenseCategoryFilter, selectedYear, selectedQuarter])
+  useEffect(() => { setIncomePage(1) }, [priceFilter, incomeCategoryFilter, selectedYear, selectedQuarter])
 
   const totalExpense = expenses.reduce((s, r) => s + Math.abs(r.amount), 0)
   const totalIncome = incomes.reduce((s, r) => s + r.amount, 0)
 
-  const { expenseGrowth, incomeGrowth } = useMemo(() => {
-    const now = new Date()
-    const currentMonth = now.getMonth()
-    const currentYear = now.getFullYear()
-    
-    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1
-    const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear
 
-    let currExp = 0, prevExp = 0, currInc = 0, prevInc = 0
-
-    apiRecords.forEach(r => {
-      const d = new Date(r.originalDateStr)
-      const m = d.getMonth()
-      const y = d.getFullYear()
-      if (y === currentYear && m === currentMonth) {
-        if (r.type === 'expense') currExp += Math.abs(r.amount)
-        else currInc += r.amount
-      } else if (y === prevYear && m === prevMonth) {
-        if (r.type === 'expense') prevExp += Math.abs(r.amount)
-        else prevInc += r.amount
-      }
-    })
-
-    const calcGrowth = (curr: number, prev: number) => {
-      if (prev === 0) return { percent: curr > 0 ? 100 : 0, diff: curr, isUp: curr >= 0 }
-      const diff = curr - prev
-      const percent = (Math.abs(diff) / prev) * 100
-      return {
-        percent: Number(percent.toFixed(1)),
-        diff: Math.abs(diff),
-        isUp: diff >= 0
-      }
-    }
-
-    return {
-      expenseGrowth: calcGrowth(currExp, prevExp),
-      incomeGrowth: calcGrowth(currInc, prevInc)
-    }
-  }, [apiRecords])
 
   const fmt = (n: number) => n.toLocaleString('vi-VN')
 
@@ -493,13 +426,32 @@ export default function Expense() {
           />
 
           <div className='flex flex-col gap-3'>
-            <span className='text-[13px] font-bold text-gray-500 uppercase tracking-wide'>Thời gian</span>
-            <input
-              type='date'
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
-              className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800'
-            />
+            <span className='text-[13px] font-bold text-gray-500 uppercase tracking-wide'>Năm</span>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 bg-white'
+            >
+              {Array.from({ length: 5 }).map((_, i) => {
+                const year = currentYear - i
+                return <option key={year} value={year}>Năm {year}</option>
+              })}
+            </select>
+          </div>
+          
+          <div className='flex flex-col gap-3'>
+            <span className='text-[13px] font-bold text-gray-500 uppercase tracking-wide'>Quý</span>
+            <select
+              value={selectedQuarter}
+              onChange={(e) => setSelectedQuarter(Number(e.target.value))}
+              className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 bg-white'
+            >
+              <option value={0}>Cả năm</option>
+              <option value={1}>Quý 1</option>
+              <option value={2}>Quý 2</option>
+              <option value={3}>Quý 3</option>
+              <option value={4}>Quý 4</option>
+            </select>
           </div>
 
           {isFiltered && (
@@ -513,39 +465,18 @@ export default function Expense() {
         </div>
 
         <div className='grow p-6 overflow-y-auto flex flex-col gap-5'>
-          <div className='flex items-center justify-end w-full'>
-            <button
-              onClick={handleExportS1a}
-              disabled={isExporting}
-              className='flex items-center gap-2 border-2 border-indigo-100 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:border-indigo-200 font-bold py-2 px-4 rounded-[8px] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-sm text-sm'
-            >
-              {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
-              Xuất Sổ S1a
-            </button>
-          </div>
-
           <div className='grid grid-cols-2 gap-5'>
             <div className='bg-white rounded-[14px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.03)] px-7 py-5'>
               <div className='flex items-start justify-between'>
                 <div>
                   <div className='flex items-center gap-2 mb-1'>
                     <ArrowUpCircle size={20} className='text-orange-500' strokeWidth={2.2} />
-                    <span className='text-[13px] font-semibold text-gray-500'>Tổng Chi</span>
+                    <span className='text-[13px] font-semibold text-gray-500'>
+                      Tổng Chi - {selectedQuarter === 0 ? `Cả năm ${selectedYear}` : `Quý ${selectedQuarter}/${selectedYear}`}
+                    </span>
                   </div>
                   <p className='text-[28px] font-extrabold text-orange-500 tracking-tight leading-none mt-2'>
                     {fmt(totalExpense)}
-                  </p>
-                  <p className='text-[12.5px] text-gray-400 mt-2 flex items-center gap-1.5'>
-                    {expenseGrowth.isUp ? (
-                      <TrendingUp size={13} className='text-orange-400' />
-                    ) : (
-                      <TrendingDown size={13} className='text-emerald-400' />
-                    )}
-                    So với tháng trước{' '}
-                    <span className={`font-bold ${expenseGrowth.isUp ? 'text-orange-500' : 'text-emerald-500'}`}>
-                      {expenseGrowth.isUp ? '↑' : '↓'} {expenseGrowth.percent}%
-                    </span>{' '}
-                    <span className='text-gray-400'>({fmt(expenseGrowth.diff)})</span>
                   </p>
                 </div>
               </div>
@@ -556,22 +487,12 @@ export default function Expense() {
                 <div>
                   <div className='flex items-center gap-2 mb-1'>
                     <ArrowDownCircle size={20} className='text-emerald-500' strokeWidth={2.2} />
-                    <span className='text-[13px] font-semibold text-gray-500'>Tổng Thu</span>
+                    <span className='text-[13px] font-semibold text-gray-500'>
+                      Tổng Thu - {selectedQuarter === 0 ? `Cả năm ${selectedYear}` : `Quý ${selectedQuarter}/${selectedYear}`}
+                    </span>
                   </div>
                   <p className='text-[28px] font-extrabold text-emerald-500 tracking-tight leading-none mt-2'>
                     {fmt(totalIncome)}
-                  </p>
-                  <p className='text-[12.5px] text-gray-400 mt-2 flex items-center gap-1.5'>
-                    {incomeGrowth.isUp ? (
-                      <TrendingUp size={13} className='text-emerald-400' />
-                    ) : (
-                      <TrendingDown size={13} className='text-orange-400' />
-                    )}
-                    So với tháng trước{' '}
-                    <span className={`font-bold ${incomeGrowth.isUp ? 'text-emerald-500' : 'text-orange-500'}`}>
-                      {incomeGrowth.isUp ? '↑' : '↓'} {incomeGrowth.percent}%
-                    </span>{' '}
-                    <span className='text-gray-400'>({fmt(incomeGrowth.diff)})</span>
                   </p>
                 </div>
               </div>
