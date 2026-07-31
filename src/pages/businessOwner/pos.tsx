@@ -130,6 +130,8 @@ export default function POS() {
 
       if (prodRes.success) setProducts(prodRes.data.items || [])
       if (catRes.success) setCategories(catRes.data || [])
+        console.log(prodRes)
+        console.log(catRes)
       if (accRes.success) {
         const accs = accRes.data || []
         setPaymentAccounts(accs)
@@ -696,9 +698,9 @@ export default function POS() {
           {categories.map(cat => (
             <button
               key={cat.id}
-              onClick={() => setSelectedCategoryId(cat.name)}
+              onClick={() => setSelectedCategoryId(cat.id)}
               className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors whitespace-nowrap ${
-                selectedCategoryId === cat.name
+                selectedCategoryId === cat.id
                   ? 'bg-[#b90a0a] text-white font-bold'
                   : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
               }`}
@@ -891,7 +893,7 @@ export default function POS() {
                   />
                   Tiền mặt
                 </label>
-                <label className='flex items-center gap-1.5 cursor-pointer font-bold text-slate-600'>
+                {/* <label className='flex items-center gap-1.5 cursor-pointer font-bold text-slate-600'>
                   <input
                     type='radio'
                     name='payment'
@@ -900,7 +902,7 @@ export default function POS() {
                     className='accent-[#004795] cursor-pointer'
                   />
                   Thẻ
-                </label>
+                </label> */}
                 <label className='flex items-center gap-1.5 cursor-pointer font-bold text-slate-600'>
                   <input
                     type='radio'
