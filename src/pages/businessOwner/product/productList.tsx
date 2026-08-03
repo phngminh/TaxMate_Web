@@ -708,7 +708,21 @@ export default function Product() {
                         {product.unit ?? 'N/A'}
                       </td>
                       <td className='py-4 px-6 text-center whitespace-nowrap'>
-                        {product.stockQuantity === null || product.stockQuantity === undefined ? (
+                        {product.hasRecipe ? (
+                          product.availableQuantity === null || product.availableQuantity === undefined ? (
+                            <span className='inline-block bg-amber-50 text-amber-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-amber-200/60'>
+                              Chưa tính được tồn
+                            </span>
+                          ) : product.availableQuantity <= 0 ? (
+                            <span className='inline-block bg-red-50 text-red-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-red-200/60'>
+                              Có thể bán: 0
+                            </span>
+                          ) : (
+                            <span className='inline-block bg-purple-50 text-purple-700 text-[12.5px] px-3 py-0.5 rounded-full font-bold border border-purple-200/60'>
+                              Có thể bán: {product.availableQuantity.toLocaleString('vi-VN')} {product.unit ?? ''}
+                            </span>
+                          )
+                        ) : product.stockQuantity === null || product.stockQuantity === undefined ? (
                           <span className='text-gray-400 font-medium text-[13px]'>N/A</span>
                         ) : product.stockQuantity === 0 ? (
                           <span className='inline-block bg-red-50 text-red-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-red-200/60'>

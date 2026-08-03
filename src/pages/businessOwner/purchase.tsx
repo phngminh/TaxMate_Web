@@ -35,7 +35,6 @@ interface PurchaseLineItem {
   name: string
   quantity: number
   costPrice: number
-  discountValue: number
   taxPercent: number
 }
 
@@ -279,7 +278,6 @@ export default function PurchasePage() {
         // Save raw materials to IngredientPurchase
         for (const item of purchaseItems) {
           let lineTotal = item.quantity * item.costPrice
-          lineTotal = Math.max(0, lineTotal - item.discountValue)
           lineTotal = lineTotal * (1 + item.taxPercent / 100)
 
           await createIngredientPurchase(businessId, {
@@ -297,11 +295,10 @@ export default function PurchasePage() {
         let totalProductCost = 0
         const detailsLines = purchaseItems.map(p => {
           let lineTotal = p.quantity * p.costPrice
-          lineTotal = Math.max(0, lineTotal - p.discountValue)
           lineTotal = lineTotal * (1 + p.taxPercent / 100)
           totalProductCost += lineTotal
 
-          return `- ${p.name}: ${p.quantity} x ${formatPrice(p.costPrice)} đ (giảm ${formatPrice(p.discountValue)} đ, thuế ${p.taxPercent}%)`
+          return `- ${p.name}: ${p.quantity} x ${formatPrice(p.costPrice)} đ (thuế ${p.taxPercent}%)`
         })
 
         const noteContent = `Nhà cung cấp: ${supplierName}\nSố hóa đơn: ${purchaseInvoiceNumber}\nGhi chú: ${purchaseNote}\n\nSản phẩm nhập kho:\n${detailsLines.join('\n')}`
@@ -325,7 +322,6 @@ export default function PurchasePage() {
           let lineUnitCost = item.costPrice
           if (item.quantity > 0) {
             let lineTotal = item.quantity * item.costPrice
-            lineTotal = Math.max(0, lineTotal - item.discountValue)
             lineTotal = lineTotal * (1 + item.taxPercent / 100)
             lineUnitCost = lineTotal / item.quantity
           }
@@ -402,7 +398,6 @@ export default function PurchasePage() {
           name: itemObj.name,
           quantity: 1,
           costPrice: itemObj.estimatedPrice || 0,
-          discountValue: 0,
           taxPercent: 0
         }
       ])
@@ -417,7 +412,6 @@ export default function PurchasePage() {
           name: itemObj.name,
           quantity: 1,
           costPrice: itemObj.currentPrice || 0,
-          discountValue: 0,
           taxPercent: 0
         }
       ])
@@ -939,7 +933,6 @@ export default function PurchasePage() {
                           <th className='p-3'>Tên mặt hàng</th>
                           <th className='p-3 text-center w-20'>Số lượng</th>
                           <th className='p-3 text-right w-28'>Giá mua (đ)</th>
-                          <th className='p-3 text-right w-24'>Giảm giá (đ)</th>
                           <th className='p-3 text-center w-20'>VAT (%)</th>
                           <th className='p-3 text-right w-28'>Thành tiền</th>
                           <th className='p-3 text-center w-12'></th>
@@ -947,8 +940,7 @@ export default function PurchasePage() {
                       </thead>
                       <tbody className='divide-y divide-slate-100 bg-white'>
                         {purchaseItems.map((item, idx) => {
-                          let itemSubtotal = item.quantity * item.costPrice
-                          itemSubtotal = Math.max(0, itemSubtotal - item.discountValue)
+                          const itemSubtotal = item.quantity * item.costPrice
                           const itemTotal = itemSubtotal * (1 + item.taxPercent / 100)
 
                           return (
@@ -970,15 +962,6 @@ export default function PurchasePage() {
                                   value={item.costPrice}
                                   onChange={e => updateLineItem(idx, { costPrice: parseFloat(e.target.value) || 0 })}
                                   className='w-24 border border-slate-200 rounded px-1.5 py-1 text-right font-bold text-slate-800 font-mono'
-                                />
-                              </td>
-                              <td className='p-3 text-right'>
-                                <input
-                                  type='number'
-                                  min='0'
-                                  value={item.discountValue}
-                                  onChange={e => updateLineItem(idx, { discountValue: parseFloat(e.target.value) || 0 })}
-                                  className='w-20 border border-slate-200 rounded px-1.5 py-1 text-right font-bold text-slate-800 font-mono'
                                 />
                               </td>
                               <td className='p-3 text-center'>
@@ -1048,8 +1031,7 @@ export default function PurchasePage() {
                   <span className='font-black text-[#D32F2F] text-lg font-mono'>
                     {formatPrice(
                       purchaseItems.reduce((acc, curr) => {
-                        let sub = curr.quantity * curr.costPrice
-                        sub = Math.max(0, sub - curr.discountValue)
+                        const sub = curr.quantity * curr.costPrice
                         return acc + sub * (1 + curr.taxPercent / 100)
                       }, 0)
                     )} đ
