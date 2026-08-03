@@ -396,7 +396,7 @@ export default function Expense() {
   return (
     <div className='flex flex-col w-full bg-[#f8f9fa] h-[calc(100vh-51px)] overflow-hidden'>
       <div className='flex grow w-full overflow-hidden'>
-        <div className='w-64 bg-white border-r border-[#ffe5e5] p-6 flex flex-col gap-6 shrink-0 overflow-y-auto mt-22'>
+        <div className='w-64 bg-white border-r border-[#ffe5e5] p-6 flex flex-col gap-6 shrink-0 overflow-y-auto mt-8'>
           <FilterGroup
             title='Giá trị đơn'
             name='priceFilter'

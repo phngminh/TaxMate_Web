@@ -629,7 +629,7 @@ export default function Product() {
               <thead>
                 <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
                   <th className='w-32 px-6 py-4'>Hình ảnh</th>
-                  <th className='w-48 px-6 py-4'>Tên sản phẩm</th>
+                  <th className='w-48 px-6 py-4 whitespace-nowrap'>Tên sản phẩm</th>
                   <th className='w-48 px-6 py-4'>Danh mục</th>
                   <th className='w-28 px-6 py-4 text-center whitespace-nowrap'>Đơn vị tính</th>
                   <th className='w-32 px-6 py-4 text-center whitespace-nowrap'>Tồn kho</th>
@@ -811,7 +811,7 @@ export default function Product() {
           </div>
 
           {products.length > 0 && totalPages > 1 && (
-            <div className='mt-4'>
+            <div className='mt-4 mb-12'>
               <Pagination className='mt-6'>
                 <PaginationContent className='gap-2'>
                   <PaginationItem>

@@ -718,8 +718,8 @@ export default function IngredientPage() {
                     <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
                       <th className='py-4 px-6 tracking-wide'>Mã sản phẩm</th>
                       <th className='py-4 px-6 tracking-wide'>Tên sản phẩm</th>
-                      <th className='py-4 px-6 tracking-wide text-center'>Số nguyên liệu</th>
                       <th className='py-4 px-6 tracking-wide text-right'>Giá bán</th>
+                      {/* <th className='py-4 px-6 tracking-wide text-right'>Trạng thái</th> */}
                       <th className='py-4 px-6 tracking-wide text-center w-32'>Thao tác</th>
                     </tr>
                   </thead>
@@ -730,15 +730,20 @@ export default function IngredientPage() {
                         <tr key={recipe.productId} className='hover:bg-[#fcfdfe] transition-colors group'>
                           <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>{recipe.productCode ?? 'N/A'}</td>
                           <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{recipe.productName}</td>
-                          <td className='py-4 px-6 text-center'>
-                            <span className='inline-flex items-center gap-1.5 bg-[#eef2ff] text-[#4c51bf] text-[12.5px] px-3 py-1 rounded-full font-bold border border-[#c7d2fe]/60'>
-                              <FlaskConical size={11} />
-                              {recipe.ingredients.length} nguyên liệu
-                            </span>
-                          </td>
                           <td className='py-4 px-6 text-right text-[14px] text-gray-900 font-bold'>
                             {recipe.price.toLocaleString('vi-VN')} đ
                           </td>
+                          {/* <td className='py-4 px-6 text-right'>
+                            {recipe.status === 'active' ? (
+                              <span className='inline-block bg-[#e6f4ea] text-[#2e7d32] text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-[#c8e6c9]/60'>
+                                Hoạt động
+                              </span>
+                            ) : (
+                              <span className='inline-block bg-[#ffebee] text-[#c62828] text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-[#ffcdd2]/60'>
+                                Không hoạt động
+                              </span>
+                            )}
+                          </td> */}
                           <td className='py-4 px-6 text-left'>
                             <div className='flex items-center justify-start gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
                               <button
