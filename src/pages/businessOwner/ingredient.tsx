@@ -38,7 +38,15 @@ interface Recipe {
   productCode: string
   productName: string
   price: number
+  status: string
   ingredients: ProductIngredient[]
+}
+
+const getProductStatusLabel = (status: string) => {
+  const normalized = status.toLowerCase()
+  if (normalized === 'active') return 'Đang hoạt động'
+  if (normalized === 'inactive') return 'Ngừng hoạt động'
+  return status
 }
 
 type Tab = 'ingredient' | 'recipe'
@@ -134,6 +142,7 @@ export default function IngredientPage() {
               productCode: product.productCode,
               productName: product.name,
               price: product.currentPrice ?? 0,
+              status: product.status,
               ingredients: linkRes.data ?? [],
             } satisfies Recipe
           } catch {
@@ -142,6 +151,7 @@ export default function IngredientPage() {
               productCode: product.productCode,
               productName: product.name,
               price: product.currentPrice ?? 0,
+              status: product.status,
               ingredients: [],
             } satisfies Recipe
           }
@@ -693,7 +703,7 @@ export default function IngredientPage() {
                     <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
                       <th className='py-4 px-6 font-semibold tracking-wide'>Mã sản phẩm</th>
                       <th className='py-4 px-6 font-semibold tracking-wide'>Tên sản phẩm</th>
-                      <th className='py-4 px-6 font-semibold tracking-wide text-center'>Số nguyên liệu</th>
+                      <th className='py-4 px-6 font-semibold tracking-wide text-center'>Trạng thái</th>
                       <th className='py-4 px-6 font-semibold tracking-wide text-right'>Giá bán</th>
                       <th className='py-4 px-6 font-semibold tracking-wide text-center w-32'>Thao tác</th>
                     </tr>
@@ -704,9 +714,14 @@ export default function IngredientPage() {
                         <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>{recipe.productCode}</td>
                         <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{recipe.productName}</td>
                         <td className='py-4 px-6 text-center'>
-                          <span className='inline-flex items-center gap-1.5 bg-[#eef2ff] text-[#4c51bf] text-[12.5px] px-3 py-1 rounded-full font-bold border border-[#c7d2fe]/60'>
-                            <FlaskConical size={11} />
-                            {recipe.ingredients.length} nguyên liệu
+                          <span
+                            className={`inline-flex items-center text-[12.5px] px-3 py-1 rounded-full font-bold border ${
+                              recipe.status.toLowerCase() === 'active'
+                                ? 'bg-green-50 text-green-700 border-green-200'
+                                : 'bg-gray-100 text-gray-600 border-gray-200'
+                            }`}
+                          >
+                            {getProductStatusLabel(recipe.status)}
                           </span>
                         </td>
                         <td className='py-4 px-6 text-right text-[14px] text-gray-900 font-bold'>
