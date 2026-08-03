@@ -625,7 +625,6 @@ export default function IngredientPage() {
                 <table className='w-full text-left border-collapse'>
                   <thead>
                     <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
-                      <th className='py-4 px-6 font-semibold tracking-wide'>Mã nguyên liệu</th>
                       <th className='py-4 px-6 font-semibold tracking-wide'>Tên nguyên liệu</th>
                       <th className='py-4 px-6 font-semibold tracking-wide text-center'>Đơn vị tính</th>
                       <th className='py-4 px-6 font-semibold tracking-wide text-center'>Tồn kho</th>
@@ -640,7 +639,6 @@ export default function IngredientPage() {
                     {filteredIngredients.length > 0 ? (
                       filteredIngredients.map((item) => (
                         <tr key={item.id} className='hover:bg-[#fcfdfe] transition-colors group'>
-                          <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>{item.id}</td>
                           <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{item.name}</td>
                           <td className='py-4 px-6 text-center'>
                             <span className='inline-block bg-[#f3f4f6] text-gray-600 text-[12.5px] px-3.5 py-1 rounded-full font-bold border border-gray-200/40'>
@@ -671,14 +669,14 @@ export default function IngredientPage() {
                             <div className='flex items-center justify-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
                               <button
                                 onClick={(e) => handleOpenEditIngredient(item, e)}
-                                className='p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors'
+                                className='p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors'
                                 title='Sửa'
                               >
                                 <Edit2 size={15} />
                               </button>
                               <button
                                 onClick={(e) => handleDeleteIngredient(item, e)}
-                                className='p-1.5 text-gray-400 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
+                                className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
                                 title='Xoá'
                               >
                                 <Trash2 size={15} />
