@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Search,
   Plus,
@@ -13,6 +14,14 @@ import {
   Eye,
   X,
 } from 'lucide-react'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '../../components/ui/pagination'
 import { toast } from 'react-toastify'
 import type { Ingredient } from '../../types/ingredient.type'
 import type { ProductIngredient } from '../../types/product.ingredient.type'
@@ -206,6 +215,43 @@ export default function IngredientPage() {
         r.productCode.toLowerCase().includes(q),
     )
   }, [recipes, searchQuery])
+
+  const [searchParams, setSearchParams] = useSearchParams()
+  const ingredientPage = Number(searchParams.get('ingPage') ?? '1')
+  const recipePage = Number(searchParams.get('recPage') ?? '1')
+  const pageSize = 7
+
+  const paginatedIngredients = useMemo(() => {
+    const start = (ingredientPage - 1) * pageSize
+    return filteredIngredients.slice(start, start + pageSize)
+  }, [filteredIngredients, ingredientPage])
+  const totalIngredientPages = Math.ceil(filteredIngredients.length / pageSize)
+
+  const paginatedRecipes = useMemo(() => {
+    const start = (recipePage - 1) * pageSize
+    return filteredRecipes.slice(start, start + pageSize)
+  }, [filteredRecipes, recipePage])
+  const totalRecipePages = Math.ceil(filteredRecipes.length / pageSize)
+
+  const changeIngredientPage = (newPage: number) => {
+    const params = new URLSearchParams(searchParams)
+    if (newPage === 1) {
+      params.delete('ingPage')
+    } else {
+      params.set('ingPage', newPage.toString())
+    }
+    setSearchParams(params, { replace: true })
+  }
+
+  const changeRecipePage = (newPage: number) => {
+    const params = new URLSearchParams(searchParams)
+    if (newPage === 1) {
+      params.delete('recPage')
+    } else {
+      params.set('recPage', newPage.toString())
+    }
+    setSearchParams(params, { replace: true })
+  }
 
   const activeIngredients = useMemo(
     () => ingredients.filter((i) => !i.isDeleted),
@@ -646,8 +692,8 @@ export default function IngredientPage() {
                   </thead>
 
                   <tbody className='divide-y divide-gray-100'>
-                    {filteredIngredients.length > 0 ? (
-                      filteredIngredients.map((item) => (
+                    {paginatedIngredients.length > 0 ? (
+                      paginatedIngredients.map((item) => (
                         <tr key={item.id} className='hover:bg-[#fcfdfe] transition-colors group'>
                           <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{item.name}</td>
                           <td className='py-4 px-6 text-center'>
@@ -718,6 +764,52 @@ export default function IngredientPage() {
             )
           )}
 
+          {activeTab === 'ingredient' && filteredIngredients.length > 0 && totalIngredientPages > 1 && !loadingIngredients && (
+            <div className='mt-4 mb-12'>
+              <Pagination className='mt-6'>
+                <PaginationContent className='gap-2'>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => changeIngredientPage(Math.max(1, ingredientPage - 1))}
+                      className={`h-10 px-4 rounded-lg border transition-all ${
+                        ingredientPage === 1
+                          ? 'pointer-events-none opacity-40'
+                          : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                      }`}
+                    />
+                  </PaginationItem>
+
+                  {[...Array(totalIngredientPages)].map((_, i) => (
+                    <PaginationItem key={i + 1}>
+                      <PaginationLink
+                        isActive={ingredientPage === i + 1}
+                        onClick={() => changeIngredientPage(i + 1)}
+                        className={`h-10 w-10 rounded-lg font-semibold transition-all cursor-pointer ${
+                          ingredientPage === i + 1
+                            ? 'bg-[#D32F2F] text-white border-[#D32F2F] hover:bg-[#B71C1C]'
+                            : 'border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                        }`}
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => changeIngredientPage(Math.min(totalIngredientPages, ingredientPage + 1))}
+                      className={`h-10 px-4 rounded-lg border transition-all ${
+                        ingredientPage === totalIngredientPages
+                          ? 'pointer-events-none opacity-40'
+                          : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                      }`}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+
           {activeTab === 'recipe' && (
             loadingRecipes ? (
               <LoadingSkeleton />
@@ -735,7 +827,7 @@ export default function IngredientPage() {
                   </thead>
 
                   <tbody className='divide-y divide-gray-100'>
-                    {filteredRecipes.map((recipe) => (
+                    {paginatedRecipes.map((recipe) => (
                       <tr key={recipe.productId} className='hover:bg-[#fcfdfe] transition-colors group'>
                         <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>{recipe.productCode}</td>
                         <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{recipe.productName}</td>
@@ -793,6 +885,52 @@ export default function IngredientPage() {
                 onReset={() => setSearchQuery('')}
               />
             )
+          )}
+
+          {activeTab === 'recipe' && filteredRecipes.length > 0 && totalRecipePages > 1 && !loadingRecipes && (
+            <div className='mt-4 mb-12'>
+              <Pagination className='mt-6'>
+                <PaginationContent className='gap-2'>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => changeRecipePage(Math.max(1, recipePage - 1))}
+                      className={`h-10 px-4 rounded-lg border transition-all ${
+                        recipePage === 1
+                          ? 'pointer-events-none opacity-40'
+                          : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                      }`}
+                    />
+                  </PaginationItem>
+
+                  {[...Array(totalRecipePages)].map((_, i) => (
+                    <PaginationItem key={i + 1}>
+                      <PaginationLink
+                        isActive={recipePage === i + 1}
+                        onClick={() => changeRecipePage(i + 1)}
+                        className={`h-10 w-10 rounded-lg font-semibold transition-all cursor-pointer ${
+                          recipePage === i + 1
+                            ? 'bg-[#D32F2F] text-white border-[#D32F2F] hover:bg-[#B71C1C]'
+                            : 'border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                        }`}
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => changeRecipePage(Math.min(totalRecipePages, recipePage + 1))}
+                      className={`h-10 px-4 rounded-lg border transition-all ${
+                        recipePage === totalRecipePages
+                          ? 'pointer-events-none opacity-40'
+                          : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                      }`}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
           )}
         </div>
       </div>

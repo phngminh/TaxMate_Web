@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import {
   Plus,
   X,
@@ -11,6 +11,14 @@ import {
   UserPlus,
   Package
 } from 'lucide-react'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '../../components/ui/pagination'
 import { toast } from 'react-toastify'
 import { useBusiness } from '../../contexts/BusinessContext'
 import {
@@ -50,6 +58,19 @@ export default function PurchasePage() {
   // Global loading
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const page = Number(searchParams.get('page') ?? '1')
+  const pageSize = 7
+
+  const changePage = (newPage: number) => {
+    const params = new URLSearchParams(searchParams)
+    if (newPage === 1) {
+      params.delete('page')
+    } else {
+      params.set('page', newPage.toString())
+    }
+    setSearchParams(params, { replace: true })
+  }
 
   // Data lists
   const [expenses, setExpenses] = useState<ExpenseDTO[]>([])
@@ -480,6 +501,13 @@ export default function PurchasePage() {
     return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [materialPurchases, expenses])
 
+  const paginatedPurchases = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return combinedPurchases.slice(start, start + pageSize)
+  }, [combinedPurchases, page])
+
+  const totalPages = Math.ceil(combinedPurchases.length / pageSize)
+
   return (
     <div className='flex flex-col bg-[#f8f9fa] min-h-[calc(100vh-51px)] w-full'>
       <div className='flex items-center justify-between px-8 py-4 gap-4 bg-white border-b border-gray-100 shadow-[0_1px_3px_rgba(0,0,0,0.02)]'>
@@ -555,7 +583,7 @@ export default function PurchasePage() {
                         </tr>
                       </thead>
                       <tbody className='divide-y divide-gray-100 text-xs font-semibold text-gray-600'>
-                        {combinedPurchases.map(p => (
+                        {paginatedPurchases.map(p => (
                           <tr key={p.id} className='hover:bg-[#fcfdfe] transition-colors'>
                             <td className='py-4 px-5 text-gray-900 font-bold font-mono'>{p.invoiceNumber}</td>
                             <td className='py-4 px-5'>
@@ -615,6 +643,52 @@ export default function PurchasePage() {
                   ) : (
                     <div className='text-center py-20 text-slate-400 text-xs font-bold'>
                       Chưa có lịch sử hóa đơn nhập kho nào.
+                    </div>
+                  )}
+
+                  {combinedPurchases.length > 0 && totalPages > 1 && (
+                    <div className='mt-4 mb-12'>
+                      <Pagination className='mt-6'>
+                        <PaginationContent className='gap-2'>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              onClick={() => changePage(Math.max(1, page - 1))}
+                              className={`h-10 px-4 rounded-lg border transition-all ${
+                                page === 1
+                                  ? 'pointer-events-none opacity-40'
+                                  : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                              }`}
+                            />
+                          </PaginationItem>
+
+                          {[...Array(totalPages)].map((_, i) => (
+                            <PaginationItem key={i + 1}>
+                              <PaginationLink
+                                isActive={page === i + 1}
+                                onClick={() => changePage(i + 1)}
+                                className={`h-10 w-10 rounded-lg font-semibold transition-all cursor-pointer ${
+                                  page === i + 1
+                                    ? 'bg-[#D32F2F] text-white border-[#D32F2F] hover:bg-[#B71C1C]'
+                                    : 'border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                                }`}
+                              >
+                                {i + 1}
+                              </PaginationLink>
+                            </PaginationItem>
+                          ))}
+
+                          <PaginationItem>
+                            <PaginationNext
+                              onClick={() => changePage(Math.min(totalPages, page + 1))}
+                              className={`h-10 px-4 rounded-lg border transition-all ${
+                                page === totalPages
+                                  ? 'pointer-events-none opacity-40'
+                                  : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                              }`}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
                     </div>
                   )}
                 </div>
