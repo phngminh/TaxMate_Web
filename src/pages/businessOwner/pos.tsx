@@ -516,15 +516,20 @@ export default function POS() {
       })
 
       if (res.success) {
-        if (method === 'Transfer' && selectedAccount) {
-          // Open awaiting payment overlay with VietQR
+        // Kiểm tra xem tài khoản ngân hàng có liên kết SePay (QR động) hay không
+        const isDynamicQR =
+          method === 'Transfer' &&
+          selectedAccount &&
+          (selectedAccount.isSePayConnected || !!selectedAccount.sePayBankAccountXid)
+        if (isDynamicQR) {
+          // Nếu là QR động (SePay): Mở overlay "Đang chờ nhận tiền..." và chờ SignalR đối soát tự động
           setAwaitingOrderId(orderId)
           setAwaitingOrderCode(activeTab.code)
           setAwaitingAmount(activeTab.totalAmount)
           setShowAwaitingOverlay(true)
           setShowAccountModal(false)
         } else {
-          // Cash/Card completed immediately. Fetch fresh order details to get e-invoice fields if any
+          // Tiền mặt, Thẻ, hoặc QR tĩnh (không SePay): Hoàn tất đơn lập tức
           const detail = await getOrderById(orderId)
           setSuccessOrderCode(activeTab.code)
           setSuccessAmount(activeTab.totalAmount)
@@ -534,6 +539,7 @@ export default function POS() {
           setSuccessInvoiceStatus(detail.data?.invoiceStatus || null)
           setSuccessTaxAuthorityCode(detail.data?.taxAuthorityCode || null)
           setShowSuccessOverlay(true)
+          setShowAccountModal(false)
           await removeFinishedTab(tabId)
         }
       }
@@ -1018,7 +1024,7 @@ export default function POS() {
             <div className='p-6 flex flex-col gap-4 max-h-[85vh] overflow-y-auto'>
               <div className='flex items-center justify-between'>
                 <p className='text-xs text-gray-500 font-medium leading-relaxed'>
-                  Chọn một trong các tài khoản ngân hàng dưới đây để sinh mã QR thanh toán động.
+                  Chọn tài khoản ngân hàng (QR động SePay tự động đối soát, QR tĩnh hoàn tất ngay).
                 </p>
                 <button
                   type='button'
@@ -1114,9 +1120,13 @@ export default function POS() {
                         </div>
                       </div>
                       <div className='flex items-center gap-2'>
-                        {acc.sePayBankAccountXid && (
+                        {acc.isSePayConnected || acc.sePayBankAccountXid ? (
                           <span className='bg-blue-50 text-blue-600 text-[9.5px] font-bold px-2 py-0.5 rounded-full border border-blue-100 shadow-3xs'>
-                            SePay Hub
+                            QR động (SePay)
+                          </span>
+                        ) : (
+                          <span className='bg-amber-50 text-amber-700 text-[9.5px] font-bold px-2 py-0.5 rounded-full border border-amber-200/60'>
+                            QR tĩnh
                           </span>
                         )}
                         {acc.isDefault && (
