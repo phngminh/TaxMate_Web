@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import {
   Plus,
   X,
@@ -11,6 +11,14 @@ import {
   UserPlus,
   Package
 } from 'lucide-react'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '../../components/ui/pagination'
 import { toast } from 'react-toastify'
 import { useBusiness } from '../../contexts/BusinessContext'
 import {
@@ -35,7 +43,6 @@ interface PurchaseLineItem {
   name: string
   quantity: number
   costPrice: number
-  discountValue: number
   taxPercent: number
 }
 
@@ -51,6 +58,19 @@ export default function PurchasePage() {
   // Global loading
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const page = Number(searchParams.get('page') ?? '1')
+  const pageSize = 7
+
+  const changePage = (newPage: number) => {
+    const params = new URLSearchParams(searchParams)
+    if (newPage === 1) {
+      params.delete('page')
+    } else {
+      params.set('page', newPage.toString())
+    }
+    setSearchParams(params, { replace: true })
+  }
 
   // Data lists
   const [expenses, setExpenses] = useState<ExpenseDTO[]>([])
@@ -279,7 +299,6 @@ export default function PurchasePage() {
         // Save raw materials to IngredientPurchase
         for (const item of purchaseItems) {
           let lineTotal = item.quantity * item.costPrice
-          lineTotal = Math.max(0, lineTotal - item.discountValue)
           lineTotal = lineTotal * (1 + item.taxPercent / 100)
 
           await createIngredientPurchase(businessId, {
@@ -297,11 +316,10 @@ export default function PurchasePage() {
         let totalProductCost = 0
         const detailsLines = purchaseItems.map(p => {
           let lineTotal = p.quantity * p.costPrice
-          lineTotal = Math.max(0, lineTotal - p.discountValue)
           lineTotal = lineTotal * (1 + p.taxPercent / 100)
           totalProductCost += lineTotal
 
-          return `- ${p.name}: ${p.quantity} x ${formatPrice(p.costPrice)} đ (giảm ${formatPrice(p.discountValue)} đ, thuế ${p.taxPercent}%)`
+          return `- ${p.name}: ${p.quantity} x ${formatPrice(p.costPrice)} đ (thuế ${p.taxPercent}%)`
         })
 
         const noteContent = `Nhà cung cấp: ${supplierName}\nSố hóa đơn: ${purchaseInvoiceNumber}\nGhi chú: ${purchaseNote}\n\nSản phẩm nhập kho:\n${detailsLines.join('\n')}`
@@ -325,7 +343,6 @@ export default function PurchasePage() {
           let lineUnitCost = item.costPrice
           if (item.quantity > 0) {
             let lineTotal = item.quantity * item.costPrice
-            lineTotal = Math.max(0, lineTotal - item.discountValue)
             lineTotal = lineTotal * (1 + item.taxPercent / 100)
             lineUnitCost = lineTotal / item.quantity
           }
@@ -402,7 +419,6 @@ export default function PurchasePage() {
           name: itemObj.name,
           quantity: 1,
           costPrice: itemObj.estimatedPrice || 0,
-          discountValue: 0,
           taxPercent: 0
         }
       ])
@@ -417,7 +433,6 @@ export default function PurchasePage() {
           name: itemObj.name,
           quantity: 1,
           costPrice: itemObj.currentPrice || 0,
-          discountValue: 0,
           taxPercent: 0
         }
       ])
@@ -485,6 +500,13 @@ export default function PurchasePage() {
     // Sort newest first
     return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [materialPurchases, expenses])
+
+  const paginatedPurchases = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return combinedPurchases.slice(start, start + pageSize)
+  }, [combinedPurchases, page])
+
+  const totalPages = Math.ceil(combinedPurchases.length / pageSize)
 
   return (
     <div className='flex flex-col bg-[#f8f9fa] min-h-[calc(100vh-51px)] w-full'>
@@ -561,7 +583,7 @@ export default function PurchasePage() {
                         </tr>
                       </thead>
                       <tbody className='divide-y divide-gray-100 text-xs font-semibold text-gray-600'>
-                        {combinedPurchases.map(p => (
+                        {paginatedPurchases.map(p => (
                           <tr key={p.id} className='hover:bg-[#fcfdfe] transition-colors'>
                             <td className='py-4 px-5 text-gray-900 font-bold font-mono'>{p.invoiceNumber}</td>
                             <td className='py-4 px-5'>
@@ -621,6 +643,52 @@ export default function PurchasePage() {
                   ) : (
                     <div className='text-center py-20 text-slate-400 text-xs font-bold'>
                       Chưa có lịch sử hóa đơn nhập kho nào.
+                    </div>
+                  )}
+
+                  {combinedPurchases.length > 0 && totalPages > 1 && (
+                    <div className='mt-4 mb-12'>
+                      <Pagination className='mt-6'>
+                        <PaginationContent className='gap-2'>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              onClick={() => changePage(Math.max(1, page - 1))}
+                              className={`h-10 px-4 rounded-lg border transition-all ${
+                                page === 1
+                                  ? 'pointer-events-none opacity-40'
+                                  : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                              }`}
+                            />
+                          </PaginationItem>
+
+                          {[...Array(totalPages)].map((_, i) => (
+                            <PaginationItem key={i + 1}>
+                              <PaginationLink
+                                isActive={page === i + 1}
+                                onClick={() => changePage(i + 1)}
+                                className={`h-10 w-10 rounded-lg font-semibold transition-all cursor-pointer ${
+                                  page === i + 1
+                                    ? 'bg-[#D32F2F] text-white border-[#D32F2F] hover:bg-[#B71C1C]'
+                                    : 'border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                                }`}
+                              >
+                                {i + 1}
+                              </PaginationLink>
+                            </PaginationItem>
+                          ))}
+
+                          <PaginationItem>
+                            <PaginationNext
+                              onClick={() => changePage(Math.min(totalPages, page + 1))}
+                              className={`h-10 px-4 rounded-lg border transition-all ${
+                                page === totalPages
+                                  ? 'pointer-events-none opacity-40'
+                                  : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                              }`}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
                     </div>
                   )}
                 </div>
@@ -939,7 +1007,6 @@ export default function PurchasePage() {
                           <th className='p-3'>Tên mặt hàng</th>
                           <th className='p-3 text-center w-20'>Số lượng</th>
                           <th className='p-3 text-right w-28'>Giá mua (đ)</th>
-                          <th className='p-3 text-right w-24'>Giảm giá (đ)</th>
                           <th className='p-3 text-center w-20'>VAT (%)</th>
                           <th className='p-3 text-right w-28'>Thành tiền</th>
                           <th className='p-3 text-center w-12'></th>
@@ -947,8 +1014,7 @@ export default function PurchasePage() {
                       </thead>
                       <tbody className='divide-y divide-slate-100 bg-white'>
                         {purchaseItems.map((item, idx) => {
-                          let itemSubtotal = item.quantity * item.costPrice
-                          itemSubtotal = Math.max(0, itemSubtotal - item.discountValue)
+                          const itemSubtotal = item.quantity * item.costPrice
                           const itemTotal = itemSubtotal * (1 + item.taxPercent / 100)
 
                           return (
@@ -970,15 +1036,6 @@ export default function PurchasePage() {
                                   value={item.costPrice}
                                   onChange={e => updateLineItem(idx, { costPrice: parseFloat(e.target.value) || 0 })}
                                   className='w-24 border border-slate-200 rounded px-1.5 py-1 text-right font-bold text-slate-800 font-mono'
-                                />
-                              </td>
-                              <td className='p-3 text-right'>
-                                <input
-                                  type='number'
-                                  min='0'
-                                  value={item.discountValue}
-                                  onChange={e => updateLineItem(idx, { discountValue: parseFloat(e.target.value) || 0 })}
-                                  className='w-20 border border-slate-200 rounded px-1.5 py-1 text-right font-bold text-slate-800 font-mono'
                                 />
                               </td>
                               <td className='p-3 text-center'>
@@ -1048,8 +1105,7 @@ export default function PurchasePage() {
                   <span className='font-black text-[#D32F2F] text-lg font-mono'>
                     {formatPrice(
                       purchaseItems.reduce((acc, curr) => {
-                        let sub = curr.quantity * curr.costPrice
-                        sub = Math.max(0, sub - curr.discountValue)
+                        const sub = curr.quantity * curr.costPrice
                         return acc + sub * (1 + curr.taxPercent / 100)
                       }, 0)
                     )} đ
