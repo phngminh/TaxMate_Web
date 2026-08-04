@@ -721,7 +721,7 @@ export default function IngredientPage() {
           {activeTab === 'recipe' && (
             loadingRecipes ? (
               <LoadingSkeleton />
-            ) : (
+            ) : filteredRecipes.length > 0 ? (
               <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-150'>
                 <table className='w-full text-left border-collapse'>
                   <thead>
