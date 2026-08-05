@@ -32,7 +32,7 @@ export default function OrderPage() {
     try {
       setLoading(true)
       const res = await getOrders(businessId, {
-        page,
+        pageNumber: page,
         pageSize,
         status: statusFilter !== 'all' ? statusFilter : null,
         paymentMethod: paymentFilter !== 'all' ? paymentFilter : null

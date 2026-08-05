@@ -15,7 +15,7 @@ export const getOrderById = async (id: string) => {
 export const getOrders = async (
   businessId: string,
   params?: {
-    page?: number
+    pageNumber?: number
     pageSize?: number
     status?: string | null
     paymentMethod?: string | null

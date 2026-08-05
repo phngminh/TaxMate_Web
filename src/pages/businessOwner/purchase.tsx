@@ -444,16 +444,52 @@ export default function PurchasePage() {
       summary: string
     }[] = []
 
-    // 1. Ingredients purchase
+    // 1. Ingredients purchase grouped by invoiceNumber or id
+    const materialMap = new Map<
+      string,
+      {
+        id: string
+        invoiceNumber: string
+        date: string
+        supplierName: string
+        amount: number
+        items: { name: string; qty: number; unit: string }[]
+      }
+    >()
+
     materialPurchases.forEach(m => {
+      const key = m.invoiceNumber ? m.invoiceNumber.trim() : m.id
+      if (!materialMap.has(key)) {
+        materialMap.set(key, {
+          id: m.id,
+          invoiceNumber: m.invoiceNumber || 'N/A',
+          date: m.purchaseDate,
+          supplierName: m.supplierName || 'Vãng lai',
+          amount: 0,
+          items: []
+        })
+      }
+      const group = materialMap.get(key)!
+      group.amount += m.totalCost
+      group.items.push({
+        name: m.ingredientName,
+        qty: m.quantity,
+        unit: m.ingredientUnit || 'đơn vị'
+      })
+    })
+
+    materialMap.forEach(group => {
+      const itemSummaries = group.items
+        .map(i => `${i.name} (${i.qty} ${i.unit})`)
+        .join(', ')
       list.push({
-        id: m.id,
-        invoiceNumber: m.invoiceNumber || 'N/A',
-        date: m.purchaseDate,
-        supplierName: m.supplierName || 'Vãng lai',
-        amount: m.totalCost,
+        id: group.id,
+        invoiceNumber: group.invoiceNumber,
+        date: group.date,
+        supplierName: group.supplierName,
+        amount: group.amount,
         type: 'Material',
-        summary: `Nguyên liệu: ${m.ingredientName} (${m.quantity} ${m.ingredientUnit || 'đơn vị'})`
+        summary: `Nguyên liệu: ${itemSummaries}`
       })
     })
 
@@ -926,10 +962,10 @@ export default function PurchasePage() {
                 </h4>
 
                 {purchaseItems.length > 0 ? (
-                  <div className='border border-slate-100 rounded-[12px] overflow-hidden'>
+                  <div className='border border-slate-100 rounded-[12px] overflow-y-auto max-h-[300px] shadow-xs'>
                     <table className='w-full text-left border-collapse text-xs font-semibold text-slate-700'>
                       <thead>
-                        <tr className='bg-slate-100 text-slate-600 font-bold border-b border-slate-200 select-none'>
+                        <tr className='bg-slate-100 text-slate-600 font-bold border-b border-slate-200 select-none sticky top-0 z-10 shadow-xs'>
                           <th className='p-3'>Tên mặt hàng</th>
                           <th className='p-3 text-center w-20'>Số lượng</th>
                           <th className='p-3 text-right w-28'>Giá mua (đ)</th>

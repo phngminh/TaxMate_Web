@@ -9,6 +9,7 @@ import { getAllProducts, createProduct } from '../../apis/product.api'
 import { getProductCategories } from '../../apis/product.category.api'
 import {
   createOrder,
+  getOrders,
   getOrderById,
   addOrderItem,
   updateOrderItem,
@@ -142,10 +143,54 @@ export default function POS() {
         setRequireEInvoice(configRes.data.isEnabled || false)
       }
 
-      // If no tab exists, initialize the first tab with concurrency protection
+      // Check for existing draft order before initializing a new one
       if (tabs.length === 0 && !isInitializingRef.current) {
         isInitializingRef.current = true
-        await initFirstTab(businessId)
+        let existingOrderId = sessionStorage.getItem('pos_active_order_' + businessId)
+        let foundOrder: any = null
+
+        if (existingOrderId) {
+          try {
+            const detailRes = await getOrderById(existingOrderId)
+            if (detailRes.success && detailRes.data && detailRes.data.status === 'Draft') {
+              foundOrder = detailRes.data
+            }
+          } catch (err) {
+            console.error('Failed to get saved order:', err)
+          }
+        }
+
+        if (!foundOrder) {
+          try {
+            const draftRes = await getOrders(businessId, { status: 'Draft', pageSize: 1 })
+            if (draftRes.success && draftRes.data?.items && draftRes.data.items.length > 0) {
+              const firstDraft = draftRes.data.items[0]
+              const detailRes = await getOrderById(firstDraft.transactionId)
+              if (detailRes.success && detailRes.data) {
+                foundOrder = detailRes.data
+              }
+            }
+          } catch (err) {
+            console.error('Failed to fetch open draft order:', err)
+          }
+        }
+
+        if (foundOrder) {
+          sessionStorage.setItem('pos_active_order_' + businessId, foundOrder.transactionId)
+          const reusedTab: POSTab = {
+            tabId: 'T-1',
+            orderId: foundOrder.transactionId,
+            code: foundOrder.transactionCode,
+            items: foundOrder.items || [],
+            totalAmount: foundOrder.totalAmount,
+            status: foundOrder.status
+          }
+          setTabs([reusedTab])
+          setActiveTabId('T-1')
+          isInitializingRef.current = false
+        } else {
+          await initFirstTab(businessId)
+        }
       }
     } catch (err) {
       console.error(err)
@@ -170,6 +215,7 @@ export default function POS() {
         status: detail.data.status
       }
 
+      sessionStorage.setItem('pos_active_order_' + bId, orderId)
       setTabs([newTab])
       setActiveTabId('T-1')
     } catch (err) {
