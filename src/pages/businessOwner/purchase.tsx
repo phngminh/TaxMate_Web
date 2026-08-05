@@ -493,24 +493,51 @@ export default function PurchasePage() {
       })
     })
 
-    // 2. Product purchase expenses (filter where category is "Chi phí nhập hàng" or title has "Nhập hàng")
+    // 2. Product purchase expenses (grouped by invoiceNumber)
+    const productMap = new Map<
+      string,
+      {
+        id: string
+        invoiceNumber: string
+        date: string
+        supplierName: string
+        amount: number
+        summary: string
+      }
+    >()
+
     expenses
       .filter(
         e =>
-          e.categoryName.toLowerCase().includes('nhập hàng') ||
-          e.expenseTitle.toLowerCase().includes('nhập hàng')
+          (e.categoryName || '').toLowerCase().includes('nhập hàng') ||
+          (e.expenseTitle || '').toLowerCase().includes('nhập hàng')
       )
       .forEach(e => {
-        list.push({
-          id: e.expenseId,
-          invoiceNumber: e.expenseTitle.replace('Nhập hàng hóa đơn ', '') || 'N/A',
-          date: e.expenseDate,
-          supplierName: e.supplierName || 'Vãng lai',
-          amount: e.amount,
-          type: 'Product',
-          summary: e.note || e.expenseTitle
-        })
+        const rawInvNum = e.expenseTitle ? e.expenseTitle.replace('Nhập hàng hóa đơn ', '').trim() : ''
+        const key = rawInvNum || e.expenseId
+        if (!productMap.has(key)) {
+          productMap.set(key, {
+            id: e.expenseId,
+            invoiceNumber: rawInvNum || 'N/A',
+            date: e.expenseDate,
+            supplierName: e.supplierName || 'Vãng lai',
+            amount: e.amount,
+            summary: e.note || e.expenseTitle
+          })
+        }
       })
+
+    productMap.forEach(group => {
+      list.push({
+        id: group.id,
+        invoiceNumber: group.invoiceNumber,
+        date: group.date,
+        supplierName: group.supplierName,
+        amount: group.amount,
+        type: 'Product',
+        summary: group.summary
+      })
+    })
 
     // Sort newest first
     return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
