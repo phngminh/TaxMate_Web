@@ -8,6 +8,7 @@ export interface Product {
   currentPrice?: number
   costPrice?: number
   stockQuantity?: number
+  availableQuantity?: number | null
   imageUrl?: string
   status: string
   hasRecipe: boolean

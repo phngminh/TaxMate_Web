@@ -6,7 +6,7 @@ export default function OwnerLayout() {
   return (
     <div className='min-h-screen bg-[#f0f2f5]'>
       <OwnerHeader />
-      <main>
+      <main className='pt-14'>
         <Outlet />
       </main>
       <FloatingAIAssistant />

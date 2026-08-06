@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Search,
   Plus,
@@ -13,6 +14,14 @@ import {
   Eye,
   X,
 } from 'lucide-react'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '../../components/ui/pagination'
 import { toast } from 'react-toastify'
 import type { Ingredient } from '../../types/ingredient.type'
 import type { ProductIngredient } from '../../types/product.ingredient.type'
@@ -38,7 +47,15 @@ interface Recipe {
   productCode: string
   productName: string
   price: number
+  status: string
   ingredients: ProductIngredient[]
+}
+
+const getProductStatusLabel = (status: string) => {
+  const normalized = status.toLowerCase()
+  if (normalized === 'active') return 'Đang hoạt động'
+  if (normalized === 'inactive') return 'Ngừng hoạt động'
+  return status
 }
 
 type Tab = 'ingredient' | 'recipe'
@@ -135,6 +152,7 @@ export default function IngredientPage() {
               productCode: product.productCode,
               productName: product.name,
               price: product.currentPrice ?? 0,
+              status: product.status,
               ingredients: linkRes.data ?? [],
             } satisfies Recipe
           } catch {
@@ -143,6 +161,7 @@ export default function IngredientPage() {
               productCode: product.productCode,
               productName: product.name,
               price: product.currentPrice ?? 0,
+              status: product.status,
               ingredients: [],
             } satisfies Recipe
           }
@@ -196,6 +215,43 @@ export default function IngredientPage() {
         r.productCode.toLowerCase().includes(q),
     )
   }, [recipes, searchQuery])
+
+  const [searchParams, setSearchParams] = useSearchParams()
+  const ingredientPage = Number(searchParams.get('ingPage') ?? '1')
+  const recipePage = Number(searchParams.get('recPage') ?? '1')
+  const pageSize = 7
+
+  const paginatedIngredients = useMemo(() => {
+    const start = (ingredientPage - 1) * pageSize
+    return filteredIngredients.slice(start, start + pageSize)
+  }, [filteredIngredients, ingredientPage])
+  const totalIngredientPages = Math.ceil(filteredIngredients.length / pageSize)
+
+  const paginatedRecipes = useMemo(() => {
+    const start = (recipePage - 1) * pageSize
+    return filteredRecipes.slice(start, start + pageSize)
+  }, [filteredRecipes, recipePage])
+  const totalRecipePages = Math.ceil(filteredRecipes.length / pageSize)
+
+  const changeIngredientPage = (newPage: number) => {
+    const params = new URLSearchParams(searchParams)
+    if (newPage === 1) {
+      params.delete('ingPage')
+    } else {
+      params.set('ingPage', newPage.toString())
+    }
+    setSearchParams(params, { replace: true })
+  }
+
+  const changeRecipePage = (newPage: number) => {
+    const params = new URLSearchParams(searchParams)
+    if (newPage === 1) {
+      params.delete('recPage')
+    } else {
+      params.set('recPage', newPage.toString())
+    }
+    setSearchParams(params, { replace: true })
+  }
 
   const activeIngredients = useMemo(
     () => ingredients.filter((i) => !i.isDeleted),
@@ -636,8 +692,8 @@ export default function IngredientPage() {
                   </thead>
 
                   <tbody className='divide-y divide-gray-100'>
-                    {filteredIngredients.length > 0 ? (
-                      filteredIngredients.map((item) => (
+                    {paginatedIngredients.length > 0 ? (
+                      paginatedIngredients.map((item) => (
                         <tr key={item.id} className='hover:bg-[#fcfdfe] transition-colors group'>
                           <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{item.name}</td>
                           <td className='py-4 px-6 text-center'>
@@ -708,82 +764,173 @@ export default function IngredientPage() {
             )
           )}
 
+          {activeTab === 'ingredient' && filteredIngredients.length > 0 && totalIngredientPages > 1 && !loadingIngredients && (
+            <div className='mt-4 mb-12'>
+              <Pagination className='mt-6'>
+                <PaginationContent className='gap-2'>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => changeIngredientPage(Math.max(1, ingredientPage - 1))}
+                      className={`h-10 px-4 rounded-lg border transition-all ${
+                        ingredientPage === 1
+                          ? 'pointer-events-none opacity-40'
+                          : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                      }`}
+                    />
+                  </PaginationItem>
+
+                  {[...Array(totalIngredientPages)].map((_, i) => (
+                    <PaginationItem key={i + 1}>
+                      <PaginationLink
+                        isActive={ingredientPage === i + 1}
+                        onClick={() => changeIngredientPage(i + 1)}
+                        className={`h-10 w-10 rounded-lg font-semibold transition-all cursor-pointer ${
+                          ingredientPage === i + 1
+                            ? 'bg-[#D32F2F] text-white border-[#D32F2F] hover:bg-[#B71C1C]'
+                            : 'border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                        }`}
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => changeIngredientPage(Math.min(totalIngredientPages, ingredientPage + 1))}
+                      className={`h-10 px-4 rounded-lg border transition-all ${
+                        ingredientPage === totalIngredientPages
+                          ? 'pointer-events-none opacity-40'
+                          : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                      }`}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+
           {activeTab === 'recipe' && (
             loadingRecipes ? (
               <LoadingSkeleton />
-            ) : (
+            ) : filteredRecipes.length > 0 ? (
               <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4_16px_rgba(0,0,0,0.02)] overflow-hidden min-w-150'>
                 <table className='w-full text-left border-collapse'>
                   <thead>
                     <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
-                      <th className='py-4 px-6 tracking-wide'>Mã sản phẩm</th>
-                      <th className='py-4 px-6 tracking-wide'>Tên sản phẩm</th>
-                      <th className='py-4 px-6 tracking-wide text-center'>Số nguyên liệu</th>
-                      <th className='py-4 px-6 tracking-wide text-right'>Giá bán</th>
-                      <th className='py-4 px-6 tracking-wide text-center w-32'>Thao tác</th>
+                      <th className='py-4 px-6 font-semibold tracking-wide'>Mã sản phẩm</th>
+                      <th className='py-4 px-6 font-semibold tracking-wide'>Tên sản phẩm</th>
+                      <th className='py-4 px-6 font-semibold tracking-wide text-center'>Trạng thái</th>
+                      <th className='py-4 px-6 font-semibold tracking-wide text-right'>Giá bán</th>
+                      <th className='py-4 px-6 font-semibold tracking-wide text-center w-32'>Thao tác</th>
                     </tr>
                   </thead>
 
                   <tbody className='divide-y divide-gray-100'>
-                    {filteredRecipes.length > 0 ? (
-                      filteredRecipes.map((recipe) => (
-                        <tr key={recipe.productId} className='hover:bg-[#fcfdfe] transition-colors group'>
-                          <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>{recipe.productCode ?? 'N/A'}</td>
-                          <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{recipe.productName}</td>
-                          <td className='py-4 px-6 text-center'>
-                            <span className='inline-flex items-center gap-1.5 bg-[#eef2ff] text-[#4c51bf] text-[12.5px] px-3 py-1 rounded-full font-bold border border-[#c7d2fe]/60'>
-                              <FlaskConical size={11} />
-                              {recipe.ingredients.length} nguyên liệu
-                            </span>
-                          </td>
-                          <td className='py-4 px-6 text-right text-[14px] text-gray-900 font-bold'>
-                            {recipe.price.toLocaleString('vi-VN')} đ
-                          </td>
-                          <td className='py-4 px-6 text-left'>
-                            <div className='flex items-center justify-start gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
+                    {paginatedRecipes.map((recipe) => (
+                      <tr key={recipe.productId} className='hover:bg-[#fcfdfe] transition-colors group'>
+                        <td className='py-4 px-6 text-[13.5px] text-gray-500 font-medium'>{recipe.productCode}</td>
+                        <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{recipe.productName}</td>
+                        <td className='py-4 px-6 text-center'>
+                          <span
+                            className={`inline-flex items-center text-[12.5px] px-3 py-1 rounded-full font-bold border ${
+                              recipe.status.toLowerCase() === 'active'
+                                ? 'bg-green-50 text-green-700 border-green-200'
+                                : 'bg-gray-100 text-gray-600 border-gray-200'
+                            }`}
+                          >
+                            {getProductStatusLabel(recipe.status)}
+                          </span>
+                        </td>
+                        <td className='py-4 px-6 text-right text-[14px] text-gray-900 font-bold'>
+                          {recipe.price.toLocaleString('vi-VN')} đ
+                        </td>
+                        <td className='py-4 px-6 text-center'>
+                          <div className='flex items-center justify-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
+                            <button
+                              onClick={() => setViewingRecipe(recipe)}
+                              className='p-1.5 text-gray-400 hover:text-[#4c51bf] hover:bg-[#eef2ff] rounded-md transition-colors'
+                              title='Xem công thức'
+                            >
+                              <Eye size={15} />
+                            </button>
+                            <button
+                              onClick={(e) => handleOpenEditRecipe(recipe, e)}
+                              className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
+                              title='Sửa'
+                            >
+                              <Edit2 size={15} />
+                            </button>
+                            {recipe.ingredients.length > 0 && (
                               <button
-                                onClick={() => setViewingRecipe(recipe)}
-                                className='p-1.5 text-gray-500 hover:text-[#4c51bf] hover:bg-[#eef2ff] rounded-md transition-colors'
-                                title='Xem công thức'
-                              >
-                                <Eye size={15} />
-                              </button>
-                              <button
-                                onClick={(e) => handleOpenEditRecipe(recipe, e)}
+                                onClick={(e) => handleDeleteRecipe(recipe, e)}
                                 className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
-                                title='Sửa'
+                                title='Gỡ công thức'
                               >
-                                <Edit2 size={15} />
+                                <Trash2 size={15} />
                               </button>
-                              {recipe.ingredients.length > 0 && (
-                                <button
-                                  onClick={(e) => handleDeleteRecipe(recipe, e)}
-                                  className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors'
-                                  title='Gỡ công thức'
-                                >
-                                  <Trash2 size={15} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={5} className='py-10'>
-                          <EmptyState
-                            icon={<FlaskConical size={48} className='text-gray-300 mb-4 stroke-[1.5]' />}
-                            title='Không tìm thấy công thức nào'
-                            subtitle='Hãy thêm công thức mới hoặc thay đổi từ khoá tìm kiếm.'
-                            onReset={() => setSearchQuery('')}
-                          />
+                            )}
+                          </div>
                         </td>
                       </tr>
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>
+            ) : (
+              <EmptyState
+                icon={<FlaskConical size={48} className='text-gray-300 mb-4 stroke-[1.5]' />}
+                title='Không tìm thấy công thức nào'
+                subtitle='Hãy thêm công thức mới hoặc thay đổi từ khoá tìm kiếm.'
+                onReset={() => setSearchQuery('')}
+              />
             )
+          )}
+
+          {activeTab === 'recipe' && filteredRecipes.length > 0 && totalRecipePages > 1 && !loadingRecipes && (
+            <div className='mt-4 mb-12'>
+              <Pagination className='mt-6'>
+                <PaginationContent className='gap-2'>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => changeRecipePage(Math.max(1, recipePage - 1))}
+                      className={`h-10 px-4 rounded-lg border transition-all ${
+                        recipePage === 1
+                          ? 'pointer-events-none opacity-40'
+                          : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                      }`}
+                    />
+                  </PaginationItem>
+
+                  {[...Array(totalRecipePages)].map((_, i) => (
+                    <PaginationItem key={i + 1}>
+                      <PaginationLink
+                        isActive={recipePage === i + 1}
+                        onClick={() => changeRecipePage(i + 1)}
+                        className={`h-10 w-10 rounded-lg font-semibold transition-all cursor-pointer ${
+                          recipePage === i + 1
+                            ? 'bg-[#D32F2F] text-white border-[#D32F2F] hover:bg-[#B71C1C]'
+                            : 'border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                        }`}
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => changeRecipePage(Math.min(totalRecipePages, recipePage + 1))}
+                      className={`h-10 px-4 rounded-lg border transition-all ${
+                        recipePage === totalRecipePages
+                          ? 'pointer-events-none opacity-40'
+                          : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                      }`}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
           )}
         </div>
       </div>

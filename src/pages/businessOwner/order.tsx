@@ -197,6 +197,8 @@ export default function OrderPage() {
     window.open(xmlUrl, '_blank')
   }
 
+  const totalProducts = selectedOrder?.items.reduce((sum, item) => sum + item.quantity, 0) || 0
+
   return (
     <div className='flex flex-col w-full bg-[#f8f9fa] h-[calc(100vh-51px)] overflow-hidden relative'>
       {/* Search Header */}
@@ -213,12 +215,12 @@ export default function OrderPage() {
           <Search className='text-gray-400 size-5 shrink-0 hover:text-gray-600 transition-colors cursor-pointer' />
         </div>
 
-        <div className='flex justify-end'>
+        {/* <div className='flex justify-end'>
           <button className='flex items-center gap-2 px-4 py-2 border border-[#D32F2F] text-[#D32F2F] rounded-[8px] hover:bg-[#fef2f2] font-bold text-[13.5px] transition-colors cursor-pointer'>
             <FileDown size={16} />
             Xuất file
           </button>
-        </div>
+        </div> */}
       </div>
 
       <div className='flex grow w-full overflow-hidden'>
@@ -377,55 +379,57 @@ export default function OrderPage() {
               <table className='w-full text-left border-collapse'>
                 <thead>
                   <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40 select-none'>
-                    <th className='py-4 px-6 font-semibold tracking-wide'>Mã đơn hàng</th>
-                    <th className='py-4 px-6 font-semibold tracking-wide'>Trạng thái hóa đơn</th>
-                    <th className='py-4 px-6 font-semibold tracking-wide'>Số lượng món</th>
-                    <th className='py-4 px-6 font-semibold tracking-wide'>Thời gian</th>
-                    <th className='py-4 px-6 font-semibold tracking-wide text-right'>Tổng cộng</th>
-                    <th className='py-4 px-6 font-semibold tracking-wide text-center w-28'>Thao tác</th>
+                    <th className='py-4 px-6 tracking-wide'>Mã đơn hàng</th>
+                    <th className='py-4 px-6 tracking-wide'>Trạng thái hóa đơn</th>
+                    <th className='py-4 px-6 tracking-wide'>Tổng sản phẩm</th>
+                    <th className='py-4 px-6 tracking-wide'>Thời gian</th>
+                    <th className='py-4 px-6 tracking-wide text-right'>Tổng cộng</th>
+                    <th className='py-4 px-6 tracking-wide text-center w-28'>Thao tác</th>
                   </tr>
                 </thead>
 
                 <tbody className='divide-y divide-gray-100'>
                   {filteredOrders.length > 0 ? (
-                    filteredOrders.map(order => (
-                      <tr key={order.transactionId} className='hover:bg-[#fcfdfe] transition-colors group'>
-                        <td className='py-4 px-6 text-[13.5px] text-gray-900 font-bold'>
-                          {order.transactionCode}
-                          {order.invoiceNumber && (
-                            <span className='block text-[10px] text-gray-400 font-bold mt-0.5'>
-                              HĐ: {order.invoiceNumber}
-                            </span>
-                          )}
-                        </td>
+                    filteredOrders
+                      .filter(order => !(order.status === 'Draft' && order.itemCount === 0))
+                      .map(order => (
+                        <tr key={order.transactionId} className='hover:bg-[#fcfdfe] transition-colors group'>
+                          <td className='py-4 px-6 text-[13.5px] text-gray-900 font-bold'>
+                            {order.transactionCode}
+                            {order.invoiceNumber && (
+                              <span className='block text-[10px] text-gray-400 font-bold mt-0.5'>
+                                HĐ: {order.invoiceNumber}
+                              </span>
+                            )}
+                          </td>
 
-                        <td className='py-4 px-6 text-[13.5px] text-gray-600 font-medium'>
-                          {getStatusBadge(order.status)}
-                        </td>
+                          <td className='py-4 px-6 text-[13.5px] text-gray-600 font-medium'>
+                            {getStatusBadge(order.status)}
+                          </td>
 
-                        <td className='py-4 px-6 text-[13.5px] text-gray-600 font-bold'>
-                          {order.itemCount} món
-                        </td>
+                          <td className='py-4 px-6 text-[13.5px] text-gray-600 font-bold'>
+                            {order.itemCount} sản phẩm
+                          </td>
 
-                        <td className='py-4 px-6 text-[13.5px] text-gray-500 font-semibold'>
-                          {formatDateTime(order.transactionDate)}
-                        </td>
+                          <td className='py-4 px-6 text-[13.5px] text-gray-500 font-semibold'>
+                            {formatDateTime(order.transactionDate)}
+                          </td>
 
-                        <td className='py-4 px-6 text-right text-[14.5px] text-gray-900 font-black'>
-                          {order.totalAmount.toLocaleString('vi-VN')} đ
-                        </td>
+                          <td className='py-4 px-6 text-right text-[14.5px] text-gray-900 font-black'>
+                            {order.totalAmount.toLocaleString('vi-VN')} đ
+                          </td>
 
-                        <td className='py-4 px-6 text-center'>
-                          <button
-                            onClick={() => handleViewDetails(order.transactionId)}
-                            disabled={loadingDetail}
-                            className='p-1.5 text-gray-400 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors cursor-pointer'
-                            title='Xem chi tiết'
-                          >
-                            <Eye size={16} />
-                          </button>
-                        </td>
-                      </tr>
+                          <td className='py-4 px-6 text-center'>
+                            <button
+                              onClick={() => handleViewDetails(order.transactionId)}
+                              disabled={loadingDetail}
+                              className='p-1.5 text-gray-400 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors cursor-pointer'
+                              title='Xem chi tiết'
+                            >
+                              <Eye size={16} />
+                            </button>
+                          </td>
+                        </tr>
                     ))
                   ) : (
                     <tr>
@@ -514,6 +518,10 @@ export default function OrderPage() {
               </div>
 
               <div className='border-t border-gray-100 pt-4 flex flex-col gap-2 font-semibold text-slate-500 text-xs'>
+                <div className='flex justify-between'>
+                  <span className='text-gray-400'>Tổng số sản phẩm:</span>
+                  <span className='font-bold text-gray-800'>{totalProducts} sản phẩm</span>
+                </div>
                 <div className='flex justify-between'>
                   <span className='text-gray-400'>Tạm tính:</span>
                   <span className='font-bold text-gray-800'>{selectedOrder.subTotal.toLocaleString('vi-VN')} đ</span>

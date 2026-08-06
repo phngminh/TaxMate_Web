@@ -168,8 +168,17 @@ export default function ExpenseReport({ businessId }: Props) {
             <div className='bg-white border border-[#eef0f2] rounded-[12px] shadow-[0px_1px_1px_rgba(0,0,0,0.03)] p-5 flex flex-col justify-between min-h-30 transition-all hover:shadow-[0px_4px_12px_rgba(0,0,0,0.05)]'>
               <div className='flex items-start justify-between'>
                 <div className='flex flex-col gap-1 min-w-0'>
-                  <span className='text-[#6b7280] text-[13px] font-medium block truncate'>Dòng tiền thuần</span>
-                  <span className={`text-[22px] font-bold leading-tight block truncate ${cashFlowData!.summary.netAmount >= 0 ? 'text-[#10b981]' : 'text-[#ef4444]'}`}>
+                  <span className='text-[#6b7280] text-[13px] font-medium block truncate'>
+                    Lãi/Lỗ tạm tính
+                  </span>
+                  <span
+                    className={`text-[22px] font-bold leading-tight block truncate ${
+                      cashFlowData!.summary.netAmount >= 0
+                        ? 'text-[#10b981]'
+                        : 'text-[#ef4444]'
+                    }`}
+                  >
+                    {cashFlowData!.summary.netAmount >= 0 ? '+' : ''}
                     {formatCurrency(cashFlowData!.summary.netAmount)}
                   </span>
                 </div>
@@ -279,8 +288,15 @@ export default function ExpenseReport({ businessId }: Props) {
                         width={45}
                       />
                       <Tooltip
-                        formatter={(value: any) => [formatCurrency(Number(value)), '']}
-                        contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #eef0f2' }}
+                        formatter={(value, name) => [
+                          formatCurrency(Number(value)),
+                          name
+                        ]}
+                        contentStyle={{
+                          fontSize: 12,
+                          borderRadius: 8,
+                          border: '1px solid #eef0f2'
+                        }}
                       />
                       <Bar dataKey='income' name='Thu nhập' fill='#10b981' radius={[4, 4, 0, 0]} maxBarSize={30} />
                       <Bar dataKey='expense' name='Chi phí' fill='#ef4444' radius={[4, 4, 0, 0]} maxBarSize={30} />
@@ -296,8 +312,7 @@ export default function ExpenseReport({ businessId }: Props) {
 
             {/* Expense Distribution */}
             <div className='bg-white border border-[#eef0f2] rounded-[12px] shadow-[0px_1px_1px_rgba(0,0,0,0.02)] p-6 flex flex-col'>
-              <div className='text-[#1f2937] text-[15px] font-bold mb-4'>Phân bổ cơ cấu chi phí</div>
-
+              <div className='text-[#1f2937] text-[15px] font-bold mb-4'>Biểu đồ khoản chi theo loại</div>
               {cashFlowData!.expenseDistribution && cashFlowData!.expenseDistribution.length > 0 ? (
                 <>
                   <div className='relative flex-1 flex items-center justify-center' style={{ height: 180 }}>

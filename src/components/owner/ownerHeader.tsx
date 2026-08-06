@@ -303,7 +303,7 @@ export default function OwnerHeader() {
   }
 
   return (
-    <div className='h-12.75 bg-linear-to-r from-[#d00c0c] to-[#4c51bf] shadow-[0px_1px_1px_rgba(0,0,0,0.05)] flex items-center justify-between px-4'>
+    <div className='fixed top-0 left-0 right-0 z-50 h-12.75 bg-linear-to-r from-[#d00c0c] to-[#4c51bf] shadow-[0px_1px_1px_rgba(0,0,0,0.05)] flex items-center justify-between px-4'>
       <div className='flex items-center gap-6'>
         <div className='bg-white h-8.25 rounded-[16px] flex items-center px-3 shrink-0'>
           <div
