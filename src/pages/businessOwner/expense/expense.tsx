@@ -90,6 +90,7 @@ export default function Expense() {
   const [priceFilter, setPriceFilter] = useState('all')
   const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('Tất cả')
   const [incomeCategoryFilter, setIncomeCategoryFilter] = useState('Tất cả')
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('Tất cả')
 
   const currentYear = new Date().getFullYear()
   const currentMonth = new Date().getMonth()
@@ -221,11 +222,12 @@ export default function Expense() {
     setPriceFilter('all')
     setExpenseCategoryFilter('Tất cả')
     setIncomeCategoryFilter('Tất cả')
+    setPaymentMethodFilter('Tất cả')
     setSelectedYear(currentYear)
     setSelectedQuarter(currentQuarter)
   }
 
-  const isFiltered = priceFilter !== 'all' || expenseCategoryFilter !== 'Tất cả' || incomeCategoryFilter !== 'Tất cả' || selectedYear !== currentYear || selectedQuarter !== currentQuarter
+  const isFiltered = priceFilter !== 'all' || expenseCategoryFilter !== 'Tất cả' || incomeCategoryFilter !== 'Tất cả' || paymentMethodFilter !== 'Tất cả' || selectedYear !== currentYear || selectedQuarter !== currentQuarter
 
   const expenses = useMemo(() => {
     return apiRecords.filter((r) => {
@@ -235,12 +237,15 @@ export default function Expense() {
       if (expenseCategoryFilter !== 'Tất cả') {
         if (r.category !== expenseCategoryFilter) return false
       }
+      if (paymentMethodFilter !== 'Tất cả') {
+        if (r.paymentMethod !== paymentMethodFilter) return false
+      }
       const d = new Date(r.originalDateStr)
       if (d.getFullYear() !== selectedYear) return false
       if (selectedQuarter > 0 && Math.floor(d.getMonth() / 3) + 1 !== selectedQuarter) return false
       return true
     })
-  }, [apiRecords, priceFilter, expenseCategoryFilter, selectedYear, selectedQuarter])
+  }, [apiRecords, priceFilter, expenseCategoryFilter, paymentMethodFilter, selectedYear, selectedQuarter])
 
   const incomes = useMemo(() => {
     return apiRecords.filter((r) => {
@@ -250,12 +255,15 @@ export default function Expense() {
       if (incomeCategoryFilter !== 'Tất cả') {
         if (r.category !== incomeCategoryFilter) return false
       }
+      if (paymentMethodFilter !== 'Tất cả') {
+        if (r.paymentMethod !== paymentMethodFilter) return false
+      }
       const d = new Date(r.originalDateStr)
       if (d.getFullYear() !== selectedYear) return false
       if (selectedQuarter > 0 && Math.floor(d.getMonth() / 3) + 1 !== selectedQuarter) return false
       return true
     })
-  }, [apiRecords, priceFilter, incomeCategoryFilter, selectedYear, selectedQuarter])
+  }, [apiRecords, priceFilter, incomeCategoryFilter, paymentMethodFilter, selectedYear, selectedQuarter])
 
   const ITEMS_PER_PAGE = 5
   const [expensePage, setExpensePage] = useState(1)
@@ -268,8 +276,8 @@ export default function Expense() {
   const incomeTotalPages = Math.ceil(incomes.length / ITEMS_PER_PAGE)
   const paginatedIncomes = showAllIncomes ? incomes : incomes.slice((incomePage - 1) * ITEMS_PER_PAGE, incomePage * ITEMS_PER_PAGE)
 
-  useEffect(() => { setExpensePage(1) }, [priceFilter, expenseCategoryFilter, selectedYear, selectedQuarter])
-  useEffect(() => { setIncomePage(1) }, [priceFilter, incomeCategoryFilter, selectedYear, selectedQuarter])
+  useEffect(() => { setExpensePage(1) }, [priceFilter, expenseCategoryFilter, paymentMethodFilter, selectedYear, selectedQuarter])
+  useEffect(() => { setIncomePage(1) }, [priceFilter, incomeCategoryFilter, paymentMethodFilter, selectedYear, selectedQuarter])
 
   const totalExpense = expenses.reduce((s, r) => s + Math.abs(r.amount), 0)
   const totalIncome = incomes.reduce((s, r) => s + r.amount, 0)
@@ -423,6 +431,19 @@ export default function Expense() {
             value={incomeCategoryFilter}
             onChange={setIncomeCategoryFilter}
             options={incomeCategoryNames.map((c) => ({ val: c, label: c }))}
+          />
+
+          <FilterGroup
+            title='Phương thức'
+            name='paymentMethodFilter'
+            value={paymentMethodFilter}
+            onChange={setPaymentMethodFilter}
+            options={[
+              { val: 'Tất cả', label: 'Tất cả' },
+              { val: 'Tiền mặt', label: 'Tiền mặt' },
+              { val: 'Chuyển khoản', label: 'Chuyển khoản' },
+              { val: 'Ví điện tử', label: 'Ví điện tử' },
+            ]}
           />
 
           <div className='flex flex-col gap-3'>
