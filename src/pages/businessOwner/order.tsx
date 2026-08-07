@@ -1,10 +1,18 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { Eye, Search, FileDown, Box, X, Scan, RotateCcw, Loader2 } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
+import { Eye, Search, Box, X, Scan, RotateCcw, Loader2 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useBusiness } from '../../contexts/BusinessContext'
 import { getOrders, getOrderById } from '../../apis/order.api'
 import type { Order, OrderDetail } from '../../types/order.type'
-
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '../../components/ui/pagination'
 export default function OrderPage() {
   const { currentBusiness } = useBusiness()
   const businessId = currentBusiness?.id
@@ -23,17 +31,28 @@ export default function OrderPage() {
   const [customDate, setCustomDate] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Pagination (simple load more or fixed page size for POS list)
-  const [page, setPage] = useState(1)
-  const [pageSize] = useState(100) // load a large page size to allow responsive local filters
+  // Pagination
+  const [searchParams, setSearchParams] = useSearchParams()
+  const page = Number(searchParams.get('page') ?? '1')
+  const pageSize = 10
+
+  const changePage = (newPage: number) => {
+    const params = new URLSearchParams(searchParams)
+    if (newPage === 1) {
+      params.delete('page')
+    } else {
+      params.set('page', newPage.toString())
+    }
+    setSearchParams(params, { replace: true })
+  }
 
   const fetchOrders = async () => {
     if (!businessId) return
     try {
       setLoading(true)
       const res = await getOrders(businessId, {
-        page,
-        pageSize,
+        page: 1,
+        pageSize: 100,
         status: statusFilter !== 'all' ? statusFilter : null,
         paymentMethod: paymentFilter !== 'all' ? paymentFilter : null
       })
@@ -41,6 +60,7 @@ export default function OrderPage() {
       if (res.success && res.data) {
         setOrders(res.data.items || [])
       }
+      console.log('Fetched orders:', res.data?.items)
     } catch (err: any) {
       console.error(err)
       toast.error('Không thể tải danh sách đơn hàng.')
@@ -74,11 +94,14 @@ export default function OrderPage() {
     setStatusFilter('all')
     setPaymentFilter('all')
     setTimeFilter('Tháng này')
+    changePage(1)
   }
 
   // Filter loaded orders by time and search query locally
   const filteredOrders = useMemo(() => {
     return orders.filter(order => {
+      if (order.status === 'Draft' && order.itemCount === 0) return false
+
       // 1. Search Query
       if (searchQuery.trim() !== '') {
         const query = searchQuery.toLowerCase().trim()
@@ -88,7 +111,8 @@ export default function OrderPage() {
       }
 
       // 2. Time Filter
-      const orderDate = new Date(order.transactionDate)
+      const utcDateStr = order.transactionDate.endsWith('Z') ? order.transactionDate : `${order.transactionDate}Z`
+      const orderDate = new Date(typeof utcDateStr === 'string' && !utcDateStr.endsWith('Z') ? utcDateStr + 'Z' : utcDateStr)
       const now = new Date()
       const diffTime = Math.abs(now.getTime() - orderDate.getTime())
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
@@ -119,7 +143,7 @@ export default function OrderPage() {
         if (!isThisYear) return false
       } else if (timeFilter === 'Tùy chọn') {
         if (customDate) {
-          const selectedDate = new Date(customDate)
+          const selectedDate = new Date(typeof customDate === 'string' && !customDate.endsWith('Z') ? customDate + 'Z' : customDate)
 
           const isSameDate =
             orderDate.getDate() === selectedDate.getDate() &&
@@ -133,6 +157,13 @@ export default function OrderPage() {
       return true
     })
   }, [orders, searchQuery, timeFilter])
+
+  const paginatedOrders = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return filteredOrders.slice(start, start + pageSize)
+  }, [filteredOrders, page])
+
+  const totalPages = Math.ceil(filteredOrders.length / pageSize)
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -170,7 +201,8 @@ export default function OrderPage() {
   }
 
   const formatDateTime = (dateStr: string) => {
-    const d = new Date(dateStr)
+    const utcDateStr = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`
+    const d = new Date(typeof utcDateStr === 'string' && !utcDateStr.endsWith('Z') ? utcDateStr + 'Z' : utcDateStr)
     return d.toLocaleString('vi-VN', {
       hour: '2-digit',
       minute: '2-digit',
@@ -209,7 +241,10 @@ export default function OrderPage() {
             type='text'
             placeholder='Tìm kiếm nhanh theo mã đơn hàng, số hóa đơn...'
             value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
+            onChange={e => {
+              setSearchQuery(e.target.value)
+              changePage(1)
+            }}
             className='grow bg-transparent outline-hidden text-[14px] text-gray-800 placeholder-gray-400 font-medium'
           />
           <Search className='text-gray-400 size-5 shrink-0 hover:text-gray-600 transition-colors cursor-pointer' />
@@ -242,7 +277,10 @@ export default function OrderPage() {
                     type='radio'
                     name='statusFilter'
                     checked={statusFilter === opt.val}
-                    onChange={() => setStatusFilter(opt.val)}
+                    onChange={() => {
+                      setStatusFilter(opt.val)
+                      changePage(1)
+                    }}
                     className='sr-only'
                   />
                   <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${
@@ -269,7 +307,7 @@ export default function OrderPage() {
               {[
                 { val: 'all', label: 'Tất cả' },
                 { val: 'Cash', label: 'Tiền mặt' },
-                { val: 'EWallet', label: 'Thẻ' },
+                // { val: 'EWallet', label: 'Thẻ' },
                 { val: 'Transfer', label: 'Chuyển khoản' }
               ].map(opt => (
                 <label key={opt.val} className='flex items-center gap-3 cursor-pointer group text-[13.5px] text-gray-700 select-none'>
@@ -277,7 +315,10 @@ export default function OrderPage() {
                     type='radio'
                     name='paymentFilter'
                     checked={paymentFilter === opt.val}
-                    onChange={() => setPaymentFilter(opt.val)}
+                    onChange={() => {
+                      setPaymentFilter(opt.val)
+                      changePage(1)
+                    }}
                     className='sr-only'
                   />
                   <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${
@@ -312,10 +353,14 @@ export default function OrderPage() {
                     name='timeFilter'
                     checked={timeFilter === opt}
                     onChange={() => {
+                      if (opt !== 'Tùy chọn') {
+                        setTimeFilter(opt)
+                        changePage(1)
+                      }
+                    }}
+                    onClick={() => {
                       if (opt === 'Tùy chọn') {
                         inputRef.current?.showPicker?.()
-                      } else {
-                        setTimeFilter(opt)
                       }
                     }}
                     className='sr-only'
@@ -353,6 +398,7 @@ export default function OrderPage() {
               onChange={(e) => {
                 setCustomDate(e.target.value)
                 setTimeFilter('Tùy chọn')
+                changePage(1)
               }}
             />
           </div>
@@ -375,7 +421,7 @@ export default function OrderPage() {
               <Loader2 className='animate-spin text-[#D32F2F] size-10' />
             </div>
           ) : (
-            <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden w-full'>
+            <div className='bg-white rounded-[12px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.02)] overflow-hidden w-full shrink-0'>
               <table className='w-full text-left border-collapse'>
                 <thead>
                   <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40 select-none'>
@@ -389,9 +435,8 @@ export default function OrderPage() {
                 </thead>
 
                 <tbody className='divide-y divide-gray-100'>
-                  {filteredOrders.length > 0 ? (
-                    filteredOrders
-                      .filter(order => !(order.status === 'Draft' && order.itemCount === 0))
+                  {paginatedOrders.length > 0 ? (
+                    paginatedOrders
                       .map(order => (
                         <tr key={order.transactionId} className='hover:bg-[#fcfdfe] transition-colors group'>
                           <td className='py-4 px-6 text-[13.5px] text-gray-900 font-bold'>
@@ -457,6 +502,52 @@ export default function OrderPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {filteredOrders.length > 0 && totalPages > 1 && (
+            <div className='mt-4 mb-12'>
+              <Pagination className='mt-6'>
+                <PaginationContent className='gap-2'>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      onClick={() => changePage(Math.max(1, page - 1))}
+                      className={`h-10 px-4 rounded-lg border transition-all ${
+                        page === 1
+                          ? 'pointer-events-none opacity-40'
+                          : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                      }`}
+                    />
+                  </PaginationItem>
+
+                  {[...Array(totalPages)].map((_, i) => (
+                    <PaginationItem key={i + 1}>
+                      <PaginationLink
+                        isActive={page === i + 1}
+                        onClick={() => changePage(i + 1)}
+                        className={`h-10 w-10 rounded-lg font-semibold transition-all cursor-pointer ${
+                          page === i + 1
+                            ? 'bg-[#D32F2F] text-white border-[#D32F2F] hover:bg-[#B71C1C]'
+                            : 'border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                        }`}
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+
+                  <PaginationItem>
+                    <PaginationNext
+                      onClick={() => changePage(Math.min(totalPages, page + 1))}
+                      className={`h-10 px-4 rounded-lg border transition-all ${
+                        page === totalPages
+                          ? 'pointer-events-none opacity-40'
+                          : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                      }`}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
         </div>
