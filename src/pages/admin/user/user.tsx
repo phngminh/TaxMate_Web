@@ -108,7 +108,7 @@ export default function UserList() {
   }
 
   const formatCreatedDate = (dateString: string) => {
-    const date = new Date(dateString)
+    const date = new Date(typeof dateString === 'string' && !dateString.endsWith('Z') ? dateString + 'Z' : dateString)
     if (Number.isNaN(date.getTime())) {
       return dateString
     }

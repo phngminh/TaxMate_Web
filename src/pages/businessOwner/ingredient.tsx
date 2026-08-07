@@ -69,7 +69,7 @@ type ConfirmAction =
   | { type: 'delete-recipe'; productId: string; productName: string }
 
 const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  new Date(typeof iso === 'string' && !iso.endsWith('Z') ? iso + 'Z' : iso).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
 const parsePrice = (value: string): number | undefined => {
   const clean = value.replace(/\D/g, '')

@@ -163,11 +163,11 @@ export default function Expense() {
         subContent: e.paymentMethod || 'Khác',
         category: e.categoryName,
         categoryColor: 'orange',
-        date: new Date(e.expenseDate).toLocaleDateString('vi-VN'),
+        date: new Date(typeof e.expenseDate === 'string' && !e.expenseDate.endsWith('Z') ? e.expenseDate + 'Z' : e.expenseDate).toLocaleDateString('vi-VN'),
         amount: -e.amount,
         type: 'expense',
         categoryId: e.expenseCategoryId,
-        originalDateStr: new Date(e.expenseDate).toISOString().split('T')[0],
+        originalDateStr: new Date(typeof e.expenseDate === 'string' && !e.expenseDate.endsWith('Z') ? e.expenseDate + 'Z' : e.expenseDate).toISOString().split('T')[0],
         rawAmount: e.amount,
         paymentMethod: e.paymentMethod || 'Tiền mặt'
       }))
@@ -178,11 +178,11 @@ export default function Expense() {
         subContent: e.paymentMethod || 'Khác',
         category: e.categoryName,
         categoryColor: 'green',
-        date: new Date(e.incomeDate).toLocaleDateString('vi-VN'),
+        date: new Date(typeof e.incomeDate === 'string' && !e.incomeDate.endsWith('Z') ? e.incomeDate + 'Z' : e.incomeDate).toLocaleDateString('vi-VN'),
         amount: e.amount,
         type: 'income',
         categoryId: e.incomeCategoryId,
-        originalDateStr: new Date(e.incomeDate).toISOString().split('T')[0],
+        originalDateStr: new Date(typeof e.incomeDate === 'string' && !e.incomeDate.endsWith('Z') ? e.incomeDate + 'Z' : e.incomeDate).toISOString().split('T')[0],
         rawAmount: e.amount,
         paymentMethod: e.paymentMethod || 'Tiền mặt'
       }))
@@ -240,7 +240,7 @@ export default function Expense() {
       if (paymentMethodFilter !== 'Tất cả') {
         if (r.paymentMethod !== paymentMethodFilter) return false
       }
-      const d = new Date(r.originalDateStr)
+      const d = new Date(typeof r.originalDateStr === 'string' && !r.originalDateStr.endsWith('Z') ? r.originalDateStr + 'Z' : r.originalDateStr)
       if (d.getFullYear() !== selectedYear) return false
       if (selectedQuarter > 0 && Math.floor(d.getMonth() / 3) + 1 !== selectedQuarter) return false
       return true
@@ -258,7 +258,7 @@ export default function Expense() {
       if (paymentMethodFilter !== 'Tất cả') {
         if (r.paymentMethod !== paymentMethodFilter) return false
       }
-      const d = new Date(r.originalDateStr)
+      const d = new Date(typeof r.originalDateStr === 'string' && !r.originalDateStr.endsWith('Z') ? r.originalDateStr + 'Z' : r.originalDateStr)
       if (d.getFullYear() !== selectedYear) return false
       if (selectedQuarter > 0 && Math.floor(d.getMonth() / 3) + 1 !== selectedQuarter) return false
       return true
@@ -295,7 +295,7 @@ export default function Expense() {
     const fd = new FormData(e.currentTarget)
     const selectedDateStr = (fd.get('date') as string) || new Date().toISOString().split('T')[0]
 
-    if (new Date(selectedDateStr) > new Date()) {
+    if (new Date(typeof selectedDateStr === 'string' && !selectedDateStr.endsWith('Z') ? selectedDateStr + 'Z' : selectedDateStr) > new Date()) {
       toast.error('Ngày tạo không được chọn quá hôm nay!')
       return
     }
@@ -325,7 +325,7 @@ export default function Expense() {
     const fd = new FormData(e.currentTarget)
     const selectedDateStr = (fd.get('date') as string) || new Date().toISOString().split('T')[0]
 
-    if (new Date(selectedDateStr) > new Date()) {
+    if (new Date(typeof selectedDateStr === 'string' && !selectedDateStr.endsWith('Z') ? selectedDateStr + 'Z' : selectedDateStr) > new Date()) {
       toast.error('Ngày tạo không được chọn quá hôm nay!')
       return
     }
@@ -352,7 +352,7 @@ export default function Expense() {
     const fd = new FormData(e.currentTarget)
     const selectedDateStr = (fd.get('date') as string) || new Date().toISOString().split('T')[0]
 
-    if (new Date(selectedDateStr) > new Date()) {
+    if (new Date(typeof selectedDateStr === 'string' && !selectedDateStr.endsWith('Z') ? selectedDateStr + 'Z' : selectedDateStr) > new Date()) {
       toast.error('Ngày không được chọn quá hôm nay!')
       return
     }

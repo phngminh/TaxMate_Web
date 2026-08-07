@@ -82,7 +82,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 
 function formatDateOnly(value: string | null) {
   if (!value) return '—'
-  const d = new Date(value)
+  const d = new Date(typeof value === 'string' && !value.endsWith('Z') ? value + 'Z' : value)
   if (Number.isNaN(d.getTime())) return value.slice(0, 10)
   return d.toLocaleDateString('vi-VN')
 }
@@ -281,11 +281,11 @@ function DocumentDrawer({
                   },
                   {
                     label: 'Created At',
-                    value: new Date(doc.created_at).toLocaleString('vi-VN'),
+                    value: new Date(typeof doc.created_at === 'string' && !doc.created_at.endsWith('Z') ? doc.created_at + 'Z' : doc.created_at).toLocaleString('vi-VN'),
                   },
                   {
                     label: 'Updated At',
-                    value: new Date(doc.updated_at).toLocaleString('vi-VN'),
+                    value: new Date(typeof doc.updated_at === 'string' && !doc.updated_at.endsWith('Z') ? doc.updated_at + 'Z' : doc.updated_at).toLocaleString('vi-VN'),
                   },
                   { label: 'Effective Date', value: formatDateOnly(doc.effective_date) },
                   { label: 'Expired Date', value: formatDateOnly(doc.expired_date) },
@@ -725,7 +725,7 @@ export default function LegalDocumentManagement() {
   const now = Date.now()
   const sevenDaysMs = 7 * 24 * 60 * 60 * 1000
   const newIn7Days = documents.filter(
-    (d) => now - new Date(d.created_at).getTime() <= sevenDaysMs,
+    (d) => now - new Date(typeof d.created_at === 'string' && !d.created_at.endsWith('Z') ? d.created_at + 'Z' : d.created_at).getTime() <= sevenDaysMs,
   ).length
   const indexedCount = documents.filter((d) => d.is_indexed).length
   const pendingCount = documents.filter((d) => !d.is_indexed).length
@@ -1021,10 +1021,10 @@ export default function LegalDocumentManagement() {
                     <TableCell className='px-4 py-5'>
                       <div>
                         <p className='text-sm text-[#374151]'>
-                          {new Date(doc.updated_at).toLocaleDateString('vi-VN')}
+                          {new Date(typeof doc.updated_at === 'string' && !doc.updated_at.endsWith('Z') ? doc.updated_at + 'Z' : doc.updated_at).toLocaleDateString('vi-VN')}
                         </p>
                         <p className='text-[11px] text-[#9ca3af] mt-1'>
-                          {new Date(doc.updated_at).toLocaleTimeString('vi-VN', {
+                          {new Date(typeof doc.updated_at === 'string' && !doc.updated_at.endsWith('Z') ? doc.updated_at + 'Z' : doc.updated_at).toLocaleTimeString('vi-VN', {
                             hour: '2-digit',
                             minute: '2-digit',
                           })}
