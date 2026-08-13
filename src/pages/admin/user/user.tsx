@@ -154,10 +154,10 @@ export default function UserList() {
         </div>
 
         <div className='flex flex-col sm:flex-row gap-3'>
-          <div className='flex-1 max-w-5xl flex items-center bg-white border border-gray-300 rounded-lg px-5 py-2.5 shadow-xs focus-within:border-sidebar-primary focus-within:ring-1 focus-within:ring-[#D32F2F]/20 transition-all'>
+          <div className='flex-1 max-w-5xl flex items-center bg-white border border-gray-300 rounded-lg px-5 py-2.5 shadow-xs focus-within:border-blue-600 focus-within:ring-1 focus-within:ring-blue-600/20 transition-all'>
             <Search
               className={`mr-3 size-5 shrink-0 stroke-2 transition-colors ${
-                searchTerm ? 'text-sidebar-primary' : 'text-gray-400'
+                searchTerm ? 'text-blue-600' : 'text-gray-400'
               }`}
             />
             <input
@@ -212,42 +212,42 @@ export default function UserList() {
               <TableHeader>
                 <TableRow>
                   <TableHead className='text-center pb-3'>
-                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                    <span className='text-xs font-medium text-gray-600 uppercase tracking-wide'>
                       Người dùng
                     </span>
                   </TableHead>
                   <TableHead className='text-center pb-3'>
-                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                    <span className='text-xs font-medium text-gray-600 uppercase tracking-wide'>
                       Liên hệ
                     </span>
                   </TableHead>
                   <TableHead className='text-center pb-3'>
-                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                    <span className='text-xs font-medium text-gray-600 uppercase tracking-wide'>
                       Mã số thuế
                     </span>
                   </TableHead>
                   <TableHead className='text-center pb-3'>
-                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                    <span className='text-xs font-medium text-gray-600 uppercase tracking-wide'>
                       Role
                     </span>
                   </TableHead>
                   <TableHead className='text-center pb-3'>
-                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                    <span className='text-xs font-medium text-gray-600 uppercase tracking-wide'>
                       Số hộ kinh doanh
                     </span>
                   </TableHead>
                   <TableHead className='text-center pb-3'>
-                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                    <span className='text-xs font-medium text-gray-600 uppercase tracking-wide'>
                       Trạng thái
                     </span>
                   </TableHead>
                   <TableHead className='text-center pb-3'>
-                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                    <span className='text-xs font-medium text-gray-600 uppercase tracking-wide'>
                       Ngày tạo
                     </span>
                   </TableHead>
                   <TableHead className='text-center pb-3'>
-                    <span className='text-xs font-medium text-muted-foreground uppercase tracking-wide'>
+                    <span className='text-xs font-medium text-gray-600 uppercase tracking-wide'>
                       Thao tác
                     </span>
                   </TableHead>
@@ -256,13 +256,13 @@ export default function UserList() {
               <TableBody>
                 {loading && users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className='py-10 text-center text-sm text-muted-foreground'>
+                    <TableCell colSpan={8} className='py-10 text-center text-sm text-gray-600'>
                       Đang tải...
                     </TableCell>
                   </TableRow>
                 ) : users.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className='py-10 text-center text-sm text-muted-foreground'>
+                    <TableCell colSpan={8} className='py-10 text-center text-sm text-gray-600'>
                       Không tìm thấy người dùng
                     </TableCell>
                   </TableRow>
@@ -278,7 +278,7 @@ export default function UserList() {
                       <TableRow key={user.id}>
                         <TableCell className='py-3'>
                           <div className='flex items-center gap-3'>
-                            <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10'>
+                            <div className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-blue-200 bg-blue-50'>
                               {user.avatarUrl ? (
                                 <img
                                   src={user.avatarUrl}
@@ -286,14 +286,14 @@ export default function UserList() {
                                   className='h-full w-full rounded-full object-cover'
                                 />
                               ) : (
-                                <UserIcon className='h-4 w-4 text-muted-foreground' />
+                                <UserIcon className='h-4 w-4 text-gray-600' />
                               )}
                             </div>
                             <div className='min-w-0 text-left'>
-                              <p className='truncate text-sm font-medium text-foreground'>
+                              <p className='truncate text-sm font-medium text-gray-900'>
                                 {user.fullName}
                               </p>
-                              <p className='truncate text-xs text-muted-foreground'>
+                              <p className='truncate text-xs text-gray-600'>
                                 {user.email}
                               </p>
                             </div>
@@ -301,14 +301,14 @@ export default function UserList() {
                         </TableCell>
 
                         <TableCell>
-                          <div className='flex items-center justify-center gap-1.5 text-sm text-muted-foreground'>
+                          <div className='flex items-center justify-center gap-1.5 text-sm text-gray-600'>
                             <Phone className='h-3 w-3' />
                             <span>{user.phone || '—'}</span>
                           </div>
                         </TableCell>
 
                         <TableCell className='text-center'>
-                          <span className='text-sm text-foreground'>
+                          <span className='text-sm text-gray-900'>
                             {user.taxCode || '—'}
                           </span>
                         </TableCell>
@@ -327,7 +327,7 @@ export default function UserList() {
 
                         <TableCell>
                           <div className='flex items-center justify-center gap-1.5'>
-                            <Building2 className='w-3.5 h-3.5 text-muted-foreground' />
+                            <Building2 className='w-3.5 h-3.5 text-gray-600' />
                             <span className='inline-flex items-center justify-center min-w-2 h-5 rounded text-sm font-medium text-slate-600'>
                               {user.businessProfileCount}
                             </span>
@@ -343,7 +343,7 @@ export default function UserList() {
                         </TableCell>
 
                         <TableCell className='text-center'>
-                          <span className='text-sm text-muted-foreground'>
+                          <span className='text-sm text-gray-600'>
                             {formatCreatedDate(user.createdAt)}
                           </span>
                         </TableCell>
