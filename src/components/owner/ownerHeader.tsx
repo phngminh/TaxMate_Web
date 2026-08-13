@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import imgLogo from '../../assets/logo3.png'
 import path from '../../constants/path'
-import { Bell, User, HeadphonesIcon, Heart, Store, Settings, LogOut, Plus, FileDown, ChevronDown } from 'lucide-react'
+import { Bell, User, HeadphonesIcon, Heart, Store, Settings, LogOut, Plus, FileDown, ChevronDown, CreditCard, FileText } from 'lucide-react'
 import { useBusiness } from '../../contexts/BusinessContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
@@ -42,6 +42,8 @@ const menuItems = [
   { icon: Heart,          label: 'Gói của tôi' },
   { icon: FileDown,       label: 'Xuất S1A-HKD' },
   { icon: FileDown,       label: 'Xuất S2A-HKD' },
+  { icon: CreditCard,     label: 'Tài khoản Nhận tiền' },
+  { icon: FileText,       label: 'Cấu hình HĐĐT' },
   { icon: Store,          label: 'Cài đặt Cửa hàng' },
   { icon: Settings,       label: 'Cài đặt cá nhân' },
 ]
@@ -467,6 +469,12 @@ export default function OwnerHeader() {
                         openExportS2aModal()
                       } else if (label === 'Gói của tôi') {
                         navigate(path.BUSINESS_OWNER_SUBSCRIPTION)
+                        setProfileOpen(false)
+                      } else if (label === 'Tài khoản Nhận tiền') {
+                        navigate(path.BUSINESS_OWNER_BANK_CONFIG)
+                        setProfileOpen(false)
+                      } else if (label === 'Cấu hình HĐĐT') {
+                        navigate(path.BUSINESS_OWNER_EINVOICE_CONFIG)
                         setProfileOpen(false)
                       }
                     }}
