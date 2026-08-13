@@ -49,7 +49,7 @@ export default function Report() {
               }`}
             >
               <Receipt size={17} className={activeTab === 'expense' ? 'text-[#4c51bf]' : 'text-gray-400'} />
-              Chi phí & Dòng tiền
+              Chi phí
             </button>
           </div>
         </div>

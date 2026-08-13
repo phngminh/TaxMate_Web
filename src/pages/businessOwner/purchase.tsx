@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import {
   Plus,
   X,
@@ -11,6 +11,14 @@ import {
   UserPlus,
   Package
 } from 'lucide-react'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from '../../components/ui/pagination'
 import { toast } from 'react-toastify'
 import { useBusiness } from '../../contexts/BusinessContext'
 import {
@@ -50,6 +58,19 @@ export default function PurchasePage() {
   // Global loading
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const page = Number(searchParams.get('page') ?? '1')
+  const pageSize = 7
+
+  const changePage = (newPage: number) => {
+    const params = new URLSearchParams(searchParams)
+    if (newPage === 1) {
+      params.delete('page')
+    } else {
+      params.set('page', newPage.toString())
+    }
+    setSearchParams(params, { replace: true })
+  }
 
   // Data lists
   const [expenses, setExpenses] = useState<ExpenseDTO[]>([])
@@ -284,7 +305,7 @@ export default function PurchasePage() {
             ingredientId: item.itemId,
             quantity: item.quantity,
             totalCost: lineTotal,
-            purchaseDate: new Date(purchaseDate).toISOString(),
+            purchaseDate: new Date(typeof purchaseDate === 'string' && !purchaseDate.endsWith('Z') ? purchaseDate + 'Z' : purchaseDate).toISOString(),
             invoiceNumber: purchaseInvoiceNumber.trim(),
             supplierId: purchaseSupplierId,
             supplierName
@@ -311,7 +332,7 @@ export default function PurchasePage() {
           expenseCategoryId: categoryId,
           expenseTitle: `Nhập hàng hóa đơn ${purchaseInvoiceNumber}`,
           amount: totalProductCost,
-          expenseDate: new Date(purchaseDate).toISOString(),
+          expenseDate: new Date(typeof purchaseDate === 'string' && !purchaseDate.endsWith('Z') ? purchaseDate + 'Z' : purchaseDate).toISOString(),
           paymentMethod: 'Cash',
           note: noteContent,
           supplierId: purchaseSupplierId
@@ -540,8 +561,15 @@ export default function PurchasePage() {
     })
 
     // Sort newest first
-    return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    return list.sort((a, b) => new Date(typeof b.date === 'string' && !b.date.endsWith('Z') ? b.date + 'Z' : b.date).getTime() - new Date(typeof a.date === 'string' && !a.date.endsWith('Z') ? a.date + 'Z' : a.date).getTime())
   }, [materialPurchases, expenses])
+
+  const paginatedPurchases = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return combinedPurchases.slice(start, start + pageSize)
+  }, [combinedPurchases, page])
+
+  const totalPages = Math.ceil(combinedPurchases.length / pageSize)
 
   return (
     <div className='flex flex-col bg-[#f8f9fa] min-h-[calc(100vh-51px)] w-full'>
@@ -618,7 +646,7 @@ export default function PurchasePage() {
                         </tr>
                       </thead>
                       <tbody className='divide-y divide-gray-100 text-xs font-semibold text-gray-600'>
-                        {combinedPurchases.map(p => (
+                        {paginatedPurchases.map(p => (
                           <tr key={p.id} className='hover:bg-[#fcfdfe] transition-colors'>
                             <td className='py-4 px-5 text-gray-900 font-bold font-mono'>{p.invoiceNumber}</td>
                             <td className='py-4 px-5'>
@@ -632,7 +660,7 @@ export default function PurchasePage() {
                             </td>
                             <td className='py-4 px-5 font-bold text-slate-700'>{p.supplierName}</td>
                             <td className='py-4 px-5 max-w-xs truncate font-medium'>{p.summary}</td>
-                            <td className='py-4 px-5 font-mono'>{new Date(p.date).toLocaleDateString('vi-VN')}</td>
+                            <td className='py-4 px-5 font-mono'>{new Date(typeof p.date === 'string' && !p.date.endsWith('Z') ? p.date + 'Z' : p.date).toLocaleDateString('vi-VN')}</td>
                             <td className='py-4 px-5 text-right font-black text-orange-600 font-mono'>-{formatPrice(p.amount)} đ</td>
                             <td className='py-4 px-5 text-center'>
                               <button
@@ -678,6 +706,52 @@ export default function PurchasePage() {
                   ) : (
                     <div className='text-center py-20 text-slate-400 text-xs font-bold'>
                       Chưa có lịch sử hóa đơn nhập kho nào.
+                    </div>
+                  )}
+
+                  {combinedPurchases.length > 0 && totalPages > 1 && (
+                    <div className='mt-4 mb-12'>
+                      <Pagination className='mt-6'>
+                        <PaginationContent className='gap-2'>
+                          <PaginationItem>
+                            <PaginationPrevious
+                              onClick={() => changePage(Math.max(1, page - 1))}
+                              className={`h-10 px-4 rounded-lg border transition-all ${
+                                page === 1
+                                  ? 'pointer-events-none opacity-40'
+                                  : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                              }`}
+                            />
+                          </PaginationItem>
+
+                          {[...Array(totalPages)].map((_, i) => (
+                            <PaginationItem key={i + 1}>
+                              <PaginationLink
+                                isActive={page === i + 1}
+                                onClick={() => changePage(i + 1)}
+                                className={`h-10 w-10 rounded-lg font-semibold transition-all cursor-pointer ${
+                                  page === i + 1
+                                    ? 'bg-[#D32F2F] text-white border-[#D32F2F] hover:bg-[#B71C1C]'
+                                    : 'border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                                }`}
+                              >
+                                {i + 1}
+                              </PaginationLink>
+                            </PaginationItem>
+                          ))}
+
+                          <PaginationItem>
+                            <PaginationNext
+                              onClick={() => changePage(Math.min(totalPages, page + 1))}
+                              className={`h-10 px-4 rounded-lg border transition-all ${
+                                page === totalPages
+                                  ? 'pointer-events-none opacity-40'
+                                  : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
+                              }`}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
                     </div>
                   )}
                 </div>
@@ -1160,7 +1234,7 @@ export default function PurchasePage() {
                     </div>
                     <div>
                       <span className='text-gray-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5'>Ngày chi</span>
-                      <span className='text-gray-800 font-bold font-mono'>{new Date(selectedExpenseDetail.expenseDate).toLocaleDateString('vi-VN')}</span>
+                      <span className='text-gray-800 font-bold font-mono'>{new Date(typeof selectedExpenseDetail.expenseDate === 'string' && !selectedExpenseDetail.expenseDate.endsWith('Z') ? selectedExpenseDetail.expenseDate + 'Z' : selectedExpenseDetail.expenseDate).toLocaleDateString('vi-VN')}</span>
                     </div>
                   </div>
 
@@ -1207,7 +1281,7 @@ export default function PurchasePage() {
                     </div>
                     <div>
                       <span className='text-gray-400 block text-[10px] uppercase font-bold tracking-wider mb-0.5'>Ngày lập phiếu</span>
-                      <span className='text-gray-800 font-bold font-mono'>{new Date(selectedMaterialDetail.purchaseDate).toLocaleDateString('vi-VN')}</span>
+                      <span className='text-gray-800 font-bold font-mono'>{new Date(typeof selectedMaterialDetail.purchaseDate === 'string' && !selectedMaterialDetail.purchaseDate.endsWith('Z') ? selectedMaterialDetail.purchaseDate + 'Z' : selectedMaterialDetail.purchaseDate).toLocaleDateString('vi-VN')}</span>
                     </div>
                   </div>
 

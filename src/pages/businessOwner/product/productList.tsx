@@ -158,8 +158,8 @@ export default function Product() {
         return sortConfig.direction === 'asc' ? priceA - priceB : priceB - priceA
       }
       if (sortConfig.key === 'createdAt') {
-        const dateA = new Date(a.createdAt).getTime()
-        const dateB = new Date(b.createdAt).getTime()
+        const dateA = new Date(typeof a.createdAt === 'string' && !a.createdAt.endsWith('Z') ? a.createdAt + 'Z' : a.createdAt).getTime()
+        const dateB = new Date(typeof b.createdAt === 'string' && !b.createdAt.endsWith('Z') ? b.createdAt + 'Z' : b.createdAt).getTime()
         return sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA
       }
       return 0
@@ -629,7 +629,7 @@ export default function Product() {
               <thead>
                 <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
                   <th className='w-32 px-6 py-4'>Hình ảnh</th>
-                  <th className='w-48 px-6 py-4'>Tên sản phẩm</th>
+                  <th className='w-48 px-6 py-4 whitespace-nowrap'>Tên sản phẩm</th>
                   <th className='w-48 px-6 py-4'>Danh mục</th>
                   <th className='w-28 px-6 py-4 text-center whitespace-nowrap'>Đơn vị tính</th>
                   <th className='w-32 px-6 py-4 text-center whitespace-nowrap'>Tồn kho</th>
@@ -753,7 +753,7 @@ export default function Product() {
                         </span>
                       </td>
                       <td className='py-4 px-6 text-center text-[13.5px] text-gray-600 font-medium'>
-                        {new Date(product.createdAt).toLocaleDateString('vi-VN')}
+                        {new Date(typeof product.createdAt === 'string' && !product.createdAt.endsWith('Z') ? product.createdAt + 'Z' : product.createdAt).toLocaleDateString('vi-VN')}
                       </td>
                       <td className='py-4 px-6 text-center'>
                         <div className='flex items-center justify-center gap-2 opacity-70 group-hover:opacity-100 transition-opacity'>
@@ -825,7 +825,7 @@ export default function Product() {
           </div>
 
           {products.length > 0 && totalPages > 1 && (
-            <div className='mt-4'>
+            <div className='mt-4 mb-12'>
               <Pagination className='mt-6'>
                 <PaginationContent className='gap-2'>
                   <PaginationItem>

@@ -143,12 +143,12 @@ export default function OwnerSubscription() {
                   <div className='flex flex-col gap-1.5 font-semibold text-slate-600 text-xs'>
                     <div className='flex items-center gap-2'>
                       <Calendar size={15} className='text-gray-400' />
-                      <span>Ngày bắt đầu: <span className='text-slate-800 font-bold'>{new Date(currentSub.startDate).toLocaleDateString('vi-VN')}</span></span>
+                      <span>Ngày bắt đầu: <span className='text-slate-800 font-bold'>{new Date(typeof currentSub.startDate === 'string' && !currentSub.startDate.endsWith('Z') ? currentSub.startDate + 'Z' : currentSub.startDate).toLocaleDateString('vi-VN')}</span></span>
                     </div>
                     {currentSub.endDate && (
                       <div className='flex items-center gap-2'>
                         <Calendar size={15} className='text-gray-400' />
-                        <span>Ngày hết hạn: <span className='text-slate-800 font-bold'>{new Date(currentSub.endDate).toLocaleDateString('vi-VN')}</span></span>
+                        <span>Ngày hết hạn: <span className='text-slate-800 font-bold'>{new Date(typeof currentSub.endDate === 'string' && !currentSub.endDate.endsWith('Z') ? currentSub.endDate + 'Z' : currentSub.endDate).toLocaleDateString('vi-VN')}</span></span>
                       </div>
                     )}
                   </div>

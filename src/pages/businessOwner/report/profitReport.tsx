@@ -200,7 +200,7 @@ export default function ProfitReport({ businessId }: Props) {
             <div className='bg-white border border-[#eef0f2] rounded-[12px] shadow-[0px_1px_1px_rgba(0,0,0,0.03)] p-5 flex flex-col justify-between min-h-30 transition-all hover:shadow-[0px_4px_12px_rgba(0,0,0,0.05)]'>
               <div className='flex items-start justify-between'>
                 <div className='flex flex-col gap-1 min-w-0'>
-                  <span className='text-[#6b7280] text-[13px] font-medium block truncate'>Giá vốn hàng bán (COGS)</span>
+                  <span className='text-[#6b7280] text-[13px] font-medium block truncate'>Giá vốn hàng bán</span>
                   <span className='text-[#1a1a1a] text-[22px] font-bold leading-tight block truncate'>
                     {formatCurrency(profitData!.summary.costOfGoodsSold)}
                   </span>
@@ -239,8 +239,7 @@ export default function ProfitReport({ businessId }: Props) {
 
           {/* Profit Trend Chart */}
           <div className='bg-white border border-[#eef0f2] rounded-[12px] shadow-[0px_1px_1px_rgba(0,0,0,0.02)] p-6 flex flex-col w-full'>
-            <div className='text-[#1f2937] text-[15px] font-bold mb-4'>Xu hướng lợi nhuận hàng tháng</div>
-
+            <div className='text-[#1f2937] text-[15px] font-bold mb-4'>Xu hướng lợi nhuận hàng tuần của quý</div>
             {profitData!.profitTrend && profitData!.profitTrend.length > 0 ? (
               <div style={{ height: 300, width: '100%' }}>
                 <ResponsiveContainer width='100%' height='100%'>
@@ -260,8 +259,15 @@ export default function ProfitReport({ businessId }: Props) {
                       width={45}
                     />
                     <Tooltip
-                      formatter={(value: any) => [formatCurrency(Number(value)), '']}
-                      contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #eef0f2' }}
+                      formatter={(value, name) => [
+                        formatCurrency(Number(value)),
+                        name
+                      ]}
+                      contentStyle={{
+                        fontSize: 12,
+                        borderRadius: 8,
+                        border: '1px solid #eef0f2'
+                      }}
                     />
                     <Line
                       type='monotone'

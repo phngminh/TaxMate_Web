@@ -219,7 +219,7 @@ export default function SalesReport({ businessId }: Props) {
             <div className='bg-white border border-[#eef0f2] rounded-[12px] shadow-[0px_1px_1px_rgba(0,0,0,0.03)] p-5 flex flex-col justify-between min-h-30 transition-all hover:shadow-[0px_4px_12px_rgba(0,0,0,0.05)]'>
               <div className='flex items-start justify-between'>
                 <div className='flex flex-col gap-1 min-w-0'>
-                  <span className='text-[#6b7280] text-[13px] font-medium block truncate'>Đơn giá trung bình (AOV)</span>
+                  <span className='text-[#6b7280] text-[13px] font-medium block truncate'>Đơn giá trung bình</span>
                   <span className='text-[#1a1a1a] text-[22px] font-bold leading-tight block truncate'>
                     {formatCurrency(
                       dashboardData.summary.totalOrders > 0
@@ -275,8 +275,15 @@ export default function SalesReport({ businessId }: Props) {
                         width={45}
                       />
                       <Tooltip
-                        formatter={(value: any) => [formatCurrency(Number(value)), '']}
-                        contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #eef0f2' }}
+                        formatter={(value, name) => [
+                          formatCurrency(Number(value)),
+                          name
+                        ]}
+                        contentStyle={{
+                          fontSize: 12,
+                          borderRadius: 8,
+                          border: '1px solid #eef0f2'
+                        }}
                       />
                       <Line
                         type='monotone'
@@ -308,7 +315,7 @@ export default function SalesReport({ businessId }: Props) {
 
             {/* Revenue Structure (Pie Chart) */}
             <div className='bg-white border border-[#eef0f2] rounded-[12px] shadow-[0px_1px_1px_rgba(0,0,0,0.02)] p-6 flex-[330_330_0] min-w-0 flex flex-col'>
-              <div className='text-[#1f2937] text-[15px] font-bold mb-4'>Cơ cấu doanh thu</div>
+              <div className='text-[#1f2937] text-[15px] font-bold mb-4'>Biểu đồ doanh thu theo sản phẩm</div>
               {dashboardData.revenueDistribution && dashboardData.revenueDistribution.length > 0 ? (
                 <>
                   <div className='relative flex-1 flex items-center justify-center' style={{ height: 180 }}>

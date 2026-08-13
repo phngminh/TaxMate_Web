@@ -356,7 +356,7 @@ export default function EInvoiceConfig() {
                         <option value=''>-- Chọn tài khoản --</option>
                         {providers.map(p => (
                           <option key={p.id} value={p.id}>
-                            {p.provider} {p.tax_authority_approved_date ? `(Đã duyệt: ${new Date(p.tax_authority_approved_date).toLocaleDateString('vi-VN')})` : ''}
+                            {p.provider} {p.tax_authority_approved_date ? `(Đã duyệt: ${new Date(typeof p.tax_authority_approved_date === 'string' && !p.tax_authority_approved_date.endsWith('Z') ? p.tax_authority_approved_date + 'Z' : p.tax_authority_approved_date).toLocaleDateString('vi-VN')})` : ''}
                           </option>
                         ))}
                       </select>

@@ -841,7 +841,7 @@ export default function POS() {
               <House
                 size={16}
                 className='cursor-pointer hover:text-blue-200 transition-colors'
-                onClick={() => navigate(path.BASE_BUSINESS_OWNER)}
+                onClick={() => navigate(-1)}
               />
             </div>
           </div>
