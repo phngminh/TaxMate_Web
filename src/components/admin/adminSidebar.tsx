@@ -49,7 +49,7 @@ export default function ComprehensiveSidebar() {
       icon: Users,
       children: [
         { label: 'Quản lý người dùng', path: path.ADMIN_USERS_LIST },
-        { label: 'Quản lý hộ kinh doanh', path: path.ADMIN_BUSINESSES_LIST },
+        // { label: 'Quản lý hộ kinh doanh', path: path.ADMIN_BUSINESSES_LIST },
         {
           label: 'Quản lý gói đăng ký',
           path: path.ADMIN_USERS_SUBSCRIPTIONS,

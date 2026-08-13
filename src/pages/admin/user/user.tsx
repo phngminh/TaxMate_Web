@@ -301,14 +301,14 @@ export default function UserList() {
                         </TableCell>
 
                         <TableCell>
-                          <div className='flex items-center justify-center gap-1.5 text-xs text-muted-foreground'>
+                          <div className='flex items-center justify-center gap-1.5 text-sm text-muted-foreground'>
                             <Phone className='h-3 w-3' />
                             <span>{user.phone || '—'}</span>
                           </div>
                         </TableCell>
 
                         <TableCell className='text-center'>
-                          <span className='text-sm font-mono text-foreground'>
+                          <span className='text-sm text-foreground'>
                             {user.taxCode || '—'}
                           </span>
                         </TableCell>
@@ -328,7 +328,7 @@ export default function UserList() {
                         <TableCell>
                           <div className='flex items-center justify-center gap-1.5'>
                             <Building2 className='w-3.5 h-3.5 text-muted-foreground' />
-                            <span className='inline-flex items-center justify-center min-w-2 h-5 rounded text-xs font-medium text-slate-600'>
+                            <span className='inline-flex items-center justify-center min-w-2 h-5 rounded text-sm font-medium text-slate-600'>
                               {user.businessProfileCount}
                             </span>
                           </div>
@@ -343,7 +343,7 @@ export default function UserList() {
                         </TableCell>
 
                         <TableCell className='text-center'>
-                          <span className='text-xs text-muted-foreground'>
+                          <span className='text-sm text-muted-foreground'>
                             {formatCreatedDate(user.createdAt)}
                           </span>
                         </TableCell>

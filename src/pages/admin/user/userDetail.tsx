@@ -295,7 +295,7 @@ export default function UserDetail() {
             <h2 className='text-lg font-semibold text-foreground'>
               Hồ sơ doanh nghiệp
             </h2>
-            <span className='inline-flex items-center justify-center min-w-6 h-6 px-2 bg-primary/10 text-primary rounded-md text-xs font-medium border border-primary/20'>
+            <span className='inline-flex items-center justify-center min-w-6 h-6 px-2 bg-primary/10 text-gray-500 rounded-md text-xs font-medium border border-gray-300'>
               {user.businessProfiles.length}
             </span>
           </div>
@@ -340,41 +340,41 @@ export default function UserDetail() {
 
                 <div className='grid grid-cols-4 gap-x-6 pt-4 border-t border-border/30'>
                   <div>
-                    <label className='text-[10px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
+                    <label className='text-[12px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
                       Địa chỉ
                     </label>
                     <div className='flex items-start gap-1.5'>
                       <MapPin className='w-3 h-3 text-muted-foreground mt-0.5 shrink-0' />
-                      <p className='text-xs text-foreground leading-snug'>
+                      <p className='text-sm text-foreground leading-snug'>
                         {business.address || '—'}
                       </p>
                     </div>
                   </div>
 
                   <div>
-                    <label className='text-[10px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
+                    <label className='text-[12px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
                       Tỉnh/Thành phố - Quận/Huyện
                     </label>
-                    <p className='text-xs text-foreground'>
+                    <p className='text-sm text-foreground'>
                       {business.provinceCode || '—'}
                       {business.wardCode ? ` - Ward ${business.wardCode}` : ''}
                     </p>
                   </div>
 
                   <div>
-                    <label className='text-[10px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
+                    <label className='text-[12px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
                       Ngày tạo
                     </label>
-                    <p className='text-xs text-foreground'>
+                    <p className='text-sm text-foreground'>
                       {formatDateTime(business.createdAt)}
                     </p>
                   </div>
 
                   <div>
-                    <label className='text-[10px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
+                    <label className='text-[12px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
                       Cập nhật lần cuối
                     </label>
-                    <p className='text-xs text-foreground'>
+                    <p className='text-sm text-foreground'>
                       {formatDateTime(business.updatedAt)}
                     </p>
                   </div>

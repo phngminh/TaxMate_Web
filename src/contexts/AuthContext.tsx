@@ -70,7 +70,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       try {
         const response = await me()
         setUser(response)
-      } catch {
+      } catch (error) {
+        console.error('Auth initialization failed', error)
         logout()
       } finally {
         setIsLoading(false)

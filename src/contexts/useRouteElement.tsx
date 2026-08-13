@@ -1,5 +1,5 @@
 import { useRoutes, Navigate } from 'react-router-dom'
-import path from '../constants/path'
+import path, { getHomePathForRole } from '../constants/path'
 import ProtectedRoute from './ProtectedRoute'
 import BusinessOwnerLoginPage from '../pages/auth/BusinessOwnerLoginPage'
 import BusinessOwnerRegisterPage from '../pages/auth/BusinessOwnerRegisterPage'
@@ -37,9 +37,7 @@ export default function useRouteElements() {
       element: isAuthenticated
         ? (
             <Navigate
-              to={user?.role === 'Admin'
-                ? path.ADMIN_DASHBOARD
-                : path.BUSINESS_OWNER_HOME}
+              to={getHomePathForRole(user?.role)}
               replace
             />
           )
@@ -52,9 +50,7 @@ export default function useRouteElements() {
       element: isAuthenticated
         ? (
             <Navigate
-              to={user?.role === 'Admin'
-                ? path.ADMIN_DASHBOARD
-                : path.BUSINESS_OWNER_HOME}
+              to={getHomePathForRole(user?.role)}
               replace
             />
           )
