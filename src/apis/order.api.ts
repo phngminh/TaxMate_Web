@@ -53,6 +53,11 @@ export const cancelOrder = async (orderId: string) => {
   return response.data
 }
 
+export const cancelAllDrafts = async (businessId: string) => {
+  const response = await http.post<ApiResponse<string>>(`/Order/business/${businessId}/cancel-drafts`)
+  return response.data
+}
+
 export const checkoutOrder = async (orderId: string, body: CheckoutRequest) => {
   const response = await http.post<ApiResponse<any>>(`/Order/${orderId}/checkout`, body)
   return response.data

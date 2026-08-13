@@ -28,39 +28,43 @@ import Report from '../pages/businessOwner/report/ownerReport'
 import { useAuth } from './AuthContext'
 
 export default function useRouteElements() {
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, isLoading, user } = useAuth()
   const routeElements = useRoutes([
     { path: path.home, element: <LandingPage /> },
     { path: path.subscription, element: <SubscriptionPage /> },
     {
       path: path.BUSINESS_OWNER_LOGIN,
-      element: isAuthenticated
-        ? (
-            <Navigate
-              to={user?.role === 'Admin'
-                ? path.ADMIN_DASHBOARD
-                : path.BUSINESS_OWNER_HOME}
-              replace
-            />
-          )
-        : (
-            <BusinessOwnerLoginPage />
-          )
+      element: isLoading
+        ? null
+        : isAuthenticated
+          ? (
+              <Navigate
+                to={user?.role === 'Admin'
+                  ? path.ADMIN_DASHBOARD
+                  : path.BUSINESS_OWNER_HOME}
+                replace
+              />
+            )
+          : (
+              <BusinessOwnerLoginPage />
+            )
     },
     {
       path: path.BUSINESS_OWNER_REGISTER,
-      element: isAuthenticated
-        ? (
-            <Navigate
-              to={user?.role === 'Admin'
-                ? path.ADMIN_DASHBOARD
-                : path.BUSINESS_OWNER_HOME}
-              replace
-            />
-          )
-        : (
-            <BusinessOwnerRegisterPage />
-          )
+      element: isLoading
+        ? null
+        : isAuthenticated
+          ? (
+              <Navigate
+                to={user?.role === 'Admin'
+                  ? path.ADMIN_DASHBOARD
+                  : path.BUSINESS_OWNER_HOME}
+                replace
+              />
+            )
+          : (
+              <BusinessOwnerRegisterPage />
+            )
     },
     //================ Business Owner routes ================
     {

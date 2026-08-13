@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Eye, Search, Box, X, Scan, RotateCcw, Loader2 } from 'lucide-react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { Eye, Search, Box, X, Scan, RotateCcw, Loader2, PlayCircle } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useBusiness } from '../../contexts/BusinessContext'
 import { getOrders, getOrderById } from '../../apis/order.api'
 import type { Order, OrderDetail } from '../../types/order.type'
+import path from '../../constants/path'
 import {
   Pagination,
   PaginationContent,
@@ -16,6 +17,7 @@ import {
 export default function OrderPage() {
   const { currentBusiness } = useBusiness()
   const businessId = currentBusiness?.id
+  const navigate = useNavigate()
 
   // Data states
   const [orders, setOrders] = useState<Order[]>([])
@@ -465,14 +467,25 @@ export default function OrderPage() {
                           </td>
 
                           <td className='py-4 px-6 text-center'>
-                            <button
-                              onClick={() => handleViewDetails(order.transactionId)}
-                              disabled={loadingDetail}
-                              className='p-1.5 text-gray-400 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors cursor-pointer'
-                              title='Xem chi tiết'
-                            >
-                              <Eye size={16} />
-                            </button>
+                            <div className='flex items-center justify-center gap-1 select-none'>
+                              {order.status === 'Draft' && order.itemCount > 0 && (
+                                <button
+                                  onClick={() => navigate(`${path.BUSINESS_OWNER_POS}?resumeOrderId=${order.transactionId}`)}
+                                  className='p-1.5 text-[#004795] hover:text-white hover:bg-[#004795] rounded-md transition-all duration-150 cursor-pointer'
+                                  title='Tiếp tục bán đơn này tại POS'
+                                >
+                                  <PlayCircle size={16} />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleViewDetails(order.transactionId)}
+                                disabled={loadingDetail}
+                                className='p-1.5 text-gray-400 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors cursor-pointer'
+                                title='Xem chi tiết'
+                              >
+                                <Eye size={16} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                     ))
@@ -666,6 +679,22 @@ export default function OrderPage() {
                         Tải XML gốc
                       </button>
                     )}
+                  </div>
+                )}
+
+                {/* TIẾP TỤC BÁN TẠI POS CHO ĐƠN NHÁP */}
+                {selectedOrder.status === 'Draft' && selectedOrder.items.length > 0 && (
+                  <div className='mt-4 pt-3 border-t border-dashed border-blue-100 select-none'>
+                    <button
+                      onClick={() => {
+                        setSelectedOrder(null)
+                        navigate(`${path.BUSINESS_OWNER_POS}?resumeOrderId=${selectedOrder.transactionId}`)
+                      }}
+                      className='w-full flex items-center justify-center gap-2 bg-[#004795] hover:bg-[#003875] text-white text-[12px] font-extrabold py-2.5 rounded-lg shadow-[0_2px_8px_rgba(0,71,149,0.3)] hover:shadow-[0_4px_14px_rgba(0,71,149,0.4)] transition-all duration-150 cursor-pointer'
+                    >
+                      <PlayCircle size={15} />
+                      Tiếp tục bán đơn này tại POS
+                    </button>
                   </div>
                 )}
               </div>
