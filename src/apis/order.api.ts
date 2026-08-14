@@ -15,7 +15,7 @@ export const getOrderById = async (id: string) => {
 export const getOrders = async (
   businessId: string,
   params?: {
-    page?: number
+    pageNumber?: number
     pageSize?: number
     status?: string | null
     paymentMethod?: string | null
@@ -50,6 +50,11 @@ export const removeOrderItem = async (orderId: string, itemId: string) => {
 
 export const cancelOrder = async (orderId: string) => {
   const response = await http.post<ApiResponse<string>>(`/Order/${orderId}/cancel`)
+  return response.data
+}
+
+export const cancelAllDrafts = async (businessId: string) => {
+  const response = await http.post<ApiResponse<string>>(`/Order/business/${businessId}/cancel-drafts`)
   return response.data
 }
 
