@@ -68,22 +68,18 @@ export default function BusinessOwnerLoginPage() {
         return
       }
 
+      authLogin(auth)
       if (auth.user.role === 'Owner') {
-        try {
-          const businessRes = await getBusinessProfiles(auth.user.id)
-          const businesses = businessRes.data.items
+        const businessRes = await getBusinessProfiles(auth.user.id)
+        const businesses = businessRes.data.items
 
-          setBusinesses(businesses)
+        setBusinesses(businesses)
 
-          if (businesses.length > 0) {
-            setCurrentBusiness(businesses[0])
-          }
-        } catch (error) {
-          console.error('Business initialization failed', error)
+        if (businesses.length > 0) {
+          setCurrentBusiness(businesses[0])
         }
       }
 
-      authLogin(auth)
       toast.success('Đăng nhập thành công')
 
       navigate(getHomePathForRole(auth.user.role), {
@@ -113,22 +109,19 @@ export default function BusinessOwnerLoginPage() {
         return
       }
 
+      authLogin(auth)
+
       if (auth.user.role === 'Owner') {
-        try {
-          const businessRes = await getBusinessProfiles(auth.user.id)
-          const businesses = businessRes.data.items
+        const businessRes = await getBusinessProfiles(auth.user.id)
+        const businesses = businessRes.data.items
 
-          setBusinesses(businesses)
+        setBusinesses(businesses)
 
-          if (businesses.length > 0) {
-            setCurrentBusiness(businesses[0])
-          }
-        } catch (error) {
-          console.error('Business initialization failed', error)
+        if (businesses.length > 0) {
+          setCurrentBusiness(businesses[0])
         }
       }
 
-      authLogin(auth)
       toast.success('Đăng nhập thành công')
 
       navigate(getHomePathForRole(auth.user.role), {

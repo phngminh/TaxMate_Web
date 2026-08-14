@@ -8,18 +8,6 @@ import {
 import type { ReactNode } from 'react'
 import type { BusinessProfile } from '../types/profile.type'
 
-const parseStorage = <T,>(key: string, fallback: T): T => {
-  try {
-    const saved = localStorage.getItem(key)
-    if (!saved) return fallback
-    return JSON.parse(saved) as T
-  } catch (error) {
-    console.error(`Failed to parse localStorage key: ${key}`, error)
-    localStorage.removeItem(key)
-    return fallback
-  }
-}
-
 interface BusinessContextType {
   businesses: BusinessProfile[]
   currentBusiness: BusinessProfile | null
@@ -39,14 +27,16 @@ interface Props {
 }
 
 export const BusinessProvider = ({ children }: Props) => {
-  const [businesses, setBusinessesState] = useState<BusinessProfile[]>(() => 
-    parseStorage<BusinessProfile[]>('businesses', [])
-  )
+  const [businesses, setBusinessesState] = useState<BusinessProfile[]>(() => {
+    const saved = localStorage.getItem('businesses')
+    return saved ? JSON.parse(saved) : []
+  })
 
   const [currentBusiness, setCurrentBusinessState] =
-    useState<BusinessProfile | null>(() => 
-      parseStorage<BusinessProfile | null>('currentBusiness', null)
-    )
+    useState<BusinessProfile | null>(() => {
+      const saved = localStorage.getItem('currentBusiness')
+      return saved ? JSON.parse(saved) : null
+    })
 
   const setBusinesses = useCallback((list: BusinessProfile[]) => {
     setBusinessesState(list)

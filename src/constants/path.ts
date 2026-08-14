@@ -34,16 +34,11 @@ const path = {
 }
 
 export function getHomePathForRole(role: string | undefined): string {
-  const normalizedRole = (role ?? '').toLowerCase()
-  if (normalizedRole === 'admin') {
+  if ((role ?? '').toLowerCase() === 'admin') {
     return path.ADMIN_DASHBOARD
   }
 
-  if (normalizedRole === 'owner') {
-    return path.BUSINESS_OWNER_HOME
-  }
-
-  return path.BUSINESS_OWNER_LOGIN
+  return path.BUSINESS_OWNER_HOME
 }
 
 export default path
