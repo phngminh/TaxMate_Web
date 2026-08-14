@@ -25,3 +25,21 @@ export const createBusinessProfile = async (request: CreateBusinessProfileReques
   const response = await http.post(`/BusinessProfile`, request)
   return response.data
 }
+
+export const updateBusinessProfile = async (
+  id: string,
+  request: Partial<CreateBusinessProfileRequest>
+) => {
+  const response = await http.put(`/BusinessProfile/${id}`, request)
+  return response.data
+}
+
+export const toggleStockTracking = async (
+  id: string,
+  isStockTrackingEnabled: boolean
+) => {
+  const response = await http.patch(`/BusinessProfile/${id}/toggle-stock-tracking`, {
+    isStockTrackingEnabled
+  })
+  return response.data
+}

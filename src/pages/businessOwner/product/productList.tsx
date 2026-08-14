@@ -182,6 +182,8 @@ export default function Product() {
       productCategoryId: '',
       unit: '',
       price: '',
+      costPrice: '',
+      stockQuantity: '',
       description: '',
       imageFile: undefined,
       imagePreview: undefined
@@ -197,6 +199,8 @@ export default function Product() {
       productCategoryId: '',
       unit: '',
       price: '',
+      costPrice: '',
+      stockQuantity: '',
       description: '',
       imageFile: undefined,
       imagePreview: undefined
@@ -225,6 +229,8 @@ export default function Product() {
       productCategoryId: product.productCategoryId ?? '',
       unit: product.unit ?? '',
       price: product.currentPrice?.toLocaleString('vi-VN') ?? '',
+      costPrice: product.costPrice ? product.costPrice.toLocaleString('vi-VN') : '',
+      stockQuantity: product.stockQuantity != null ? product.stockQuantity.toString() : '',
       description: product.description ?? '',
       imagePreview: product.imageUrl ?? undefined
     })
@@ -280,6 +286,10 @@ export default function Product() {
       return
     }
 
+    const costPriceNum = productForm.costPrice?.trim()
+      ? Number(productForm.costPrice.replace(/\./g, ''))
+      : undefined
+
     if (!businessId) {
       console.error('Missing businessId')
       return
@@ -298,6 +308,7 @@ export default function Product() {
         productCategoryId: productForm.productCategoryId || undefined,
         description: productForm.description || undefined,
         unit: productForm.unit || undefined,
+        costPrice: costPriceNum,
         imageUrl
       }
 
@@ -340,6 +351,14 @@ export default function Product() {
       return
     }
 
+    const costPriceNum = productForm.costPrice?.trim()
+      ? Number(productForm.costPrice.replace(/\./g, ''))
+      : undefined
+
+    const stockQtyNum = productForm.stockQuantity?.trim()
+      ? Number(productForm.stockQuantity.replace(',', '.'))
+      : undefined
+
     try {
       let imageUrl = selectedProduct.imageUrl
 
@@ -353,6 +372,8 @@ export default function Product() {
         productCategoryId: productForm.productCategoryId || undefined,
         description: productForm.description || undefined,
         unit: productForm.unit || undefined,
+        costPrice: costPriceNum,
+        stockQuantity: selectedProduct.hasRecipe ? undefined : stockQtyNum,
         imageUrl
       })
 
@@ -632,7 +653,9 @@ export default function Product() {
                   <th className='w-48 px-6 py-4 whitespace-nowrap'>Tên sản phẩm</th>
                   <th className='w-48 px-6 py-4'>Danh mục</th>
                   <th className='w-28 px-6 py-4 text-center whitespace-nowrap'>Đơn vị tính</th>
-                  <th className='w-32 px-6 py-4 text-center whitespace-nowrap'>Tồn kho</th>
+                  {currentBusiness?.isStockTrackingEnabled !== false && (
+                    <th className='w-32 px-6 py-4 text-center whitespace-nowrap'>Tồn kho</th>
+                  )}
                   <th 
                     className='w-40 px-6 py-4 text-right cursor-pointer hover:bg-[#d0e3f5] transition-colors select-none'
                     onClick={() => handleSort('price')}
@@ -707,33 +730,35 @@ export default function Product() {
                       <td className='py-4 px-6 text-center text-sm'>
                         {product.unit ?? 'N/A'}
                       </td>
-                      <td className='py-4 px-6 text-center whitespace-nowrap'>
-                        {product.hasRecipe ? (
-                          product.availableQuantity === null || product.availableQuantity === undefined ? (
-                            <span className='inline-block bg-amber-50 text-amber-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-amber-200/60'>
-                              Chưa tính được tồn
-                            </span>
-                          ) : product.availableQuantity <= 0 ? (
+                      {currentBusiness?.isStockTrackingEnabled !== false && (
+                        <td className='py-4 px-6 text-center whitespace-nowrap'>
+                          {product.hasRecipe ? (
+                            product.availableQuantity === null || product.availableQuantity === undefined ? (
+                              <span className='inline-block bg-amber-50 text-amber-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-amber-200/60'>
+                                Chưa tính được tồn
+                              </span>
+                            ) : product.availableQuantity <= 0 ? (
+                              <span className='inline-block bg-red-50 text-red-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-red-200/60'>
+                                Có thể bán: 0
+                              </span>
+                            ) : (
+                              <span className='inline-block bg-purple-50 text-purple-700 text-[12.5px] px-3 py-0.5 rounded-full font-bold border border-purple-200/60'>
+                                Có thể bán: {product.availableQuantity.toLocaleString('vi-VN')} {product.unit ?? ''}
+                              </span>
+                            )
+                          ) : product.stockQuantity === null || product.stockQuantity === undefined ? (
+                            <span className='text-gray-400 font-medium text-[13px]'>N/A</span>
+                          ) : product.stockQuantity === 0 ? (
                             <span className='inline-block bg-red-50 text-red-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-red-200/60'>
-                              Có thể bán: 0
+                              0 (Hết hàng)
                             </span>
                           ) : (
-                            <span className='inline-block bg-purple-50 text-purple-700 text-[12.5px] px-3 py-0.5 rounded-full font-bold border border-purple-200/60'>
-                              Có thể bán: {product.availableQuantity.toLocaleString('vi-VN')} {product.unit ?? ''}
+                            <span className='text-gray-900 font-bold text-[13.5px]'>
+                              {product.stockQuantity.toLocaleString('vi-VN')}
                             </span>
-                          )
-                        ) : product.stockQuantity === null || product.stockQuantity === undefined ? (
-                          <span className='text-gray-400 font-medium text-[13px]'>N/A</span>
-                        ) : product.stockQuantity === 0 ? (
-                          <span className='inline-block bg-red-50 text-red-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-red-200/60'>
-                            0 (Hết hàng)
-                          </span>
-                        ) : (
-                          <span className='text-gray-900 font-bold text-[13.5px]'>
-                            {product.stockQuantity.toLocaleString('vi-VN')}
-                          </span>
-                        )}
-                      </td>
+                          )}
+                        </td>
+                      )}
                       <td className='py-4 px-6 text-right text-[14.5px] font-bold text-gray-900 whitespace-nowrap'>
                         {
                           product.currentPrice != null
@@ -798,7 +823,7 @@ export default function Product() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={9}>
+                    <td colSpan={currentBusiness?.isStockTrackingEnabled !== false ? 9 : 8}>
                       <div className='flex flex-col items-center justify-center py-20 px-4'>
                         <ShoppingBag
                           size={48}
@@ -882,6 +907,8 @@ export default function Product() {
         handleImage={handleImage}
         isEditing={isEditing}
         isProduct={isProduct}
+        isStockTrackingEnabled={currentBusiness?.isStockTrackingEnabled !== false}
+        hasRecipe={selectedProduct?.hasRecipe}
         isSubmitting={isSubmitting}
         handleQuickAddCategory={handleQuickAddCategory}
         showQuickCategoryForm={showQuickCategoryForm}

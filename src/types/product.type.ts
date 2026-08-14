@@ -23,6 +23,8 @@ export interface CreateProductRequest {
   description?: string
   unit?: string
   currentPrice?: number
+  costPrice?: number
+  stockQuantity?: number
   imageUrl?: string
 }
 
@@ -33,15 +35,19 @@ export interface UpdateProductRequest {
   description?: string
   unit?: string
   currentPrice?: number
+  costPrice?: number
+  stockQuantity?: number
   imageUrl?: string
 }
 
 export interface ProductForm {
-  productCode: string,
+  productCode: string
   name: string
   productCategoryId: string
   unit: string
   price: string
+  costPrice?: string
+  stockQuantity?: string
   description: string
   imagePreview?: string
   imageFile?: File

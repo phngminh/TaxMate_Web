@@ -6,8 +6,8 @@ import { Bell, User, HeadphonesIcon, Heart, Store, Settings, LogOut, Plus, FileD
 import { useBusiness } from '../../contexts/BusinessContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
-import { createBusinessProfile, getBusinessProfiles } from '../../apis/profile.api'
-import BusinessModal from './addBusinessModal'
+import { createBusinessProfile, getBusinessProfiles, toggleStockTracking } from '../../apis/profile.api'
+import BusinessModal, { type BusinessForm } from './addBusinessModal'
 import { getCurrentSubscription } from '../../apis/subscription.api'
 import type { UserSubscriptionResponse } from '../../types/subscription.type'
 import http from '../../utils/http'
@@ -56,15 +56,16 @@ export default function OwnerHeader() {
   const profileRef = useRef<HTMLDivElement>(null)
   const { businesses, currentBusiness, setCurrentBusiness, clearBusiness, setBusinesses } = useBusiness()
   const [subscription, setSubscription] = useState<UserSubscriptionResponse | null>(null)
-  const emptyBusinessForm = {
+  const emptyBusinessForm: BusinessForm = {
     businessName: '',
     address: '',
     provinceCode: '',
     wardCode: '',
-    categoryId: ''
+    categoryId: '',
+    isStockTrackingEnabled: true
   }
 
-  const [form, setForm] = useState(emptyBusinessForm)
+  const [form, setForm] = useState<BusinessForm>(emptyBusinessForm)
   const [loading, setLoading] = useState(false)
   const [showExportS1aModal, setShowExportS1aModal] = useState(false)
   const [showExportS2aModal, setShowExportS2aModal] = useState(false)
@@ -73,8 +74,48 @@ export default function OwnerHeader() {
   const [exportQuarter, setExportQuarter] = useState<'1' | '2' | '3' | '4'>('1')
   const [isExportingS1a, setIsExportingS1a] = useState(false)
   const [isExportingS2a, setIsExportingS2a] = useState(false)
+
+  const [showToggleStockModal, setShowToggleStockModal] = useState(false)
+  const [pendingStockTrackingState, setPendingStockTrackingState] = useState<boolean>(true)
+  const [isTogglingStock, setIsTogglingStock] = useState(false)
+
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+
+  const isServiceStore =
+    currentBusiness?.mainCategoryId === 'd2222222-2222-2222-2222-222222222222' ||
+    currentBusiness?.mainCategoryName?.toLowerCase().includes('dịch vụ')
+
+  const handleRequestToggleStock = (targetState: boolean) => {
+    setPendingStockTrackingState(targetState)
+    setShowToggleStockModal(true)
+  }
+
+  const handleConfirmToggleStock = async () => {
+    if (!currentBusiness) return
+    try {
+      setIsTogglingStock(true)
+      await toggleStockTracking(currentBusiness.id, pendingStockTrackingState)
+      const updatedBusiness = {
+        ...currentBusiness,
+        isStockTrackingEnabled: pendingStockTrackingState
+      }
+      setCurrentBusiness(updatedBusiness)
+      setBusinesses(
+        businesses.map((b) => (b.id === currentBusiness.id ? updatedBusiness : b))
+      )
+      toast.success(
+        pendingStockTrackingState
+          ? 'Đã bật quản lý tồn kho tự động'
+          : 'Đã chuyển sang chế độ chỉ tính giá vốn'
+      )
+      setShowToggleStockModal(false)
+    } catch (error) {
+      toast.error('Không thể cập nhật cấu hình tồn kho')
+    } finally {
+      setIsTogglingStock(false)
+    }
+  }
 
   useEffect(() => {
     if (!user) return
@@ -146,7 +187,8 @@ export default function OwnerHeader() {
         wardCode: form.wardCode.trim() || undefined,
         address: form.address.trim() || undefined,
         mainCategoryId: form.categoryId,
-        preferElectronicInvoice: false
+        preferElectronicInvoice: false,
+        isStockTrackingEnabled: form.isStockTrackingEnabled ?? true
       })
 
       const newBusiness = res.data
@@ -343,11 +385,13 @@ export default function OwnerHeader() {
             )}
           </NavLink>
 
-          <NavLink to={path.BUSINESS_OWNER_INGREDIENTS}>
-            {({ isActive }) => (
-              <NavItem label='Nguyên liệu' isActive={isActive} />
-            )}
-          </NavLink>
+          {!isServiceStore && (
+            <NavLink to={path.BUSINESS_OWNER_INGREDIENTS}>
+              {({ isActive }) => (
+                <NavItem label='Nguyên liệu' isActive={isActive} />
+              )}
+            </NavLink>
+          )}
 
           <NavLink to={path.BUSINESS_OWNER_ORDERS}>
             {({ isActive }) => (
@@ -458,6 +502,30 @@ export default function OwnerHeader() {
               </div>
 
               <div className='flex-1 py-2 overflow-y-auto'>
+                {!isServiceStore && (
+                  <div className='mx-5 mb-2 mt-1 p-3 rounded-xl bg-gray-50 border border-gray-200'>
+                    <div className='flex items-center justify-between'>
+                      <div>
+                        <div className='text-[13px] font-bold text-gray-800'>Quản lý tồn kho</div>
+                        <div className='text-[11px] text-gray-500 mt-0.5'>
+                          {currentBusiness?.isStockTrackingEnabled !== false
+                            ? 'Tự động trừ kho khi bán'
+                            : 'Chỉ tính giá vốn món'}
+                        </div>
+                      </div>
+                      <label className='relative inline-flex cursor-pointer items-center'>
+                        <input
+                          type='checkbox'
+                          className='peer sr-only'
+                          checked={currentBusiness?.isStockTrackingEnabled !== false}
+                          onChange={(e) => handleRequestToggleStock(e.target.checked)}
+                        />
+                        <div className="peer h-5 w-9 rounded-full bg-gray-300 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-[#c0392b] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none"></div>
+                      </label>
+                    </div>
+                  </div>
+                )}
+
                 {menuItems.map(({ icon: Icon, label }) => (
                   <button
                     key={label}
@@ -729,6 +797,53 @@ export default function OwnerHeader() {
                 className='px-5 py-2.5 rounded-xl bg-taxmate-red text-white font-semibold hover:bg-red-700 disabled:opacity-60 disabled:cursor-not-allowed'
               >
                 {isExportingS2a ? 'Đang xuất...' : 'Xuất file'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showToggleStockModal && (
+        <div className='fixed inset-0 z-70 flex items-center justify-center bg-black/60 p-4' onClick={() => !isTogglingStock && setShowToggleStockModal(false)}>
+          <div className='w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl' onClick={(e) => e.stopPropagation()}>
+            <h3 className='text-lg font-bold text-gray-900 mb-2'>
+              {pendingStockTrackingState ? 'Bật quản lý tồn kho tự động' : 'Tắt trừ tồn kho tự động'}
+            </h3>
+            <div className='text-sm text-gray-600 leading-relaxed mb-6 space-y-3'>
+              {pendingStockTrackingState ? (
+                <div className='p-3.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-[13.5px]'>
+                  <p className='font-bold mb-1 flex items-center gap-1.5'>💡 Lưu ý quan trọng:</p>
+                  <p>Hệ thống sẽ bắt đầu tự động trừ tồn kho khi hoàn tất đơn hàng.</p>
+                  <p className='mt-2 text-[12.5px] text-blue-800 bg-white/70 p-2 rounded-lg border border-blue-100'>
+                    👉 Bạn hãy vào mục <strong>"Nhập nguyên liệu"</strong> (hoặc <strong>"Sản phẩm"</strong>) để cập nhật số lượng tồn thực tế của quán trước khi bán hàng nhé!
+                  </p>
+                </div>
+              ) : (
+                <div className='p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[13.5px]'>
+                  <p className='font-bold mb-1 flex items-center gap-1.5'>💡 Chế độ tính giá vốn:</p>
+                  <p>Hệ thống sẽ tạm dừng trừ tồn kho khi bán hàng.</p>
+                  <p className='mt-2 text-[12.5px] text-amber-800 bg-white/70 p-2 rounded-lg border border-amber-100'>
+                    Các công thức định lượng (BOM) vẫn được giữ lại đầy đủ để tính giá vốn sản phẩm và báo cáo lãi lỗ chính xác.
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className='flex justify-end gap-3'>
+              <button
+                type='button'
+                onClick={() => setShowToggleStockModal(false)}
+                className='px-4 py-2 rounded-xl border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50'
+                disabled={isTogglingStock}
+              >
+                Hủy
+              </button>
+              <button
+                type='button'
+                onClick={handleConfirmToggleStock}
+                disabled={isTogglingStock}
+                className='px-4 py-2 rounded-xl bg-taxmate-red text-white font-semibold hover:bg-red-700 disabled:opacity-60'
+              >
+                {isTogglingStock ? 'Đang xử lý...' : pendingStockTrackingState ? 'Xác nhận bật' : 'Xác nhận tắt'}
               </button>
             </div>
           </div>
