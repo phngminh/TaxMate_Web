@@ -14,10 +14,12 @@ export interface CreateIngredientRequest {
   name: string
   unit?: string
   estimatedPrice?: number
+  stockQuantity?: number
 }
 
 export interface UpdateIngredientRequest {
   name: string
   unit?: string
   estimatedPrice?: number
+  stockQuantity?: number
 }

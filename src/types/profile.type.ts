@@ -8,6 +8,7 @@ export interface BusinessProfile {
   mainCategoryId?: string
   mainCategoryName?: string
   preferElectronicInvoice: boolean
+  isStockTrackingEnabled?: boolean
   isActive: boolean
   createdAt: string
   updatedAt: string
@@ -21,6 +22,7 @@ export interface CreateBusinessProfileRequest {
   address?: string
   mainCategoryId?: string
   preferElectronicInvoice: boolean
+  isStockTrackingEnabled?: boolean
 }
 
 export interface UpdateBusinessProfileRequest {
@@ -30,4 +32,5 @@ export interface UpdateBusinessProfileRequest {
   address?: string
   mainCategoryId?: string
   preferElectronicInvoice: boolean
+  isStockTrackingEnabled?: boolean
 }
