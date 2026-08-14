@@ -33,3 +33,18 @@ export interface RegisterRequest {
   email: string
   password: string
 }
+
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+export interface VerifyResetPasswordOtpRequest {
+  email: string
+  otp: string
+}
+
+export interface ResetPasswordRequest {
+  email: string
+  newPassword: string
+  confirmPassword: string
+}

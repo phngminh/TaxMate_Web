@@ -97,22 +97,22 @@ export default function UserDetail() {
           <div>
             <Link
               to={path.ADMIN_USERS_LIST}
-              className='inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 hover:bg-background transition-colors'
+              className='inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 hover:bg-gray-100 transition-colors'
             >
-              <ArrowLeft className='h-4 w-4 text-foreground' />
-              <span className='text-sm font-medium text-foreground'>
+              <ArrowLeft className='h-4 w-4 text-gray-900' />
+              <span className='text-sm font-medium text-gray-900'>
                 Quay lại
               </span>
             </Link>
           </div>
           <div className='text-center'>
-            <h1 className='text-2xl font-semibold text-foreground'>
+            <h1 className='text-2xl font-semibold text-gray-900'>
               Chi tiết người dùng
             </h1>
           </div>
           <div />
         </div>
-        <div className='bg-card border border-border rounded-xl p-12 text-center text-sm text-muted-foreground'>
+        <div className='bg-white border border-gray-300 rounded-xl p-12 text-center text-sm text-gray-600'>
           Đang tải...
         </div>
       </div>
@@ -126,22 +126,22 @@ export default function UserDetail() {
           <div>
             <Link
               to={path.ADMIN_USERS_LIST}
-              className='inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 hover:bg-background transition-colors'
+              className='inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 hover:bg-gray-100 transition-colors'
             >
-              <ArrowLeft className='h-4 w-4 text-foreground' />
-              <span className='text-sm font-medium text-foreground'>
+              <ArrowLeft className='h-4 w-4 text-gray-900' />
+              <span className='text-sm font-medium text-gray-900'>
                 Quay lại
               </span>
             </Link>
           </div>
           <div className='text-center'>
-            <h1 className='text-2xl font-semibold text-foreground'>
+            <h1 className='text-2xl font-semibold text-gray-900'>
               Chi tiết người dùng
             </h1>
           </div>
           <div />
         </div>
-        <div className='bg-card border border-border rounded-xl p-12 text-center text-sm text-muted-foreground'>
+        <div className='bg-white border border-gray-300 rounded-xl p-12 text-center text-sm text-gray-600'>
           {error || 'Không tìm thấy người dùng.'}
         </div>
       </div>
@@ -156,29 +156,29 @@ export default function UserDetail() {
         <div>
           <Link
             to={path.ADMIN_USERS_LIST}
-            className='inline-flex items-center gap-2 rounded-md border border-border bg-card px-4 py-2 hover:bg-background transition-colors'
+            className='inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 hover:bg-gray-100 transition-colors'
           >
-            <ArrowLeft className='h-4 w-4 text-foreground' />
-            <span className='text-sm font-medium text-foreground'>
+            <ArrowLeft className='h-4 w-4 text-gray-900' />
+            <span className='text-sm font-medium text-gray-900'>
               Quay lại
             </span>
           </Link>
         </div>
         <div className='text-center'>
-          <h1 className='text-2xl font-semibold text-foreground'>
+          <h1 className='text-2xl font-semibold text-gray-900'>
             Chi tiết người dùng
           </h1>
-          <p className='text-sm text-muted-foreground mt-0.5'>
+          <p className='text-sm text-gray-600 mt-0.5'>
             Thông tin tài khoản và hồ sơ doanh nghiệp
           </p>
         </div>
         <div />
       </div>
 
-      <div className='bg-card border border-border rounded-xl p-6'>
+      <div className='bg-white border border-gray-300 rounded-xl p-6'>
         <div className='flex items-center gap-2 mb-6'>
-          <UserIcon className='w-5 h-5 text-blue' />
-          <h2 className='text-lg font-semibold text-foreground'>
+          <UserIcon className='w-5 h-5 text-blue-600' />
+          <h2 className='text-lg font-semibold text-gray-900'>
             Thông tin người dùng
           </h2>
         </div>
@@ -207,36 +207,36 @@ export default function UserDetail() {
 
           <div className='lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5'>
             <div>
-              <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-1.5'>
+              <label className='text-xs font-medium text-gray-600 uppercase tracking-wide block mb-1.5'>
                 Họ và tên
               </label>
-              <p className='text-sm text-foreground font-medium'>
+              <p className='text-sm text-gray-900 font-medium'>
                 {user.fullName}
               </p>
             </div>
 
             <div>
-              <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-1.5'>
+              <label className='text-xs font-medium text-gray-600 uppercase tracking-wide block mb-1.5'>
                 Email
               </label>
               <div className='flex items-center gap-2'>
-                <Mail className='w-3.5 h-3.5 text-muted-foreground' />
-                <p className='text-sm text-foreground'>{user.email}</p>
+                <Mail className='w-3.5 h-3.5 text-gray-600' />
+                <p className='text-sm text-gray-900'>{user.email}</p>
               </div>
             </div>
 
             <div>
-              <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-1.5'>
+              <label className='text-xs font-medium text-gray-600 uppercase tracking-wide block mb-1.5'>
                 Số điện thoại
               </label>
               <div className='flex items-center gap-2'>
-                <Phone className='w-3.5 h-3.5 text-muted-foreground' />
-                <p className='text-sm text-foreground'>{user.phone || '—'}</p>
+                <Phone className='w-3.5 h-3.5 text-gray-600' />
+                <p className='text-sm text-gray-900'>{user.phone || '—'}</p>
               </div>
             </div>
 
             <div>
-              <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-1.5'>
+              <label className='text-xs font-medium text-gray-600 uppercase tracking-wide block mb-1.5'>
                 Role
               </label>
               <div className='flex items-center gap-2'>
@@ -253,33 +253,33 @@ export default function UserDetail() {
             </div>
 
             <div>
-              <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-1.5'>
+              <label className='text-xs font-medium text-gray-600 uppercase tracking-wide block mb-1.5'>
                 Mã số thuế
               </label>
-              <p className='text-sm text-foreground font-mono'>
+              <p className='text-sm text-gray-900'>
                 {user.taxCode || '—'}
               </p>
             </div>
 
             <div>
-              <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-1.5'>
+              <label className='text-xs font-medium text-gray-600 uppercase tracking-wide block mb-1.5'>
                 Ngày tạo
               </label>
               <div className='flex items-center gap-2'>
-                <Calendar className='w-3.5 h-3.5 text-muted-foreground' />
-                <p className='text-sm text-foreground'>
+                <Calendar className='w-3.5 h-3.5 text-gray-600' />
+                <p className='text-sm text-gray-900'>
                   {formatDateTime(user.createdAt)}
                 </p>
               </div>
             </div>
 
             <div>
-              <label className='text-xs font-medium text-muted-foreground uppercase tracking-wide block mb-1.5'>
+              <label className='text-xs font-medium text-gray-600 uppercase tracking-wide block mb-1.5'>
                 Cập nhật lần cuối
               </label>
               <div className='flex items-center gap-2'>
-                <Calendar className='w-3.5 h-3.5 text-muted-foreground' />
-                <p className='text-sm text-foreground'>
+                <Calendar className='w-3.5 h-3.5 text-gray-600' />
+                <p className='text-sm text-gray-900'>
                   {formatDateTime(user.updatedAt)}
                 </p>
               </div>
@@ -288,23 +288,23 @@ export default function UserDetail() {
         </div>
       </div>
 
-      <div className='bg-card border border-border rounded-xl p-6'>
+      <div className='bg-white border border-gray-300 rounded-xl p-6'>
         <div className='flex items-center justify-between mb-6'>
           <div className='flex items-center gap-2'>
-            <Building2 className='w-5 h-5 text-blue' />
-            <h2 className='text-lg font-semibold text-foreground'>
+            <Building2 className='w-5 h-5 text-blue-600' />
+            <h2 className='text-lg font-semibold text-gray-900'>
               Hồ sơ doanh nghiệp
             </h2>
-            <span className='inline-flex items-center justify-center min-w-6 h-6 px-2 bg-primary/10 text-primary rounded-md text-xs font-medium border border-primary/20'>
+            <span className='inline-flex items-center justify-center min-w-6 h-6 px-2 bg-blue-50 text-gray-500 rounded-md text-xs font-medium border border-gray-300'>
               {user.businessProfiles.length}
             </span>
           </div>
         </div>
 
         {user.businessProfiles.length === 0 ? (
-          <div className='text-center py-12 bg-background/30 rounded-xl border border-border/30'>
-            <Building2 className='w-12 h-12 text-muted-foreground/50 mx-auto mb-3' />
-            <p className='text-sm text-muted-foreground'>
+          <div className='text-center py-12 bg-gray-50 rounded-xl border border-gray-300/30'>
+            <Building2 className='w-12 h-12 text-gray-600/50 mx-auto mb-3' />
+            <p className='text-sm text-gray-600'>
               Không có hồ sơ doanh nghiệp gắn với người dùng này
             </p>
           </div>
@@ -313,12 +313,12 @@ export default function UserDetail() {
             {user.businessProfiles.map((business) => (
               <div
                 key={business.id}
-                className='bg-background/50 border border-border rounded-xl p-5 hover:border-border transition-all'
+                className='bg-white border border-gray-300 rounded-xl p-5 hover:border-gray-300 transition-all'
               >
                 <div className='flex items-start justify-between mb-4'>
                   <div className='flex items-start gap-3 flex-1'>
                     <div className='flex-1 min-w-0'>
-                      <h3 className='text-base font-semibold text-foreground mb-1'>
+                      <h3 className='text-base font-semibold text-gray-900 mb-1'>
                         {business.businessName}
                       </h3>
                       <div className='flex items-center gap-2 flex-wrap'>
@@ -338,43 +338,43 @@ export default function UserDetail() {
                   </div>
                 </div>
 
-                <div className='grid grid-cols-4 gap-x-6 pt-4 border-t border-border/30'>
+                <div className='grid grid-cols-4 gap-x-6 pt-4 border-t border-gray-300/30'>
                   <div>
-                    <label className='text-[10px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
+                    <label className='text-[12px] font-medium text-gray-600 uppercase tracking-wide block mb-1'>
                       Địa chỉ
                     </label>
                     <div className='flex items-start gap-1.5'>
-                      <MapPin className='w-3 h-3 text-muted-foreground mt-0.5 shrink-0' />
-                      <p className='text-xs text-foreground leading-snug'>
+                      <MapPin className='w-3 h-3 text-gray-600 mt-0.5 shrink-0' />
+                      <p className='text-sm text-gray-900 leading-snug'>
                         {business.address || '—'}
                       </p>
                     </div>
                   </div>
 
                   <div>
-                    <label className='text-[10px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
+                    <label className='text-[12px] font-medium text-gray-600 uppercase tracking-wide block mb-1'>
                       Tỉnh/Thành phố - Quận/Huyện
                     </label>
-                    <p className='text-xs text-foreground'>
+                    <p className='text-sm text-gray-900'>
                       {business.provinceCode || '—'}
                       {business.wardCode ? ` - Ward ${business.wardCode}` : ''}
                     </p>
                   </div>
 
                   <div>
-                    <label className='text-[10px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
+                    <label className='text-[12px] font-medium text-gray-600 uppercase tracking-wide block mb-1'>
                       Ngày tạo
                     </label>
-                    <p className='text-xs text-foreground'>
+                    <p className='text-sm text-gray-900'>
                       {formatDateTime(business.createdAt)}
                     </p>
                   </div>
 
                   <div>
-                    <label className='text-[10px] font-medium text-muted-foreground uppercase tracking-wide block mb-1'>
+                    <label className='text-[12px] font-medium text-gray-600 uppercase tracking-wide block mb-1'>
                       Cập nhật lần cuối
                     </label>
-                    <p className='text-xs text-foreground'>
+                    <p className='text-sm text-gray-900'>
                       {formatDateTime(business.updatedAt)}
                     </p>
                   </div>

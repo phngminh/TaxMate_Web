@@ -211,9 +211,9 @@ export default function BusinessOwnerRegisterPage() {
                 aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
               >
                 {showPassword ? (
-                  <Eye size={18} />
+                  <Eye size={18} className='cursor-pointer' />
                 ) : (
-                  <EyeOff size={18} />
+                  <EyeOff size={18} className='cursor-pointer' />
                 )}
               </button>
             </div>
@@ -253,7 +253,7 @@ export default function BusinessOwnerRegisterPage() {
               onClick={() =>
                 navigate(path.BUSINESS_OWNER_LOGIN, { state: { direction: 'right' } })
               }
-              className='font-semibold text-taxmate-red transition-colors hover:text-taxmate-red-hover'
+              className='font-semibold text-taxmate-red transition-colors hover:text-taxmate-red-hover cursor-pointer'
             >
               Đăng nhập ngay
             </button>

@@ -411,7 +411,7 @@ export default function ComprehensiveDashboard() {
         <div className="bg-card border border-border rounded-xl p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-lg font-semibold text-card-foreground">Tăng trưởng hộ kinh doanh</h2>
+              <h2 className="text-lg font-semibold text-card-foreground">Biểu đồ tăng trưởng sổ hộ kinh doanh</h2>
               <p className="text-sm text-muted-foreground">Số người dùng có subscription theo tháng</p>
             </div>
             <Building2 className="w-5 h-5 text-primary" />
@@ -440,7 +440,7 @@ export default function ComprehensiveDashboard() {
         <div className="bg-card border border-border rounded-xl p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-lg font-semibold text-card-foreground">Phễu chuyển đổi người dùng</h2>
+              <h2 className="text-lg font-semibold text-card-foreground">Phân bổ người dùng theo gói</h2>
               <p className="text-sm text-muted-foreground">Từ đăng ký đến trả phí</p>
             </div>
             <UsersIcon className="w-5 h-5 text-primary" />
