@@ -1,6 +1,31 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import * as signalR from '@microsoft/signalr'
-import { Search, Plus, X, Check, Utensils, Printer, Loader2, PlayCircle, RefreshCw, FileText, Sparkles, Building, Mail, MapPin, Hash, House } from 'lucide-react'
+import {
+  Search,
+  Plus,
+  X,
+  Check,
+  Utensils,
+  Printer,
+  Loader2,
+  PlayCircle,
+  RefreshCw,
+  FileText,
+  Sparkles,
+  Building,
+  Mail,
+  MapPin,
+  Hash,
+  House,
+  ClipboardList,
+  Package,
+  ArrowRight,
+  RotateCcw,
+  Trash2,
+  Minus,
+  ShoppingCart,
+  User
+} from 'lucide-react'
 import { toast } from 'react-toastify'
 import http from '../../utils/http'
 import { useBusiness } from '../../contexts/BusinessContext'
@@ -9,11 +34,13 @@ import { getAllProducts, createProduct } from '../../apis/product.api'
 import { getProductCategories } from '../../apis/product.category.api'
 import {
   createOrder,
+  getOrders,
   getOrderById,
   addOrderItem,
   updateOrderItem,
   removeOrderItem,
   cancelOrder,
+  cancelAllDrafts,
   checkoutOrder,
   confirmPayment
 } from '../../apis/order.api'
@@ -22,6 +49,7 @@ import { getEInvoiceConfig } from '../../apis/einvoice.api'
 import type { Product } from '../../types/product.type'
 import type { ProductCategory } from '../../types/product.category.type'
 import type { PaymentAccount } from '../../types/paymentAccount.type'
+import type { Order } from '../../types/order.type'
 import { useNavigate } from 'react-router-dom'
 import path from '../../constants/path'
 
@@ -38,13 +66,14 @@ const BANK_OPTIONS = [
   { shortName: 'CAKE', fullName: 'CAKE' }
 ]
 
-interface POSTab {
+export interface POSTab {
   tabId: string // e.g. "T-1", "T-2"
-  orderId: string // Backend Guid transactionId
-  code: string // Backend transactionCode
+  orderId: string | null // Backend Guid transactionId, null if local draft
+  code: string // Backend transactionCode or "Đơn 1"
   items: any[]
   totalAmount: number
   status: string
+  isPersisted: boolean
 }
 
 export default function POS() {
@@ -67,6 +96,36 @@ export default function POS() {
   const [activeTabId, setActiveTabId] = useState<string>('')
   const [loadingPOS, setLoadingPOS] = useState(true)
   const [loadingCart, setLoadingCart] = useState(false)
+
+  // Resizable Splitter state (persisted in localStorage, min 35%, max 75%)
+  const [leftWidthPercent, setLeftWidthPercent] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('pos_layout_left_width')
+      if (saved) {
+        const parsed = parseFloat(saved)
+        if (!isNaN(parsed) && parsed >= 35 && parsed <= 75) return parsed
+      }
+    } catch {}
+    return 58
+  })
+  const [isDraggingSplitter, setIsDraggingSplitter] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Tab scroll & drag state
+  const tabBarRef = useRef<HTMLDivElement>(null)
+  const [draggedTabId, setDraggedTabId] = useState<string | null>(null)
+  const [dragOverTabId, setDragOverTabId] = useState<string | null>(null)
+
+  // Open Orders Drawer state
+  const [showOpenOrdersPanel, setShowOpenOrdersPanel] = useState(false)
+  const [openDraftOrders, setOpenDraftOrders] = useState<Order[]>([])
+  const [loadingOpenOrders, setLoadingOpenOrders] = useState(false)
+  const [openDraftCount, setOpenDraftCount] = useState(0)
+  const [showConfirmCancelAll, setShowConfirmCancelAll] = useState(false)
+  const [cancellingAll, setCancellingAll] = useState(false)
+
+  // Mutex lock to prevent duplicate order creation on rapid clicks
+  const creatingDraftTabIdsRef = useRef<Set<string>>(new Set())
 
   // Payment states
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'EWallet' | 'Transfer'>('Cash')
@@ -116,6 +175,322 @@ export default function POS() {
   // Flag to prevent concurrent initialization in StrictMode
   const isInitializingRef = useRef(false)
 
+  // Debounced quantity updates map (itemId -> { timer, targetQty, orderId, tabId })
+  const debouncedQuantityUpdatesRef = useRef<
+    Map<
+      string,
+      {
+        timer: ReturnType<typeof setTimeout>
+        targetQty: number
+        orderId: string
+        tabId: string
+      }
+    >
+  >(new Map())
+
+  // Flush any pending debounced updates immediately (used before checkout or closing tabs)
+  const flushPendingQuantityUpdates = async () => {
+    const pendingList = Array.from(debouncedQuantityUpdatesRef.current.entries())
+    if (pendingList.length === 0) return
+
+    debouncedQuantityUpdatesRef.current.clear()
+    const promises = pendingList.map(([itemId, pending]) => {
+      clearTimeout(pending.timer)
+      if (pending.targetQty <= 0) {
+        return removeOrderItem(pending.orderId, itemId)
+      } else {
+        return updateOrderItem(pending.orderId, itemId, { quantity: pending.targetQty })
+      }
+    })
+
+    await Promise.allSettled(promises)
+  }
+
+  // Helper to sync active order IDs to sessionStorage
+  const updateSessionTabs = (tabList: POSTab[]) => {
+    if (!businessId) return
+    const persistedOrderIds = tabList
+      .map(t => t.orderId)
+      .filter((id): id is string => Boolean(id))
+    if (persistedOrderIds.length > 0) {
+      sessionStorage.setItem('pos_active_tabs_' + businessId, JSON.stringify(persistedOrderIds))
+    } else {
+      sessionStorage.removeItem('pos_active_tabs_' + businessId)
+    }
+  }
+
+  // Format relative time helper
+  const formatRelativeTime = (dateStr: string) => {
+    if (!dateStr) return ''
+    try {
+      const utcDateStr = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`
+      const date = new Date(utcDateStr)
+      const now = new Date()
+      const diffMs = now.getTime() - date.getTime()
+      const diffSec = Math.floor(diffMs / 1000)
+      const diffMin = Math.floor(diffSec / 60)
+      const diffHours = Math.floor(diffMin / 60)
+      const diffDays = Math.floor(diffHours / 24)
+
+      if (diffMin < 1) return 'Vừa xong'
+      if (diffMin < 60) return `${diffMin} phút trước`
+      if (diffHours < 24) return `${diffHours} giờ trước`
+      if (diffDays < 7) return `${diffDays} ngày trước`
+      return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+    } catch {
+      return ''
+    }
+  }
+
+  // Fetch open drafts count for header badge
+  const fetchOpenDraftCount = async () => {
+    if (!businessId) return
+    try {
+      const res = await getOrders(businessId, { status: 'Draft', pageSize: 50 })
+      if (res.success && res.data?.items) {
+        const validDrafts = res.data.items.filter(o => o.itemCount > 0)
+        setOpenDraftCount(validDrafts.length)
+      }
+    } catch (err) {
+      console.error('Failed to fetch open draft count:', err)
+    }
+  }
+
+  // Fetch open drafts list for drawer
+  const fetchOpenDraftOrders = async () => {
+    if (!businessId) return
+    try {
+      setLoadingOpenOrders(true)
+      const res = await getOrders(businessId, { status: 'Draft', pageSize: 50 })
+      if (res.success && res.data?.items) {
+        const validDrafts = res.data.items.filter(o => o.itemCount > 0)
+        setOpenDraftOrders(validDrafts)
+        setOpenDraftCount(validDrafts.length)
+      }
+    } catch (err) {
+      console.error('Failed to fetch open draft orders:', err)
+      toast.error('Không thể tải danh sách đơn chờ.')
+    } finally {
+      setLoadingOpenOrders(false)
+    }
+  }
+
+  // Resume draft order into POS tab
+  const handleResumeDraftOrder = async (order: Order) => {
+    const existingTab = tabs.find(t => t.orderId === order.transactionId)
+    if (existingTab) {
+      setActiveTabId(existingTab.tabId)
+      setShowOpenOrdersPanel(false)
+      toast.info(`Đơn ${order.transactionCode} đang mở tại tab ${existingTab.tabId}`)
+      return
+    }
+
+    try {
+      setLoadingCart(true)
+      const detail = await getOrderById(order.transactionId)
+      if (!detail.success || !detail.data) return
+
+      const nextIndex =
+        tabs.length > 0
+          ? Math.max(
+              ...tabs.map(t => {
+                const match = t.tabId.match(/T-(\d+)/)
+                return match ? parseInt(match[1]) : 0
+              })
+            ) + 1
+          : 1
+
+      const newTabId = `T-${nextIndex}`
+      const resumedTab: POSTab = {
+        tabId: newTabId,
+        orderId: detail.data.transactionId,
+        code: detail.data.transactionCode,
+        items: detail.data.items || [],
+        totalAmount: detail.data.totalAmount,
+        status: detail.data.status,
+        isPersisted: true
+      }
+
+      let updatedTabs: POSTab[] = []
+      if (tabs.length === 1 && !tabs[0].isPersisted && tabs[0].items.length === 0) {
+        resumedTab.tabId = 'T-1'
+        updatedTabs = [resumedTab]
+      } else {
+        updatedTabs = [...tabs, resumedTab]
+      }
+
+      setTabs(updatedTabs)
+      setActiveTabId(resumedTab.tabId)
+      updateSessionTabs(updatedTabs)
+      setShowOpenOrdersPanel(false)
+      toast.success(`Đã mở lại đơn ${order.transactionCode}`)
+    } catch (err) {
+      console.error('Resume draft order failed:', err)
+      toast.error('Không thể mở lại đơn hàng.')
+    } finally {
+      setLoadingCart(false)
+    }
+  }
+
+  // Cancel draft directly from drawer
+  const handleCancelDraftFromPanel = async (orderId: string) => {
+    try {
+      await cancelOrder(orderId)
+      toast.success('Đã hủy đơn nháp thành công.')
+      const remaining = tabs.filter(t => t.orderId !== orderId)
+      if (remaining.length !== tabs.length) {
+        if (remaining.length === 0) {
+          const resetTab: POSTab = {
+            tabId: 'T-1',
+            orderId: null,
+            code: 'Đơn 1',
+            items: [],
+            totalAmount: 0,
+            status: 'Draft',
+            isPersisted: false
+          }
+          setTabs([resetTab])
+          setActiveTabId('T-1')
+          updateSessionTabs([])
+        } else {
+          setTabs(remaining)
+          updateSessionTabs(remaining)
+          if (!remaining.some(t => t.tabId === activeTabId)) {
+            setActiveTabId(remaining[0].tabId)
+          }
+        }
+      }
+      fetchOpenDraftOrders()
+    } catch (err) {
+      console.error('Cancel draft failed:', err)
+      toast.error('Hủy đơn hàng nháp thất bại.')
+    }
+  }
+
+  // Cancel all drafts
+  const handleCancelAllDrafts = async () => {
+    if (!businessId) return
+    try {
+      setCancellingAll(true)
+      await cancelAllDrafts(businessId)
+      toast.success('Đã hủy tất cả đơn hàng chờ thành công.')
+
+      const resetTab: POSTab = {
+        tabId: 'T-1',
+        orderId: null,
+        code: 'Đơn 1',
+        items: [],
+        totalAmount: 0,
+        status: 'Draft',
+        isPersisted: false
+      }
+      setTabs([resetTab])
+      setActiveTabId('T-1')
+      updateSessionTabs([])
+
+      setOpenDraftOrders([])
+      setOpenDraftCount(0)
+      setShowConfirmCancelAll(false)
+      setShowOpenOrdersPanel(false)
+    } catch (err: any) {
+      console.error('Cancel all drafts failed:', err)
+      toast.error(err?.response?.data?.message || 'Không thể hủy danh sách đơn chờ.')
+    } finally {
+      setCancellingAll(false)
+    }
+  }
+
+  // Helper to extract full initials (e.g. "Nguyễn Văn An" -> "NVA")
+  const getUserInitials = (name?: string) => {
+    if (!name?.trim()) return 'NV'
+    const words = name.trim().split(/\s+/)
+    return words.map(w => w[0]?.toUpperCase()).join('').slice(0, 4)
+  }
+
+  // Splitter dragging listener
+  const handleSplitterPointerDown = (e: React.PointerEvent) => {
+    e.preventDefault()
+    setIsDraggingSplitter(true)
+  }
+
+  useEffect(() => {
+    if (!isDraggingSplitter) return
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      const newPercent = ((e.clientX - rect.left) / rect.width) * 100
+      const clamped = Math.min(Math.max(newPercent, 35), 75)
+      setLeftWidthPercent(clamped)
+    }
+
+    const handlePointerUp = () => {
+      setIsDraggingSplitter(false)
+      try {
+        localStorage.setItem('pos_layout_left_width', leftWidthPercent.toString())
+      } catch {}
+    }
+
+    window.addEventListener('pointermove', handlePointerMove)
+    window.addEventListener('pointerup', handlePointerUp)
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+    }
+  }, [isDraggingSplitter, leftWidthPercent])
+
+  // Tab horizontal wheel scroll handler
+  const handleTabBarWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (tabBarRef.current) {
+      tabBarRef.current.scrollLeft += e.deltaY + e.deltaX
+    }
+  }
+
+  // Tab Drag and Drop handlers
+  const handleTabDragStart = (tabId: string, e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', tabId)
+    e.dataTransfer.effectAllowed = 'move'
+    setDraggedTabId(tabId)
+  }
+
+  const handleTabDragOver = (tabId: string, e: React.DragEvent) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dragOverTabId !== tabId) {
+      setDragOverTabId(tabId)
+    }
+  }
+
+  const handleTabDrop = (targetTabId: string, e: React.DragEvent) => {
+    e.preventDefault()
+    const sourceTabId = e.dataTransfer.getData('text/plain') || draggedTabId
+    if (!sourceTabId || sourceTabId === targetTabId) {
+      setDraggedTabId(null)
+      setDragOverTabId(null)
+      return
+    }
+
+    setTabs(prevTabs => {
+      const fromIndex = prevTabs.findIndex(t => t.tabId === sourceTabId)
+      const toIndex = prevTabs.findIndex(t => t.tabId === targetTabId)
+      if (fromIndex === -1 || toIndex === -1) return prevTabs
+
+      const reordered = [...prevTabs]
+      const [movedTab] = reordered.splice(fromIndex, 1)
+      reordered.splice(toIndex, 0, movedTab)
+      updateSessionTabs(reordered)
+      return reordered
+    })
+
+    setDraggedTabId(null)
+    setDragOverTabId(null)
+  }
+
+  const handleTabDragEnd = () => {
+    setDraggedTabId(null)
+    setDragOverTabId(null)
+  }
+
   // 1. Fetch initial products, categories, bank accounts and e-invoice preference
   const loadInitialData = async () => {
     if (!businessId) return
@@ -130,8 +505,6 @@ export default function POS() {
 
       if (prodRes.success) setProducts(prodRes.data.items || [])
       if (catRes.success) setCategories(catRes.data || [])
-        console.log(prodRes)
-        console.log(catRes)
       if (accRes.success) {
         const accs = accRes.data || []
         setPaymentAccounts(accs)
@@ -142,41 +515,109 @@ export default function POS() {
         setRequireEInvoice(configRes.data.isEnabled || false)
       }
 
-      // If no tab exists, initialize the first tab with concurrency protection
+      // 2. Tab Initialization & Multi-Tab Session Recovery
       if (tabs.length === 0 && !isInitializingRef.current) {
         isInitializingRef.current = true
-        await initFirstTab(businessId)
+
+        // A. Check for URL resumeOrderId (transferred from Order history)
+        const searchParams = new URLSearchParams(window.location.search)
+        const resumeOrderId = searchParams.get('resumeOrderId')
+
+        if (resumeOrderId) {
+          try {
+            const detailRes = await getOrderById(resumeOrderId)
+            if (detailRes.success && detailRes.data && detailRes.data.status === 'Draft') {
+              const draft = detailRes.data
+              const resumedTab: POSTab = {
+                tabId: 'T-1',
+                orderId: draft.transactionId,
+                code: draft.transactionCode,
+                items: draft.items || [],
+                totalAmount: draft.totalAmount,
+                status: draft.status,
+                isPersisted: true
+              }
+              setTabs([resumedTab])
+              setActiveTabId('T-1')
+              updateSessionTabs([resumedTab])
+              fetchOpenDraftCount()
+              isInitializingRef.current = false
+              return
+            }
+          } catch (err) {
+            console.error('Failed to resume order from url:', err)
+          }
+        }
+
+        // B. Check sessionStorage for multi-tab recovery
+        let savedOrderIds: string[] = []
+        try {
+          const savedTabsJson = sessionStorage.getItem('pos_active_tabs_' + businessId)
+          if (savedTabsJson) savedOrderIds = JSON.parse(savedTabsJson)
+        } catch {
+          savedOrderIds = []
+        }
+
+        // Fallback for single session key
+        if (savedOrderIds.length === 0) {
+          const legacyId = sessionStorage.getItem('pos_active_order_' + businessId)
+          if (legacyId) savedOrderIds = [legacyId]
+        }
+
+        if (savedOrderIds.length > 0) {
+          try {
+            const results = await Promise.allSettled(savedOrderIds.map(id => getOrderById(id)))
+            const validTabs: POSTab[] = []
+            let tabIndex = 1
+
+            for (const res of results) {
+              if (res.status === 'fulfilled' && res.value.success && res.value.data?.status === 'Draft') {
+                const order = res.value.data
+                validTabs.push({
+                  tabId: `T-${tabIndex++}`,
+                  orderId: order.transactionId,
+                  code: order.transactionCode,
+                  items: order.items || [],
+                  totalAmount: order.totalAmount,
+                  status: order.status,
+                  isPersisted: true
+                })
+              }
+            }
+
+            if (validTabs.length > 0) {
+              setTabs(validTabs)
+              setActiveTabId(validTabs[0].tabId)
+              updateSessionTabs(validTabs)
+              fetchOpenDraftCount()
+              isInitializingRef.current = false
+              return
+            }
+          } catch (err) {
+            console.error('Session recovery failed:', err)
+          }
+        }
+
+        // C. LAZY DRAFT: Create 1 single empty local tab without calling backend API
+        const defaultLocalTab: POSTab = {
+          tabId: 'T-1',
+          orderId: null,
+          code: 'Đơn 1',
+          items: [],
+          totalAmount: 0,
+          status: 'Draft',
+          isPersisted: false
+        }
+        setTabs([defaultLocalTab])
+        setActiveTabId('T-1')
+        fetchOpenDraftCount()
+        isInitializingRef.current = false
       }
     } catch (err) {
       console.error(err)
       toast.error('Không thể tải dữ liệu bán hàng.')
     } finally {
       setLoadingPOS(false)
-    }
-  }
-
-  const initFirstTab = async (bId: string) => {
-    try {
-      const orderRes = await createOrder(bId, { note: '' })
-      const orderId = orderRes.data
-      const detail = await getOrderById(orderId)
-      
-      const newTab: POSTab = {
-        tabId: 'T-1',
-        orderId: orderId,
-        code: detail.data.transactionCode,
-        items: detail.data.items || [],
-        totalAmount: detail.data.totalAmount,
-        status: detail.data.status
-      }
-
-      setTabs([newTab])
-      setActiveTabId('T-1')
-    } catch (err) {
-      console.error('Init first tab failed:', err)
-      toast.error('Không thể khởi tạo đơn hàng nháp.')
-    } finally {
-      isInitializingRef.current = false
     }
   }
 
@@ -249,9 +690,9 @@ export default function POS() {
   }, [tabs, activeTabId])
 
   // Sync active tab cart details from backend
-  const syncActiveTabDetails = async (tabId: string, orderId: string) => {
+  const syncActiveTabDetails = async (tabId: string, orderId: string, showLoading = false) => {
     try {
-      setLoadingCart(true)
+      if (showLoading) setLoadingCart(true)
       const detail = await getOrderById(orderId)
       setTabs(prev =>
         prev.map(t =>
@@ -268,121 +709,254 @@ export default function POS() {
     } catch (err) {
       console.error('Sync tab details failed:', err)
     } finally {
-      setLoadingCart(false)
+      if (showLoading) setLoadingCart(false)
     }
   }
 
-  // 2. Add product to cart
+  // 2. Add product to cart (Lazy Backend Order Creation & Optimistic UI)
   const handleAddProductToCart = async (product: Product) => {
-    if (!activeTab) return
-    const orderId = activeTab.orderId
+    if (!activeTab || !businessId) return
     const tabId = activeTab.tabId
 
     try {
-      setLoadingCart(true)
+      // A. Tab is NOT persisted yet -> create draft on backend first
+      if (!activeTab.isPersisted || !activeTab.orderId) {
+        if (creatingDraftTabIdsRef.current.has(tabId)) return
+        creatingDraftTabIdsRef.current.add(tabId)
+
+        try {
+          setLoadingCart(true)
+          const orderRes = await createOrder(businessId, { note: '' })
+          const newOrderId = orderRes.data
+          await addOrderItem(newOrderId, {
+            productId: product.id,
+            quantity: 1
+          })
+          const detail = await getOrderById(newOrderId)
+
+          const updatedTabs = tabs.map(t =>
+            t.tabId === tabId
+              ? {
+                  ...t,
+                  orderId: newOrderId,
+                  code: detail.data.transactionCode,
+                  items: detail.data.items || [],
+                  totalAmount: detail.data.totalAmount,
+                  status: detail.data.status,
+                  isPersisted: true
+                }
+              : t
+          )
+
+          setTabs(updatedTabs)
+          updateSessionTabs(updatedTabs)
+          fetchOpenDraftCount()
+        } finally {
+          setLoadingCart(false)
+          creatingDraftTabIdsRef.current.delete(tabId)
+        }
+        return
+      }
+
+      // B. Tab is already persisted -> Optimistic UI update & Debounce
       const existing = activeTab.items.find(x => x.productId === product.id)
       if (existing) {
-        await updateOrderItem(orderId, existing.transactionItemId, {
-          quantity: existing.quantity + 1
-        })
-      } else {
-        await addOrderItem(orderId, {
-          productId: product.id,
-          quantity: 1
-        })
+        handleUpdateQuantity(existing.transactionItemId, existing.quantity, 1)
+        return
       }
-      await syncActiveTabDetails(tabId, orderId)
+
+      const orderId = activeTab.orderId
+      await addOrderItem(orderId, {
+        productId: product.id,
+        quantity: 1
+      })
+      await syncActiveTabDetails(tabId, orderId, false)
+      fetchOpenDraftCount()
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Không thể thêm sản phẩm.')
-    } finally {
-      setLoadingCart(false)
+      if (activeTab.orderId) {
+        await syncActiveTabDetails(tabId, activeTab.orderId, false)
+      }
     }
   }
 
-  // 3. Update item quantity (+ / -)
-  const handleUpdateQuantity = async (itemId: string, currentQty: number, delta: number) => {
-    if (!activeTab) return
+  // 3. Update item quantity (+ / -) with Debounced Backend Sync (0ms latency, zero race condition)
+  const handleUpdateQuantity = (itemId: string, currentQty: number, delta: number) => {
+    if (!activeTab || !activeTab.orderId) return
     const orderId = activeTab.orderId
     const tabId = activeTab.tabId
-    const newQty = currentQty + delta
 
-    try {
-      setLoadingCart(true)
-      if (newQty <= 0) {
-        await removeOrderItem(orderId, itemId)
-      } else {
-        await updateOrderItem(orderId, itemId, {
-          quantity: newQty
-        })
+    // Check if there is already a pending target quantity for this item
+    const existingPending = debouncedQuantityUpdatesRef.current.get(itemId)
+    const baseQty = existingPending ? existingPending.targetQty : currentQty
+    const targetQty = baseQty + delta
+
+    // 1. Optimistic UI update immediately (0ms delay)
+    setTabs(prev =>
+      prev.map(t => {
+        if (t.tabId !== tabId) return t
+        let nextItems = [...t.items]
+        if (targetQty <= 0) {
+          nextItems = nextItems.filter(item => item.transactionItemId !== itemId)
+        } else {
+          nextItems = nextItems.map(item =>
+            item.transactionItemId === itemId
+              ? {
+                  ...item,
+                  quantity: targetQty,
+                  lineTotal: targetQty * item.unitPrice
+                }
+              : item
+          )
+        }
+        const nextTotal = nextItems.reduce((acc, curr) => acc + curr.lineTotal, 0)
+        return {
+          ...t,
+          items: nextItems,
+          totalAmount: nextTotal
+        }
+      })
+    )
+
+    // 2. Clear any existing timer for this item
+    if (existingPending) {
+      clearTimeout(existingPending.timer)
+    }
+
+    // 3. Schedule debounced API call (300ms)
+    const timer = setTimeout(async () => {
+      debouncedQuantityUpdatesRef.current.delete(itemId)
+      try {
+        if (targetQty <= 0) {
+          await removeOrderItem(orderId, itemId)
+        } else {
+          await updateOrderItem(orderId, itemId, {
+            quantity: targetQty
+          })
+        }
+        // Only sync from backend if no newer clicks are pending in flight
+        if (debouncedQuantityUpdatesRef.current.size === 0) {
+          await syncActiveTabDetails(tabId, orderId, false)
+          fetchOpenDraftCount()
+        }
+      } catch (err: any) {
+        toast.error(err?.response?.data?.message || 'Cập nhật số lượng thất bại.')
+        await syncActiveTabDetails(tabId, orderId, false)
       }
-      await syncActiveTabDetails(tabId, orderId)
+    }, 300)
+
+    debouncedQuantityUpdatesRef.current.set(itemId, {
+      timer,
+      targetQty,
+      orderId,
+      tabId
+    })
+  }
+
+  // 3.1. Direct Remove item from cart with Optimistic UI
+  const handleRemoveItem = async (itemId: string) => {
+    if (!activeTab || !activeTab.orderId) return
+    const orderId = activeTab.orderId
+    const tabId = activeTab.tabId
+
+    // Clear any pending debounced timer for this item
+    const existingPending = debouncedQuantityUpdatesRef.current.get(itemId)
+    if (existingPending) {
+      clearTimeout(existingPending.timer)
+      debouncedQuantityUpdatesRef.current.delete(itemId)
+    }
+
+    // 1. Optimistic remove immediately
+    setTabs(prev =>
+      prev.map(t => {
+        if (t.tabId !== tabId) return t
+        const nextItems = t.items.filter(item => item.transactionItemId !== itemId)
+        const nextTotal = nextItems.reduce((acc, curr) => acc + curr.lineTotal, 0)
+        return {
+          ...t,
+          items: nextItems,
+          totalAmount: nextTotal
+        }
+      })
+    )
+
+    // 2. Call backend in background
+    try {
+      await removeOrderItem(orderId, itemId)
+      if (debouncedQuantityUpdatesRef.current.size === 0) {
+        await syncActiveTabDetails(tabId, orderId, false)
+        fetchOpenDraftCount()
+      }
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Cập nhật số lượng thất bại.')
-    } finally {
-      setLoadingCart(false)
+      toast.error(err?.response?.data?.message || 'Xóa món thất bại.')
+      await syncActiveTabDetails(tabId, orderId, false)
     }
   }
 
-  // 4. Create new tab
-  const handleAddTab = async () => {
-    if (!businessId) return
-    try {
-      setLoadingCart(true)
-      const nextIndex =
-        tabs.length > 0
-          ? Math.max(
-              ...tabs.map(t => {
-                const match = t.tabId.match(/T-(\d+)/)
-                return match ? parseInt(match[1]) : 0
-              })
-            ) + 1
-          : 1
+  // 4. Create new tab (Lazy Tab Creation)
+  const handleAddTab = () => {
+    const nextIndex =
+      tabs.length > 0
+        ? Math.max(
+            ...tabs.map(t => {
+              const match = t.tabId.match(/T-(\d+)/)
+              return match ? parseInt(match[1]) : 0
+            })
+          ) + 1
+        : 1
 
-      const newTabId = `T-${nextIndex}`
-      const orderRes = await createOrder(businessId, { note: '' })
-      const orderId = orderRes.data
-      const detail = await getOrderById(orderId)
-
-      const newTab: POSTab = {
-        tabId: newTabId,
-        orderId: orderId,
-        code: detail.data.transactionCode,
-        items: detail.data.items || [],
-        totalAmount: detail.data.totalAmount,
-        status: detail.data.status
-      }
-
-      setTabs(prev => [...prev, newTab])
-      setActiveTabId(newTabId)
-    } catch (err) {
-      console.error(err)
-      toast.error('Không thể tạo tab đơn hàng mới.')
-    } finally {
-      setLoadingCart(false)
+    const newTabId = `T-${nextIndex}`
+    const newTab: POSTab = {
+      tabId: newTabId,
+      orderId: null,
+      code: `Đơn ${nextIndex}`,
+      items: [],
+      totalAmount: 0,
+      status: 'Draft',
+      isPersisted: false
     }
+
+    setTabs(prev => [...prev, newTab])
+    setActiveTabId(newTabId)
   }
 
   // 5. Close a tab
-  const handleCloseOrder = async (tabId: string, orderId: string, e: React.MouseEvent) => {
+  const handleCloseOrder = async (tabId: string, orderId: string | null, e: React.MouseEvent) => {
     e.stopPropagation()
     if (!businessId) return
+    await flushPendingQuantityUpdates()
 
     try {
-      // Cancel on backend
-      await cancelOrder(orderId)
+      if (orderId) {
+        await cancelOrder(orderId)
+      }
 
       if (tabs.length === 1) {
-        // If it was the last tab, reset it by creating a new one
-        setTabs([])
-        await initFirstTab(businessId)
+        const resetTab: POSTab = {
+          tabId: 'T-1',
+          orderId: null,
+          code: 'Đơn 1',
+          items: [],
+          totalAmount: 0,
+          status: 'Draft',
+          isPersisted: false
+        }
+        setTabs([resetTab])
+        setActiveTabId('T-1')
+        updateSessionTabs([])
+        fetchOpenDraftCount()
         return
       }
 
       const remaining = tabs.filter(t => t.tabId !== tabId)
       setTabs(remaining)
+      updateSessionTabs(remaining)
+      fetchOpenDraftCount()
       if (activeTabId === tabId) {
         setActiveTabId(remaining[0].tabId)
-        syncActiveTabDetails(remaining[0].tabId, remaining[0].orderId)
+        if (remaining[0].orderId) {
+          syncActiveTabDetails(remaining[0].tabId, remaining[0].orderId)
+        }
       }
     } catch (err) {
       console.error(err)
@@ -476,8 +1050,9 @@ export default function POS() {
 
   // 7. Checkout Handlers
   const handleCheckoutClick = async () => {
+    await flushPendingQuantityUpdates()
     if (!activeTab || activeTab.items.length === 0) {
-      toast.error('Giỏ hàng trống. V vui lòng thêm sản phẩm.')
+      toast.error('Giỏ hàng trống. Vui lòng thêm sản phẩm.')
       return
     }
 
@@ -495,7 +1070,7 @@ export default function POS() {
   }
 
   const executeCheckout = async (method: 'Cash' | 'EWallet' | 'Transfer', bankAccountId: string | null) => {
-    if (!activeTab || !businessId) return
+    if (!activeTab || !businessId || !activeTab.orderId) return
     const orderId = activeTab.orderId
     const tabId = activeTab.tabId
 
@@ -556,11 +1131,25 @@ export default function POS() {
     if (remaining.length > 0) {
       setTabs(remaining)
       setActiveTabId(remaining[0].tabId)
-      syncActiveTabDetails(remaining[0].tabId, remaining[0].orderId)
+      updateSessionTabs(remaining)
+      if (remaining[0].orderId) {
+        syncActiveTabDetails(remaining[0].tabId, remaining[0].orderId)
+      }
     } else {
-      setTabs([])
-      await initFirstTab(businessId)
+      const resetTab: POSTab = {
+        tabId: 'T-1',
+        orderId: null,
+        code: 'Đơn 1',
+        items: [],
+        totalAmount: 0,
+        status: 'Draft',
+        isPersisted: false
+      }
+      setTabs([resetTab])
+      setActiveTabId('T-1')
+      updateSessionTabs([])
     }
+    fetchOpenDraftCount()
   }
 
   // Helper delay function
@@ -660,9 +1249,17 @@ export default function POS() {
   }
 
   return (
-    <div className='flex bg-[#004795] p-3 gap-3 h-screen w-full text-slate-800 overflow-hidden relative'>
+    <div
+      ref={containerRef}
+      className={`flex bg-[#004795] p-3 gap-2 h-screen w-full text-slate-800 overflow-hidden relative ${
+        isDraggingSplitter ? 'select-none cursor-col-resize' : ''
+      }`}
+    >
       {/* CỘT TRÁI - DANH SÁCH SẢN PHẨM */}
-      <div className='w-7/12 flex flex-col bg-white rounded-md overflow-hidden shadow-md h-full'>
+      <div
+        style={{ width: `${leftWidthPercent}%` }}
+        className='flex flex-col bg-white rounded-md overflow-hidden shadow-md h-full shrink-0'
+      >
         <div className='bg-[#004795] flex items-center justify-between px-3 pt-2'>
           <div className='bg-white text-[#004795] font-bold px-5 py-2.5 rounded-t-md text-sm border-b-2 border-white select-none'>
             Danh sách sản phẩm
@@ -753,29 +1350,71 @@ export default function POS() {
         )}
       </div>
 
+      {/* RESIZABLE SPLITTER DIVIDER */}
+      <div
+        onPointerDown={handleSplitterPointerDown}
+        className={`w-2 -mx-1 shrink-0 flex items-center justify-center cursor-col-resize select-none z-20 group transition-colors duration-150 ${
+          isDraggingSplitter ? 'bg-white/40' : 'hover:bg-white/20'
+        }`}
+        title='Kéo sang trái / phải để điều chỉnh kích thước 2 bên'
+      >
+        <div
+          className={`w-1 rounded-full transition-all duration-150 ${
+            isDraggingSplitter
+              ? 'bg-white h-12 shadow-sm'
+              : 'bg-white/30 group-hover:bg-white/90 h-8 group-hover:h-11'
+          }`}
+        />
+      </div>
+
       {/* CỘT PHẢI - GIỎ HÀNG & THANH TOÁN */}
-      <div className='w-5/12 flex flex-col bg-white rounded-md overflow-hidden shadow-md h-full relative'>
-        <div className='bg-[#004795] flex items-center justify-between px-3 pt-2 select-none'>
-          {/* Đơn hàng tabs */}
-          <div className='flex items-center gap-1 overflow-x-auto max-w-[60%] scrollbar-none'>
+      <div
+        style={{ width: `${100 - leftWidthPercent}%` }}
+        className='flex flex-col bg-white rounded-md overflow-hidden shadow-md h-full relative shrink-0 min-w-0'
+      >
+        <div className='bg-[#004795] flex items-center px-3 pt-2 select-none'>
+          {/* Đơn hàng tabs - Chiếm trọn 100% không gian trống tới sát cụm avatar */}
+          <div
+            ref={tabBarRef}
+            onWheel={handleTabBarWheel}
+            className='flex-1 min-w-0 flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5 mr-2'
+          >
             {tabs.map(order => {
               const isActive = order.tabId === activeTabId
+              const isDragging = draggedTabId === order.tabId
+              const isDragOver = dragOverTabId === order.tabId && !isDragging
+
               return (
                 <div
                   key={order.tabId}
+                  draggable
+                  onDragStart={e => handleTabDragStart(order.tabId, e)}
+                  onDragOver={e => handleTabDragOver(order.tabId, e)}
+                  onDrop={e => handleTabDrop(order.tabId, e)}
+                  onDragEnd={handleTabDragEnd}
                   onClick={() => {
                     setActiveTabId(order.tabId)
-                    syncActiveTabDetails(order.tabId, order.orderId)
+                    if (order.orderId) syncActiveTabDetails(order.tabId, order.orderId)
                   }}
-                  className={`flex items-center gap-1.5 px-3 py-2.5 rounded-t-md text-xs font-extrabold cursor-pointer transition-colors shrink-0 ${
+                  className={`flex items-center gap-1.5 px-3 py-2.5 rounded-t-md text-xs font-extrabold cursor-grab active:cursor-grabbing transition-all duration-150 shrink-0 ${
                     isActive
                       ? 'bg-white text-[#004795]'
                       : 'bg-[#003875] text-[#b0cde8] hover:bg-[#003c7e] hover:text-white'
+                  } ${isDragging ? 'opacity-40 scale-95' : ''} ${
+                    isDragOver ? 'ring-2 ring-amber-400 bg-[#004c9e]' : ''
                   }`}
                 >
+                  {/* Dot indicator: xanh lá = có món, ẩn = tab rỗng */}
+                  {order.items.length > 0 && (
+                    <span
+                      className={`size-1.5 rounded-full shrink-0 ${
+                        isActive ? 'bg-emerald-500' : 'bg-emerald-400/70'
+                      }`}
+                    />
+                  )}
                   <span>Đơn {order.tabId}</span>
                   <X
-                    className='size-3 hover:text-red-500 cursor-pointer stroke-3'
+                    className='size-3 hover:text-red-400 cursor-pointer stroke-3'
                     onClick={e => handleCloseOrder(order.tabId, order.orderId, e)}
                   />
                 </div>
@@ -783,88 +1422,160 @@ export default function POS() {
             })}
             <button
               onClick={handleAddTab}
-              className='bg-[#005fb8] hover:bg-[#006bd1] text-white p-1.5 rounded-md transition-colors'
+              title='Mở thêm tab bán hàng mới'
+              className='bg-[#005fb8] hover:bg-[#006bd1] text-white p-1.5 rounded-md transition-colors cursor-pointer shrink-0'
             >
               <Plus className='size-3.5 stroke-3' />
             </button>
+
+            {/* Nút Danh sách Đơn Chờ (Open Orders Panel) */}
+            <button
+              onClick={() => {
+                setShowOpenOrdersPanel(true)
+                fetchOpenDraftOrders()
+              }}
+              title='Xem danh sách đơn đang chờ xử lý'
+              className='relative ml-1 flex items-center gap-1.5 bg-white/10 hover:bg-white/20 border border-white/15 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-md transition-all duration-150 cursor-pointer select-none shrink-0'
+            >
+              <ClipboardList size={13} className='shrink-0' />
+              <span>Đơn chờ</span>
+              {openDraftCount > 0 && (
+                <span className='absolute -top-1.5 -right-1.5 bg-[#b90a0a] text-white text-[9px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm animate-pulse'>
+                  {openDraftCount > 9 ? '9+' : openDraftCount}
+                </span>
+              )}
+            </button>
           </div>
 
-          <div className='flex items-center justify-between pb-2'>
-            <div className='flex items-center gap-2 text-white text-xs font-bold'>
-              <span>Xin chào, {user?.fullName || 'Nhân viên'}</span>
-              <House
-                size={16}
-                className='cursor-pointer hover:text-blue-200 transition-colors'
-                onClick={() => navigate(-1)}
-              />
+          {/* Cụm Action Icons — Avatar Initials + Home */}
+          <div className='flex items-center gap-1.5 pb-2 shrink-0 select-none'>
+            {/* Avatar Initials + Tooltip */}
+            <div className='relative group/avatar'>
+              <div
+                className='size-7 rounded-full bg-white/20 hover:bg-white/30 border border-white/30 flex items-center justify-center cursor-default transition-all shadow-xs'
+                title={`Xin chào, ${user?.fullName || 'Nhân viên'}`}
+              >
+                <span className='text-white font-black text-[10px] tracking-wider leading-none'>
+                  {getUserInitials(user?.fullName)}
+                </span>
+              </div>
+
+              {/* Tooltip hover */}
+              <div className='absolute right-0 top-full mt-1.5 bg-slate-900/95 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-md shadow-xl whitespace-nowrap invisible group-hover/avatar:visible opacity-0 group-hover/avatar:opacity-100 translate-y-1 group-hover/avatar:translate-y-0 transition-all duration-150 z-50 pointer-events-none'>
+                Xin chào, {user?.fullName || 'Nhân viên'}
+              </div>
             </div>
+
+            {/* Nút Home */}
+            <button
+              onClick={() => navigate(path.BUSINESS_OWNER_HOME)}
+              className='p-1.5 rounded-md text-white/80 hover:text-white hover:bg-white/20 transition-all cursor-pointer'
+              title='Về trang chủ quản lý'
+            >
+              <House size={16} />
+            </button>
           </div>
         </div>
 
-        {/* Khách hàng (mocked) */}
-        <div className='p-4 border-b border-slate-100 flex gap-2'>
+        {/* Khách hàng */}
+        <div className='px-4 py-2.5 border-b border-slate-100 bg-white flex items-center gap-2 select-none'>
           <div className='relative grow flex items-center'>
-            <Search className='absolute left-3 text-slate-400 size-4' />
+            <User className='absolute left-3 text-slate-400 size-3.5' />
             <input
               type='text'
               readOnly
               value='Khách vãng lai'
-              className='bg-slate-50 border border-slate-200 text-slate-500 text-xs pl-9 pr-4 py-2 w-full rounded-md outline-hidden font-bold select-none cursor-not-allowed'
+              className='bg-slate-50 border border-slate-200/80 text-slate-600 text-xs pl-8 pr-3 py-1.5 w-full rounded-md outline-hidden font-bold select-none cursor-default'
             />
           </div>
         </div>
 
-        {/* Danh sách dòng hàng */}
-        {loadingCart ? (
-          <div className='grow flex items-center justify-center'>
-            <Loader2 className='animate-spin text-[#004795] size-8' />
+        {/* Column Headers (Chỉ hiện khi có món trong giỏ) */}
+        {activeTab && activeTab.items.length > 0 && (
+          <div className='grid grid-cols-[minmax(0,1fr)_88px_90px] gap-2 px-4 py-2 bg-slate-50 border-b border-slate-200/70 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 select-none'>
+            <span>Sản phẩm</span>
+            <span className='text-center'>Số lượng</span>
+            <span className='text-right'>Thành tiền</span>
           </div>
-        ) : activeTab ? (
-          <div className='grow p-4 overflow-y-auto min-h-0 space-y-4'>
+        )}
+
+        {/* Danh sách dòng hàng */}
+        {activeTab ? (
+          <div className='grow overflow-y-auto min-h-0 divide-y divide-slate-100/80'>
             {activeTab.items.map((item, index) => (
               <div
                 key={item.transactionItemId}
-                className='flex items-center justify-between border-b border-slate-100 py-2 gap-3'
+                className='group relative grid grid-cols-[minmax(0,1fr)_88px_90px] gap-2 items-center px-4 py-3 hover:bg-slate-50/80 transition-colors'
               >
-                <div className='flex-1 min-w-0'>
-                  <div className='font-bold text-slate-700 text-xs truncate'>
-                    {index + 1}. {item.productName}
+                {/* Cột 1: Tên sản phẩm + Đơn giá */}
+                <div className='min-w-0 pr-1 flex flex-col justify-center'>
+                  <div className='flex items-baseline gap-1.5'>
+                    <span className='text-[10px] text-slate-400 font-bold shrink-0 tabular-nums select-none'>
+                      {index + 1}.
+                    </span>
+                    <span
+                      className='font-bold text-slate-800 text-xs truncate leading-snug'
+                      title={item.productName}
+                    >
+                      {item.productName}
+                    </span>
+                  </div>
+                  <div className='text-[10.5px] text-slate-400 font-semibold mt-0.5 ml-3.5 tabular-nums select-none flex items-center gap-1.5'>
+                    <span>{formatPrice(item.unitPrice)} đ</span>
+                    {/* Nút xóa nhanh khi hover */}
+                    <button
+                      onClick={() => handleRemoveItem(item.transactionItemId)}
+                      className='opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500 transition-all p-0.5 rounded cursor-pointer hover:bg-rose-50'
+                      title='Xóa món này'
+                    >
+                      <Trash2 size={11} />
+                    </button>
                   </div>
                 </div>
 
-                <div className='flex items-center gap-4 shrink-0'>
-                  <div className='flex items-center border border-[#b90a0a] rounded-md overflow-hidden bg-white'>
+                {/* Cột 2: Stepper Pill Modern */}
+                <div className='flex items-center justify-center select-none'>
+                  <div className='flex items-center bg-slate-100 hover:bg-slate-200/60 p-0.5 rounded-full transition-colors border border-slate-200/60 shadow-2xs'>
                     <button
-                      onClick={() =>handleUpdateQuantity(item.transactionItemId, item.quantity, -1)}
-                      className='px-2 py-0.5 text-[#b90a0a] font-black hover:bg-[#ffebeb] transition-colors text-xs select-none'
+                      onClick={() => handleUpdateQuantity(item.transactionItemId, item.quantity, -1)}
+                      className='size-6 rounded-full bg-white flex items-center justify-center text-rose-600 hover:bg-rose-50 hover:text-rose-700 active:scale-90 shadow-2xs transition-all cursor-pointer font-black text-xs'
+                      title='Giảm 1'
                     >
-                      -
+                      <Minus className='size-3 stroke-[2.5]' />
                     </button>
-                    <span className='px-2.5 text-slate-800 font-bold text-xs select-none'>
+                    <span className='min-w-[24px] px-1 text-center font-bold text-slate-800 text-xs tabular-nums'>
                       {item.quantity}
                     </span>
                     <button
-                      onClick={() =>handleUpdateQuantity(item.transactionItemId, item.quantity, 1)}
-                      className='px-2 py-0.5 text-[#b90a0a] font-black hover:bg-[#ffebeb] transition-colors text-xs select-none'
+                      onClick={() => handleUpdateQuantity(item.transactionItemId, item.quantity, 1)}
+                      className='size-6 rounded-full bg-white flex items-center justify-center text-[#004795] hover:bg-blue-50 hover:text-[#003b95] active:scale-90 shadow-2xs transition-all cursor-pointer font-black text-xs'
+                      title='Tăng 1'
                     >
-                      +
+                      <Plus className='size-3 stroke-[2.5]' />
                     </button>
                   </div>
+                </div>
 
-                  <div className='min-w-27.5 text-right text-slate-400 font-semibold text-xs whitespace-nowrap'>
-                    {formatPrice(item.unitPrice)}
-                  </div>
-
-                  <div className='min-w-35 text-right font-black text-slate-900 text-xs whitespace-nowrap'>
-                    {formatPrice(item.lineTotal)}
+                {/* Cột 3: Thành tiền */}
+                <div className='text-right select-none pr-0.5'>
+                  <div className='font-black text-slate-900 text-xs tabular-nums whitespace-nowrap'>
+                    {formatPrice(item.lineTotal)} đ
                   </div>
                 </div>
               </div>
             ))}
 
             {activeTab.items.length === 0 && (
-              <div className='text-center py-20 text-slate-400 text-xs font-bold'>
-                Đơn hàng chưa có sản phẩm.
+              <div className='flex flex-col items-center justify-center py-20 gap-3 select-none text-center px-4'>
+                <div className='size-14 rounded-2xl bg-slate-100/90 border border-slate-200/50 flex items-center justify-center shadow-2xs text-slate-300'>
+                  <ShoppingCart className='size-7' strokeWidth={1.75} />
+                </div>
+                <div>
+                  <p className='text-slate-600 font-bold text-xs'>Đơn hàng chưa có món nào</p>
+                  <p className='text-slate-400 text-[11px] mt-0.5 font-medium'>
+                    Chọn sản phẩm từ danh mục bên trái để thêm vào đơn
+                  </p>
+                </div>
               </div>
             )}
           </div>
@@ -872,50 +1583,63 @@ export default function POS() {
 
         {/* Thanh toán & checkout */}
         {activeTab && (
-          <div className='p-4 border-t border-slate-200 bg-slate-50/50 space-y-4'>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center gap-2 select-none'>
-                <span className='font-extrabold text-[#003B95] text-[15px]'>Tổng thanh toán</span>
-                <span className='bg-[#b90a0a] text-white text-[10px] font-bold rounded-full w-5 h-5 flex items-center justify-center'>
-                  {activeTab.items.reduce((acc, curr) => acc + curr.quantity, 0)}
+          <div className='p-4 border-t border-slate-200 bg-slate-50/70 space-y-3.5 shadow-xs'>
+            {/* Summary Breakdown */}
+            <div className='space-y-1.5'>
+              <div className='flex items-center justify-between text-xs text-slate-500 font-semibold select-none'>
+                <span>
+                  Số lượng mặt hàng:{' '}
+                  <strong className='text-slate-700 font-bold'>
+                    {activeTab.items.length} món
+                  </strong>{' '}
+                  ({activeTab.items.reduce((acc, curr) => acc + curr.quantity, 0)} sản phẩm)
                 </span>
               </div>
-              <div className='font-black text-[#003B95] text-lg'>
-                {formatPrice(activeTab.totalAmount)} đ
+
+              <div className='flex items-baseline justify-between pt-1 border-t border-slate-200/60 select-none'>
+                <span className='font-black text-[#003B95] text-sm tracking-tight'>
+                  Tổng thanh toán
+                </span>
+                <div className='font-black text-[#003B95] text-xl tabular-nums tracking-tight'>
+                  {formatPrice(activeTab.totalAmount)}{' '}
+                  <span className='text-xs font-bold text-slate-500'>đ</span>
+                </div>
               </div>
             </div>
 
             {/* Chọn phương thức thanh toán */}
-            <div className='flex items-center justify-between text-xs select-none pt-1 border-t border-slate-100'>
-              <span className='text-slate-500 font-bold'>Phương thức thanh toán</span>
-              <div className='flex gap-4'>
-                <label className='flex items-center gap-1.5 cursor-pointer font-bold text-slate-600'>
+            <div className='flex items-center justify-between text-xs select-none pt-2 border-t border-slate-200/60'>
+              <span className='text-slate-500 font-bold'>Phương thức</span>
+              <div className='flex gap-1.5 bg-white p-1 rounded-lg border border-slate-200/80 shadow-2xs'>
+                <label
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md cursor-pointer font-bold text-xs transition-all ${
+                    paymentMethod === 'Cash'
+                      ? 'bg-[#004795] text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
                   <input
                     type='radio'
                     name='payment'
                     checked={paymentMethod === 'Cash'}
                     onChange={() => setPaymentMethod('Cash')}
-                    className='accent-[#004795] cursor-pointer'
+                    className='hidden'
                   />
                   Tiền mặt
                 </label>
-                {/* <label className='flex items-center gap-1.5 cursor-pointer font-bold text-slate-600'>
-                  <input
-                    type='radio'
-                    name='payment'
-                    checked={paymentMethod === 'EWallet'}
-                    onChange={() => setPaymentMethod('EWallet')}
-                    className='accent-[#004795] cursor-pointer'
-                  />
-                  Thẻ
-                </label> */}
-                <label className='flex items-center gap-1.5 cursor-pointer font-bold text-slate-600'>
+                <label
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md cursor-pointer font-bold text-xs transition-all ${
+                    paymentMethod === 'Transfer'
+                      ? 'bg-[#004795] text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                  }`}
+                >
                   <input
                     type='radio'
                     name='payment'
                     checked={paymentMethod === 'Transfer'}
                     onChange={() => setPaymentMethod('Transfer')}
-                    className='accent-[#004795] cursor-pointer'
+                    className='hidden'
                   />
                   Chuyển khoản
                 </label>
@@ -923,7 +1647,7 @@ export default function POS() {
             </div>
 
             {/* Công tắc Xuất Hóa đơn đỏ (VAT) */}
-            <div className='pt-2 border-t border-slate-100 flex flex-col gap-2'>
+            <div className='pt-2 border-t border-slate-200/60 flex flex-col gap-2'>
               <div className='flex items-center justify-between text-xs select-none'>
                 <span className='text-slate-700 font-bold flex items-center gap-1.5'>
                   <FileText className='text-[#b90a0a] size-4' />
@@ -938,7 +1662,7 @@ export default function POS() {
               </div>
 
               {requireEInvoice && (
-                <div className='bg-slate-100/70 p-3 rounded-md border border-slate-200/60 flex flex-col gap-2 text-xs animate-in fade-in duration-200'>
+                <div className='bg-white p-3 rounded-lg border border-slate-200 shadow-2xs flex flex-col gap-2 text-xs animate-in fade-in duration-200'>
                   <div className='grid grid-cols-2 gap-2'>
                     <div>
                       <label className='text-[10px] font-bold text-slate-500 block mb-0.5'>Mã số thuế</label>
@@ -947,7 +1671,7 @@ export default function POS() {
                         placeholder='MST (tùy chọn)...'
                         value={buyerTaxCode}
                         onChange={e => setBuyerTaxCode(e.target.value)}
-                        className='w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-medium outline-hidden focus:border-[#b90a0a]'
+                        className='w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-medium outline-hidden focus:border-[#b90a0a] focus:bg-white'
                       />
                     </div>
                     <div>
@@ -957,7 +1681,7 @@ export default function POS() {
                         placeholder='Email...'
                         value={buyerEmail}
                         onChange={e => setBuyerEmail(e.target.value)}
-                        className='w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-medium outline-hidden focus:border-[#b90a0a]'
+                        className='w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-medium outline-hidden focus:border-[#b90a0a] focus:bg-white'
                       />
                     </div>
                   </div>
@@ -968,7 +1692,7 @@ export default function POS() {
                       placeholder='Tên công ty / đơn vị mua hàng...'
                       value={buyerCompanyName}
                       onChange={e => setBuyerCompanyName(e.target.value)}
-                      className='w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-medium outline-hidden focus:border-[#b90a0a]'
+                      className='w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-medium outline-hidden focus:border-[#b90a0a] focus:bg-white'
                     />
                   </div>
                   <div>
@@ -978,26 +1702,31 @@ export default function POS() {
                       placeholder='Địa chỉ đăng ký thuế...'
                       value={buyerAddress}
                       onChange={e => setBuyerAddress(e.target.value)}
-                      className='w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs font-medium outline-hidden focus:border-[#b90a0a]'
+                      className='w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs font-medium outline-hidden focus:border-[#b90a0a] focus:bg-white'
                     />
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Nút checkout */}
+            {/* Nút checkout VIP with price & badge */}
             <div className='pt-1'>
               <button
                 onClick={handleCheckoutClick}
-                disabled={checkingOut || loadingCart}
-                className='w-full flex items-center justify-center gap-2 bg-[#b90a0a] hover:bg-[#a00909] disabled:bg-gray-300 text-white font-extrabold py-2.5 px-4 rounded-md text-xs transition-colors shadow-xs cursor-pointer'
+                disabled={checkingOut || loadingCart || activeTab.items.length === 0}
+                className='w-full flex items-center justify-between bg-[#b90a0a] hover:bg-[#a00909] disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-extrabold py-3 px-4 rounded-xl text-xs transition-all shadow-sm hover:shadow-md active:scale-[0.99] cursor-pointer'
               >
-                {checkingOut ? (
-                  <Loader2 className='animate-spin size-4' />
-                ) : (
-                  <Check className='size-4 stroke-3' />
-                )}
-                Xác nhận & Thanh toán
+                <div className='flex items-center gap-2'>
+                  {checkingOut ? (
+                    <Loader2 className='animate-spin size-4' />
+                  ) : (
+                    <Check className='size-4 stroke-3' />
+                  )}
+                  <span className='font-extrabold text-[13px]'>Xác nhận & Thanh toán</span>
+                </div>
+                <span className='font-black text-sm tabular-nums bg-white/15 px-2.5 py-0.5 rounded-md'>
+                  {formatPrice(activeTab.totalAmount)} đ
+                </span>
               </button>
             </div>
           </div>
@@ -1447,6 +2176,217 @@ export default function POS() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* DRAWER - DANH SÁCH ĐƠN HÀNG ĐANG CHỜ (OPEN ORDERS PANEL) */}
+      {showOpenOrdersPanel && (
+        <>
+          {/* Dim overlay */}
+          <div
+            className='fixed inset-0 bg-black/30 backdrop-blur-[2px] z-40 animate-in fade-in duration-200'
+            onClick={() => setShowOpenOrdersPanel(false)}
+          />
+
+          {/* Drawer slide-in from right */}
+          <div className='fixed right-0 top-0 bottom-0 w-[360px] bg-white z-50 shadow-[-8px_0_32px_rgba(0,0,0,0.15)] flex flex-col animate-in slide-in-from-right duration-250'>
+            {/* Drawer Header */}
+            <div className='bg-[#004795] px-5 py-4 flex items-center justify-between shrink-0 select-none'>
+              <div className='flex items-center gap-2.5'>
+                <ClipboardList size={18} className='text-white/80' />
+                <div>
+                  <h2 className='text-white font-extrabold text-[14px] leading-tight'>
+                    Đơn hàng đang chờ
+                  </h2>
+                  <p className='text-white/60 text-[10px] font-semibold mt-0.5'>
+                    {openDraftOrders.length > 0
+                      ? `${openDraftOrders.length} đơn có sản phẩm chưa thanh toán`
+                      : 'Không có đơn nào đang chờ'}
+                  </p>
+                </div>
+              </div>
+              <div className='flex items-center gap-1.5'>
+                {openDraftOrders.length > 0 && (
+                  <button
+                    onClick={() => setShowConfirmCancelAll(true)}
+                    className='flex items-center gap-1 px-2.5 py-1.5 bg-red-600/80 hover:bg-red-600 text-white rounded-md text-[11px] font-bold transition-all shadow-xs cursor-pointer'
+                    title='Hủy toàn bộ đơn chờ'
+                  >
+                    <Trash2 size={12} />
+                    <span>Hủy tất cả</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowOpenOrdersPanel(false)}
+                  className='p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-md transition-colors cursor-pointer'
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Drawer Body */}
+            <div className='flex-1 overflow-y-auto px-4 py-3 space-y-2.5 bg-[#f7f9fc]'>
+              {/* Skeleton loading */}
+              {loadingOpenOrders &&
+                [...Array(3)].map((_, i) => (
+                  <div key={i} className='bg-white rounded-[12px] p-4 border border-slate-100 animate-pulse'>
+                    <div className='h-3 bg-slate-200 rounded w-2/5 mb-2' />
+                    <div className='h-2.5 bg-slate-100 rounded w-3/5 mb-3' />
+                    <div className='flex gap-2'>
+                      <div className='h-7 bg-slate-100 rounded-md flex-1' />
+                      <div className='h-7 bg-slate-100 rounded-md w-16' />
+                    </div>
+                  </div>
+                ))}
+
+              {/* Empty state */}
+              {!loadingOpenOrders && openDraftOrders.length === 0 && (
+                <div className='flex flex-col items-center justify-center py-16 px-4 text-center'>
+                  <div className='size-14 bg-slate-100 rounded-full flex items-center justify-center mb-3'>
+                    <ClipboardList size={24} className='text-slate-300' />
+                  </div>
+                  <p className='text-slate-500 font-bold text-[13px] mb-1'>Không có đơn nháp nào</p>
+                  <p className='text-slate-400 text-[11px] font-medium leading-relaxed'>
+                    Các đơn có sản phẩm đang chờ thanh toán sẽ xuất hiện ở đây.
+                  </p>
+                </div>
+              )}
+
+              {/* Draft Order Cards */}
+              {!loadingOpenOrders &&
+                openDraftOrders.map(order => {
+                  const isOpenInTab = tabs.find(t => t.orderId === order.transactionId)
+                  const relativeTime = formatRelativeTime(order.transactionDate)
+
+                  return (
+                    <div
+                      key={order.transactionId}
+                      className='bg-white rounded-[12px] p-4 border border-slate-100 shadow-[0_1px_4px_rgba(0,0,0,0.04)] hover:shadow-[0_3px_10px_rgba(0,0,0,0.08)] hover:border-slate-200 transition-all duration-150 group'
+                    >
+                      {/* Card Header: Mã đơn + Thời gian + Badge */}
+                      <div className='flex items-start justify-between mb-2.5 gap-2'>
+                        <div>
+                          <span className='font-extrabold text-slate-800 text-[13px] leading-tight block'>
+                            {order.transactionCode}
+                          </span>
+                          <span className='text-[10.5px] text-slate-400 font-semibold'>
+                            {relativeTime}
+                          </span>
+                        </div>
+                        {isOpenInTab ? (
+                          <span className='shrink-0 flex items-center gap-1 bg-emerald-50 text-emerald-600 text-[9.5px] font-bold px-2 py-0.5 rounded-full border border-emerald-100'>
+                            <span className='size-1.5 bg-emerald-400 rounded-full inline-block' />
+                            Tab {isOpenInTab.tabId}
+                          </span>
+                        ) : (
+                          <span className='shrink-0 bg-amber-50 text-amber-600 text-[9.5px] font-bold px-2 py-0.5 rounded-full border border-amber-200/70'>
+                            Chờ xử lý
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Card Body: Số món + Tổng tiền */}
+                      <div className='flex items-center justify-between mb-3'>
+                        <div className='flex items-center gap-1.5 text-slate-500'>
+                          <div className='size-5 bg-slate-100 rounded flex items-center justify-center'>
+                            <Package size={11} className='text-slate-400' />
+                          </div>
+                          <span className='text-[11px] font-bold'>{order.itemCount} sản phẩm</span>
+                        </div>
+                        <span className='font-black text-[#004795] text-[13.5px]'>
+                          {formatPrice(order.totalAmount)} đ
+                        </span>
+                      </div>
+
+                      {/* Card Footer: Action Buttons */}
+                      <div className='flex gap-2 pt-2.5 border-t border-slate-50 select-none'>
+                        {isOpenInTab ? (
+                          <button
+                            onClick={() => {
+                              setActiveTabId(isOpenInTab.tabId)
+                              setShowOpenOrdersPanel(false)
+                            }}
+                            className='flex-1 flex items-center justify-center gap-1.5 bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold py-1.5 rounded-md transition-colors cursor-pointer'
+                          >
+                            <ArrowRight size={13} />
+                            Chuyển đến {isOpenInTab.tabId}
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleResumeDraftOrder(order)}
+                              className='flex-1 flex items-center justify-center gap-1.5 bg-[#004795] hover:bg-[#003875] text-white text-[11px] font-bold py-1.5 rounded-md transition-colors cursor-pointer shadow-xs'
+                            >
+                              <PlayCircle size={13} />
+                              Mở lại đơn này
+                            </button>
+                            <button
+                              onClick={() => handleCancelDraftFromPanel(order.transactionId)}
+                              className='flex items-center justify-center gap-1 border border-slate-200 hover:border-red-300 hover:bg-red-50 hover:text-[#b90a0a] text-slate-400 text-[11px] font-bold px-3 py-1.5 rounded-md transition-colors cursor-pointer'
+                              title='Hủy đơn nháp'
+                            >
+                              <X size={12} />
+                              Hủy
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+            </div>
+
+            {/* Drawer Footer */}
+            <div className='shrink-0 px-4 py-3 border-t border-slate-100 bg-white select-none'>
+              <button
+                onClick={() => {
+                  setShowOpenOrdersPanel(false)
+                  navigate(path.BUSINESS_OWNER_ORDERS)
+                }}
+                className='w-full flex items-center justify-center gap-2 text-slate-400 hover:text-[#004795] text-[11px] font-bold py-2 rounded-md hover:bg-slate-50 transition-colors cursor-pointer'
+              >
+                <RotateCcw size={12} />
+                Xem toàn bộ lịch sử đơn hàng
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* MODAL XÁC NHẬN HỦY TẤT CẢ ĐƠN CHỜ */}
+      {showConfirmCancelAll && (
+        <div className='fixed inset-0 bg-black/50 backdrop-blur-xs z-60 flex items-center justify-center p-4 animate-in fade-in duration-150'>
+          <div className='bg-white rounded-[16px] shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-150 p-6 text-center select-none'>
+            <div className='bg-red-100 text-red-600 size-14 rounded-full flex items-center justify-center mx-auto mb-3'>
+              <Trash2 size={24} />
+            </div>
+            <h3 className='text-slate-900 font-extrabold text-[16px] mb-1.5'>
+              Hủy toàn bộ đơn chờ?
+            </h3>
+            <p className='text-slate-500 text-xs font-medium leading-relaxed mb-6'>
+              Bạn có chắc chắn muốn hủy tất cả <span className='font-bold text-red-600'>{openDraftOrders.length}</span> đơn hàng đang chờ? Thao tác này sẽ xóa các đơn nháp và làm mới giao diện POS.
+            </p>
+            <div className='flex gap-3'>
+              <button
+                type='button'
+                onClick={() => setShowConfirmCancelAll(false)}
+                disabled={cancellingAll}
+                className='flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer'
+              >
+                Giữ lại
+              </button>
+              <button
+                type='button'
+                onClick={handleCancelAllDrafts}
+                disabled={cancellingAll}
+                className='flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer'
+              >
+                {cancellingAll && <Loader2 size={13} className='animate-spin' />}
+                Xác nhận hủy
+              </button>
+            </div>
           </div>
         </div>
       )}
