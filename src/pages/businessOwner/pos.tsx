@@ -1319,24 +1319,24 @@ export default function POS() {
             <Loader2 className='animate-spin text-[#004795] size-10' />
           </div>
         ) : (
-          <div className='p-4 grow overflow-y-auto min-h-0 grid grid-cols-4 gap-4 content-start'>
+          <div className='p-4 grow overflow-y-auto min-h-0 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 content-start'>
             {filteredProducts.map(product => (
               <div
                 key={product.id}
                 onClick={() => handleAddProductToCart(product)}
-                className='border border-slate-100 rounded-md overflow-hidden cursor-pointer shadow-xs hover:shadow-md hover:border-slate-200 transition-all flex flex-col items-center p-3 text-center bg-white group'
+                className='border border-slate-200/90 rounded-xl cursor-pointer shadow-xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col p-2.5 bg-white group select-none relative'
               >
-                <div className='bg-[#ffebeb] w-full aspect-square rounded-md flex items-center justify-center mb-3 group-hover:scale-102 transition-transform duration-200'>
+                <div className='bg-[#ffebeb] w-full aspect-square rounded-lg flex items-center justify-center mb-2 group-hover:scale-102 transition-transform duration-200 shrink-0 overflow-hidden'>
                   {product.imageUrl ? (
-                    <img src={product.imageUrl} alt={product.name} className='w-full h-full object-cover rounded-md' />
+                    <img src={product.imageUrl} alt={product.name} className='w-full h-full object-cover' />
                   ) : (
-                    <Utensils className='text-[#b90a0a] size-8 stroke-[1.5]' />
+                    <Utensils className='text-[#b90a0a] size-7 stroke-[1.5]' />
                   )}
                 </div>
-                <div className='text-[11.5px] font-bold text-slate-700 mb-1 line-clamp-2 min-h-8 flex items-center justify-center'>
+                <div className='text-[12px] font-semibold text-slate-700 mb-1 line-clamp-2 min-h-[32px] text-center leading-snug flex items-center justify-center'>
                   {product.name}
                 </div>
-                <div className='text-xs font-black text-slate-900'>
+                <div className='text-[12.5px] font-black text-slate-900 text-center mt-auto'>
                   {formatPrice(product.currentPrice ?? 0)} đ
                 </div>
               </div>
