@@ -490,14 +490,20 @@ export default function OwnerHeader() {
             style={{ animation: 'slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}
           >
             <div className='flex-1 flex flex-col border-r border-gray-100'>
-              <div className='bg-[#9b0000] px-5 py-6 text-white h-35 flex flex-col justify-center'>
-                <h2 className='text-[22px] font-bold leading-tight mb-1'>{currentBusiness?.businessName ?? 'Chưa có cửa hàng'}</h2>
-                <p className='text-[14px] text-white/90 mb-3'>{currentBusiness?.mainCategoryName ?? 'Hãy tạo hồ sơ cửa hàng'}</p>
-                <div className='bg-white inline-flex items-center px-2.5 py-1 rounded-md self-start shadow-xs'>
-                  <span className='text-[#1d1d1d] text-[12px] font-semibold mr-1.5'>
+              <div className='bg-[#9b0000] px-5 py-4 text-white flex flex-col'>
+                <h2 className='mb-1 text-[22px] font-bold leading-tight break-word'>
+                  {currentBusiness?.businessName ?? 'Chưa có cửa hàng'}
+                </h2>
+                <p className='mb-3 text-[14px] text-white/90 break-word'>
+                  {currentBusiness?.mainCategoryName ?? 'Hãy tạo hồ sơ cửa hàng'}
+                </p>
+                <div className='inline-flex w-fit shrink-0 items-center rounded-md bg-white px-2.5 py-1 shadow-xs'>
+                  <span className='mr-1.5 text-[12px] font-semibold text-[#1d1d1d]'>
                     {subscription?.subscriptionPlanName ?? 'Gói Miễn Phí'}
                   </span>
-                  <div className='bg-yellow-400 text-white rounded-full w-4 h-4 flex items-center justify-center text-[10px] leading-none'>★</div>
+                  <div className='flex size-4 shrink-0 items-center justify-center rounded-full bg-yellow-400 text-[10px] leading-none text-white'>
+                    ★
+                  </div>
                 </div>
               </div>
 
@@ -520,7 +526,7 @@ export default function OwnerHeader() {
                           checked={currentBusiness?.isStockTrackingEnabled !== false}
                           onChange={(e) => handleRequestToggleStock(e.target.checked)}
                         />
-                        <div className="peer h-5 w-9 rounded-full bg-gray-300 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-[#c0392b] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none"></div>
+                        <div className="peer h-5 w-9 rounded-full bg-gray-300 after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-[#c0392b] peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none"></div>
                       </label>
                     </div>
                   </div>
@@ -543,6 +549,9 @@ export default function OwnerHeader() {
                         setProfileOpen(false)
                       } else if (label === 'Cấu hình HĐĐT') {
                         navigate(path.BUSINESS_OWNER_EINVOICE_CONFIG)
+                        setProfileOpen(false)
+                      } else if (label === 'Hỗ trợ') {
+                        window.dispatchEvent(new Event('open-ai-assistant'))
                         setProfileOpen(false)
                       }
                     }}
