@@ -26,14 +26,22 @@ export default function Product() {
   const [products, setProducts] = useState<Product[]>([])
   const [categories, setCategories] = useState<ProductCategory[]>([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedCategory, setSelectedCategory] = useState('all')
-  const [selectedStatus, setSelectedStatus] = useState<'all' | 'Active' | 'Inactive'>('all')
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
+  const categoryFromUrl = searchParams.get('category')
+  const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl || 'all')
+  const [selectedStatus, setSelectedStatus] = useState<'all' | 'Active' | 'Inactive'>('all')
   const page = Number(searchParams.get('page') ?? '1')
   const [totalPages, setTotalPages] = useState(1)
   const pageSize = 5
   const [sortConfig, setSortConfig] = useState<{ key: 'price' | 'createdAt', direction: 'asc' | 'desc' } | null>(null)
+
+  useEffect(() => {
+    const catParam = searchParams.get('category')
+    if (catParam) {
+      setSelectedCategory(catParam)
+    }
+  }, [searchParams])
 
   const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false)
   const [addNewDropdownOpen, setAddNewDropdownOpen] = useState(false)
@@ -256,8 +264,7 @@ export default function Product() {
     try {
       const res = await createProductCategory(businessId, {
         name: categoryForm.name.trim(),
-        description: categoryForm.description,
-        sortOrder: categories.length + 1
+        description: categoryForm.description
       })
 
       setCategories((prev) => [...prev, res.data])

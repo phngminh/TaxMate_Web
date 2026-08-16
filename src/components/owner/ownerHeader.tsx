@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import imgLogo from '../../assets/logo3.png'
 import path from '../../constants/path'
@@ -49,6 +49,7 @@ const menuItems = [
 ]
 
 export default function OwnerHeader() {
+  const [productOpen, setProductOpen] = useState(false)
   const [expenseOpen, setExpenseOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [showBusinessModal, setShowBusinessModal] = useState(false)
@@ -80,6 +81,7 @@ export default function OwnerHeader() {
   const [isTogglingStock, setIsTogglingStock] = useState(false)
 
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, logout } = useAuth()
 
   const isServiceStore =
@@ -379,11 +381,50 @@ export default function OwnerHeader() {
             )}
           </NavLink>
 
-          <NavLink to={path.BUSINESS_OWNER_PRODUCTS}>
-            {({ isActive }) => (
-              <NavItem label='Sản phẩm' isActive={isActive} />
-            )}
-          </NavLink>
+          <DropdownMenu
+            open={productOpen}
+            onOpenChange={setProductOpen}
+          >
+            <DropdownMenuTrigger>
+              <div className='cursor-pointer'>
+                <NavItem
+                  isActive={productOpen || location.pathname.includes('/products') || location.pathname.includes('/product-categories')}
+                  label={
+                    <div className='flex items-center gap-1'>
+                      <span>Sản phẩm</span>
+
+                      <ChevronDown
+                        size={14}
+                        className={`transition-transform duration-200 ${
+                          productOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </div>
+                  }
+                />
+              </div>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent
+              align='start'
+              sideOffset={8}
+              className='w-56 rounded-md border border-gray-200 bg-white p-1 shadow-xl z-9999 animate-in fade-in-0 zoom-in-95'
+            >
+              <DropdownMenuItem
+                className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
+                onClick={() => navigate(path.BUSINESS_OWNER_PRODUCTS)}
+              >
+                Danh sách sản phẩm
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
+                onClick={() => navigate(path.BUSINESS_OWNER_PRODUCT_CATEGORIES)}
+              >
+                Quản lý danh mục
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {!isServiceStore && (
             <NavLink to={path.BUSINESS_OWNER_INGREDIENTS}>
@@ -406,7 +447,7 @@ export default function OwnerHeader() {
             <DropdownMenuTrigger>
               <div className='cursor-pointer'>
                 <NavItem
-                  isActive={expenseOpen}
+                  isActive={expenseOpen || location.pathname.includes('/expenses') || location.pathname.includes('/purchase-expenses') || location.pathname.includes('/supplier')}
                   label={
                     <div className='flex items-center gap-1'>
                       <span>Thu Chi</span>

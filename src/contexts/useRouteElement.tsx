@@ -5,6 +5,7 @@ import BusinessOwnerLoginPage from '../pages/auth/BusinessOwnerLoginPage'
 import BusinessOwnerRegisterPage from '../pages/auth/BusinessOwnerRegisterPage'
 import Home from '../pages/businessOwner/home'
 import Product from '../pages/businessOwner/product/productList'
+import ProductCategoryPage from '../pages/businessOwner/product/categoryList'
 import OwnerLayout from '../components/owner/ownerLayout'
 import LandingPage from '../pages/landingPage/LandingPage'
 import Ingredient from '../pages/businessOwner/ingredient'
@@ -77,6 +78,7 @@ export default function useRouteElements() {
             { index: true, element: <Navigate to={path.BUSINESS_OWNER_HOME} replace /> },
             { path: path.BUSINESS_OWNER_HOME, element: <Home /> },
             { path: path.BUSINESS_OWNER_PRODUCTS, element: <Product /> },
+            { path: path.BUSINESS_OWNER_PRODUCT_CATEGORIES, element: <ProductCategoryPage /> },
             { path: path.BUSINESS_OWNER_INGREDIENTS, element: <Ingredient /> },
             { path: path.BUSINESS_OWNER_ORDERS, element: <Order /> },
             { path: path.BUSINESS_OWNER_EXPENSES, element: <Expense /> },

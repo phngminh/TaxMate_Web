@@ -14,7 +14,8 @@ import {
   Calendar,
   Layers,
   FileText,
-  Boxes
+  Boxes,
+  AlertTriangle
 } from 'lucide-react'
 import {
   Pagination,
@@ -105,6 +106,9 @@ export default function PurchasePage() {
   const [showSupplierModal, setShowSupplierModal] = useState(false)
   const [showSupplierDetailModal, setShowSupplierDetailModal] = useState(false)
   const [showPurchaseDetailModal, setShowPurchaseDetailModal] = useState(false)
+  const [deleteSupplierTarget, setDeleteSupplierTarget] = useState<Supplier | null>(null)
+  const [showDeleteSupplierModal, setShowDeleteSupplierModal] = useState(false)
+  const [isDeletingSupplier, setIsDeletingSupplier] = useState(false)
 
   // --- FORM STATES ---
   // A. Supplier Form (Add/Edit)
@@ -255,17 +259,27 @@ export default function PurchasePage() {
     }
   }
 
-  const handleDeleteSupplier = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa đối tác nhà cung cấp này không?')) return
+  const handleOpenDeleteSupplierModal = (supplier: Supplier) => {
+    setDeleteSupplierTarget(supplier)
+    setShowDeleteSupplierModal(true)
+  }
+
+  const handleConfirmDeleteSupplier = async () => {
+    if (!deleteSupplierTarget) return
 
     try {
-      const res = await deleteSupplier(id)
+      setIsDeletingSupplier(true)
+      const res = await deleteSupplier(deleteSupplierTarget.id)
       if (res.success) {
         toast.success('Xóa nhà cung cấp thành công!')
+        setShowDeleteSupplierModal(false)
+        setDeleteSupplierTarget(null)
         loadData()
       }
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Không thể xóa nhà cung cấp.')
+    } finally {
+      setIsDeletingSupplier(false)
     }
   }
 
@@ -835,8 +849,9 @@ export default function PurchasePage() {
                                 <Edit size={15} />
                               </button>
                               <button
-                                onClick={() => handleDeleteSupplier(s.id)}
+                                onClick={() => handleOpenDeleteSupplierModal(s)}
                                 className='text-slate-400 hover:text-[#b90a0a] p-1 hover:bg-red-50 rounded-md transition-colors cursor-pointer'
+                                title='Xóa nhà cung cấp'
                               >
                                 <Trash2 size={15} />
                               </button>
@@ -1431,6 +1446,61 @@ export default function PurchasePage() {
                   Đóng
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL XÁC NHẬN XÓA NHÀ CUNG CẤP (STYLE CHUẨN TAXMATE) */}
+      {showDeleteSupplierModal && deleteSupplierTarget && (
+        <div className='fixed inset-0 z-60 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4'>
+          <div className='bg-white rounded-[16px] shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200'>
+            {/* Header */}
+            <div className='flex items-center gap-2 px-8 py-4 bg-[#fef2f2] border-b border-red-100'>
+              <AlertTriangle className='text-[#D32F2F] size-5' />
+              <h3 className='text-[16px] font-bold text-gray-900'>
+                Xác nhận xóa đối tác
+              </h3>
+            </div>
+
+            {/* Content */}
+            <div className='px-8 py-6'>
+              <p className='text-[14px] text-gray-700 leading-6'>
+                Bạn có chắc chắn muốn xóa nhà cung cấp{' '}
+                <span className='font-bold text-gray-900'>
+                  "{deleteSupplierTarget.name}"
+                </span>
+                ?
+              </p>
+
+              <p className='mt-2 text-[13px] text-gray-500'>
+                Hành động này không thể hoàn tác. Các đơn nhập hàng liên quan trước đó vẫn được lưu giữ trong lịch sử.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className='flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-white'>
+              <button
+                type='button'
+                disabled={isDeletingSupplier}
+                onClick={() => {
+                  setShowDeleteSupplierModal(false)
+                  setDeleteSupplierTarget(null)
+                }}
+                className='px-8 py-2 border-2 border-taxmate-red text-taxmate-red text-[13px] font-bold rounded-[8px] hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer disabled:opacity-50'
+              >
+                Hủy
+              </button>
+
+              <button
+                type='button'
+                disabled={isDeletingSupplier}
+                onClick={handleConfirmDeleteSupplier}
+                className='px-5 py-2 bg-[#D32F2F] hover:bg-[#B71C1C] active:bg-[#991B1B] text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs cursor-pointer flex items-center gap-2 disabled:opacity-50'
+              >
+                {isDeletingSupplier && <Loader2 size={14} className='animate-spin' />}
+                {isDeletingSupplier ? 'Đang xóa...' : 'Xóa'}
+              </button>
             </div>
           </div>
         </div>
