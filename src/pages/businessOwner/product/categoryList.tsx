@@ -251,7 +251,7 @@ export default function ProductCategoryList() {
             Quản lý Danh mục Sản phẩm
           </h1>
           <p className='text-gray-400 text-xs mt-1 font-medium'>
-            Quản lý danh sách danh mục để phân loại món/sản phẩm thuận tiện cho bán hàng POS
+            Quản lý danh sách danh mục để phân loại món/sản phẩm thuận tiện cho bán hàng POS và quản lý kho
           </p>
         </div>
 

@@ -103,6 +103,7 @@ export default function IngredientPage() {
   const [formName, setFormName] = useState('')
   const [formUnit, setFormUnit] = useState('')
   const [formPrice, setFormPrice] = useState('')
+  const [formStock, setFormStock] = useState('')
 
   const [recipeProductId, setRecipeProductId] = useState('')
   const [recipeRows, setRecipeRows] = useState<{ ingredientId: string; quantity: string }[]>([
@@ -268,6 +269,7 @@ export default function IngredientPage() {
     setFormName('')
     setFormUnit('')
     setFormPrice('')
+    setFormStock('')
     setRecipeProductId('')
     setRecipeRows([{ ingredientId: '', quantity: '' }])
   }
@@ -277,6 +279,7 @@ export default function IngredientPage() {
     setFormName('')
     setFormUnit('')
     setFormPrice('')
+    setFormStock('0')
     setIsAddIngredientOpen(true)
   }
 
@@ -318,6 +321,7 @@ export default function IngredientPage() {
     setFormName(ingredient.name)
     setFormUnit(ingredient.unit ?? '')
     setFormPrice(ingredient.estimatedPrice?.toLocaleString('vi-VN') ?? '')
+    setFormStock(ingredient.stockQuantity?.toString() ?? '0')
     setIsEditIngredientOpen(true)
   }
 
@@ -331,6 +335,7 @@ export default function IngredientPage() {
       name,
       unit: formUnit.trim() || undefined,
       estimatedPrice: parsePrice(formPrice),
+      stockQuantity: formStock ? Number(formStock.replace(',', '.')) : 0,
     }
   }
 
@@ -673,6 +678,15 @@ export default function IngredientPage() {
         </div>
 
         <div className='grow p-8 overflow-x-auto'>
+          {currentBusiness?.isStockTrackingEnabled === false && (
+            <div className='mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-[13.5px] flex items-center justify-between shadow-xs'>
+              <div className='flex items-center gap-2.5'>
+                <span className='font-bold text-sm bg-blue-600 text-white px-2 py-0.5 rounded-md text-xs'>CHẾ ĐỘ GIÁ VỐN</span>
+                <span>Quán đang tắt trừ tồn kho: Công thức nguyên liệu được dùng để tính giá vốn (Cost Price) của món. Số lượng tồn sẽ không bị trừ khi bán hàng.</span>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'ingredient' && (
             loadingIngredients ? (
               <LoadingSkeleton />
@@ -683,6 +697,7 @@ export default function IngredientPage() {
                     <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
                       <th className='py-4 px-6 font-semibold tracking-wide'>Tên nguyên liệu</th>
                       <th className='py-4 px-6 font-semibold tracking-wide text-center'>Đơn vị tính</th>
+                      <th className='py-4 px-6 font-semibold tracking-wide text-center'>Tồn kho</th>
                       <th className='py-4 px-6 font-semibold tracking-wide text-right'>Giá ước tính</th>
                       <th className='py-4 px-6 font-semibold tracking-wide'>Ngày tạo</th>
                       <th className='py-4 px-6 font-semibold tracking-wide'>Cập nhật</th>
@@ -699,6 +714,21 @@ export default function IngredientPage() {
                             <span className='inline-block bg-[#f3f4f6] text-gray-600 text-[12.5px] px-3.5 py-1 rounded-full font-bold border border-gray-200/40'>
                               {item.unit ?? '—'}
                             </span>
+                          </td>
+                          <td className='py-4 px-6 text-center whitespace-nowrap'>
+                            {currentBusiness?.isStockTrackingEnabled === false ? (
+                              <span className='text-gray-400 font-medium text-[13px]'>Không theo dõi tồn</span>
+                            ) : item.stockQuantity === null || item.stockQuantity === undefined ? (
+                              <span className='text-gray-400 font-medium text-[13px]'>N/A</span>
+                            ) : item.stockQuantity === 0 ? (
+                              <span className='inline-block bg-red-50 text-red-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-red-200/60'>
+                                0 (Hết kho)
+                              </span>
+                            ) : (
+                              <span className='text-gray-900 font-bold text-[13.5px]'>
+                                {item.stockQuantity.toLocaleString('vi-VN')}
+                              </span>
+                            )}
                           </td>
                           <td className='py-4 px-6 text-right text-[14px] text-gray-900 font-bold'>
                             {item.estimatedPrice != null
@@ -729,7 +759,7 @@ export default function IngredientPage() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className='py-16'>
+                        <td colSpan={8} className='py-16'>
                           <EmptyState
                             icon={
                               <Package
@@ -949,7 +979,7 @@ export default function IngredientPage() {
                 />
               </div>
 
-              <div className='grid grid-cols-2 gap-4'>
+              <div className={`grid ${currentBusiness?.isStockTrackingEnabled === false ? 'grid-cols-2 gap-4' : 'grid-cols-3 gap-3'}`}>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Đơn vị tính</label>
                   <input
@@ -960,6 +990,22 @@ export default function IngredientPage() {
                     className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
                   />
                 </div>
+                {currentBusiness?.isStockTrackingEnabled !== false && (
+                  <div className='flex flex-col gap-1.5'>
+                    <label className='text-[13px] font-bold text-gray-600'>
+                      {isIngredientEditing ? 'Số lượng tồn' : 'Tồn ban đầu'}
+                    </label>
+                    <input
+                      type='number'
+                      step='any'
+                      min='0'
+                      placeholder='0'
+                      value={formStock}
+                      onChange={(e) => setFormStock(e.target.value)}
+                      className='w-full border border-gray-200 rounded-[8px] px-3 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 text-right'
+                    />
+                  </div>
+                )}
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Giá ước tính (đ)</label>
                   <input

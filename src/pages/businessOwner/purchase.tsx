@@ -310,7 +310,7 @@ export default function PurchasePage() {
     if (!businessId) return
 
     if (purchaseItems.length === 0) {
-      toast.error('Vui lòng chọn ít nhất một mặt hàng nhập.')
+      toast.error('Vui lòng chọn ít nhất một mặt hàng nhập kho.')
       return
     }
     if (!purchaseSupplierId) {
@@ -355,7 +355,7 @@ export default function PurchasePage() {
           return `- ${p.name}: ${p.quantity} x ${formatPrice(p.costPrice)} đ (thuế ${p.taxPercent}%)`
         })
 
-        const noteContent = `Nhà cung cấp: ${supplierName}\nSố hóa đơn: ${purchaseInvoiceNumber}\nGhi chú: ${purchaseNote}\n\nSản phẩm nhập:\n${detailsLines.join('\n')}`
+        const noteContent = `Nhà cung cấp: ${supplierName}\nSố hóa đơn: ${purchaseInvoiceNumber}\nGhi chú: ${purchaseNote}\n\nSản phẩm nhập kho:\n${detailsLines.join('\n')}`
 
         // Find or create category
         const catsRes = await getExpenseCategories(businessId)
@@ -387,19 +387,19 @@ export default function PurchasePage() {
         }
       }
 
-      toast.success('Nhập hàng hóa thành công!')
+      toast.success('Nhập kho hàng hóa thành công!')
       setShowAddPurchaseModal(false)
       resetPurchaseForm()
       loadData()
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Có lỗi xảy ra khi nhập hàng.')
+      toast.error(err?.response?.data?.message || 'Có lỗi xảy ra khi nhập kho.')
     } finally {
       setActionLoading(false)
     }
   }
 
   const handleDeletePurchase = async (type: 'Product' | 'Material', id: string, ids?: string[]) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa phiếu nhập hàng này không?')) return
+    if (!confirm('Bạn có chắc chắn muốn xóa phiếu nhập kho này không?')) return
 
     try {
       if (type === 'Material') {
@@ -625,12 +625,12 @@ export default function PurchasePage() {
             ) : (
               <Package className='text-[#D32F2F] size-5' />
             )}
-            {isSupplierView ? 'Quản lý Đối tác Nhà cung cấp' : 'Quản lý Hóa đơn Nhập hàng'}
+            {isSupplierView ? 'Quản lý Đối tác Nhà cung cấp' : 'Quản lý Hóa đơn Nhập kho'}
           </h1>
           <p className='text-gray-400 text-xs mt-0.5 font-medium'>
             {isSupplierView
               ? 'Quản lý thông tin và danh sách các nhà cung cấp sản phẩm & nguyên vật liệu'
-              : 'Quản lý lịch sử nhập sản phẩm, nguyên vật liệu và cập nhật giá vốn hàng bán'}
+              : 'Quản lý lịch sử nhập sản phẩm, nguyên vật liệu kho và cập nhật giá vốn hàng bán'}
           </p>
         </div>
 
@@ -645,7 +645,7 @@ export default function PurchasePage() {
                 }}
                 className='px-5 py-2.5 text-[14px] font-bold hover:bg-[#B71C1C] active:bg-[#991B1B] transition-colors flex items-center gap-2'
               >
-                <Plus size={16} strokeWidth={2.5} /> Nhập hàng mới
+                <Plus size={16} strokeWidth={2.5} /> Nhập kho mới
               </button>
             </div>
           )}
@@ -758,7 +758,7 @@ export default function PurchasePage() {
                     </table>
                   ) : (
                     <div className='text-center py-20 text-slate-400 text-xs font-bold'>
-                      Chưa có lịch sử hóa đơn nhập hàng nào.
+                      Chưa có lịch sử hóa đơn nhập kho nào.
                     </div>
                   )}
 
@@ -930,7 +930,7 @@ export default function PurchasePage() {
               </div>
 
               <div className='flex flex-col gap-1.5'>
-                <label className='text-[13px] font-bold text-gray-600'>Địa chỉ giao hàng / văn phòng</label>
+                <label className='text-[13px] font-bold text-gray-600'>Địa chỉ kho / văn phòng</label>
                 <input
                   type='text'
                   placeholder='Địa chỉ nhà cung cấp...'
@@ -976,14 +976,14 @@ export default function PurchasePage() {
         </div>
       )}
 
-      {/* MODAL 3 - LẬP HÓA ĐƠN NHẬP HÀNG LỚN (BATCH PRODUCTS/INGREDIENTS IMPORT) */}
+      {/* MODAL 3 - LẬP HÓA ĐƠN NHẬP KHO LỚN (BATCH PRODUCTS/INGREDIENTS IMPORT) */}
       {showAddPurchaseModal && (
         <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200 overflow-y-auto'>
           <div className='bg-white rounded-[16px] shadow-2xl max-w-3xl w-full overflow-hidden animate-in zoom-in-95 duration-200 my-8'>
             <div className='flex items-center justify-between px-8 py-4 border-b border-red-100 bg-red-50/50'>
               <h3 className='text-[15px] font-bold text-gray-900 flex items-center gap-2 select-none'>
                 <Package size={18} className='text-[#D32F2F]' />
-                Lập phiếu Nhập hàng & Chi phí nhập hàng
+                Lập phiếu Nhập hàng & Chi phí kho
               </h3>
               <button
                 onClick={() => {
@@ -1187,7 +1187,7 @@ export default function PurchasePage() {
                   </div>
                 ) : (
                   <div className='flex-1 border-2 border-dashed border-slate-200 rounded-[12px] flex items-center justify-center py-10 text-slate-400 text-xs font-semibold select-none bg-slate-50/20'>
-                    Chưa chọn mặt hàng nào để nhập.
+                    Chưa chọn mặt hàng nào để nhập kho.
                   </div>
                 )}
               </div>
@@ -1270,7 +1270,7 @@ export default function PurchasePage() {
                 <div>
                   <div className='flex items-center gap-2'>
                     <h3 className='text-[16px] font-bold text-gray-900'>
-                      {selectedExpenseDetail ? 'Chi tiết phiếu chi phí nhập hàng' : 'Chi tiết hóa đơn nhập hàng'}
+                      {selectedExpenseDetail ? 'Chi tiết phiếu chi phí nhập hàng' : 'Chi tiết hóa đơn nhập kho'}
                     </h3>
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                       selectedExpenseDetail
@@ -1311,7 +1311,7 @@ export default function PurchasePage() {
                 </div>
                 <div className='flex flex-col gap-1'>
                   <span className='flex items-center gap-1.5 text-gray-400 text-[10.5px] uppercase font-bold tracking-wider'>
-                    <Calendar size={13} className='text-slate-400' /> Ngày nhập hàng
+                    <Calendar size={13} className='text-slate-400' /> Ngày nhập kho
                   </span>
                   <span className='text-gray-900 font-bold font-mono text-[13px]'>
                     {new Date(
@@ -1350,7 +1350,7 @@ export default function PurchasePage() {
                   {selectedExpenseDetail.note && (
                     <div className='bg-slate-50/70 border border-slate-200/70 rounded-xl p-4'>
                       <span className='text-gray-400 block text-[10px] uppercase font-bold tracking-wider mb-2 select-none'>
-                        Chi tiết danh mục sản phẩm nhập
+                        Chi tiết danh mục sản phẩm nhập kho
                       </span>
                       <pre className='text-slate-800 font-bold text-xs font-sans whitespace-pre-wrap leading-relaxed'>
                         {selectedExpenseDetail.note}
