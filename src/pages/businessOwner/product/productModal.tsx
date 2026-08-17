@@ -17,9 +17,6 @@ interface ProductModalProps {
 
   isEditing: boolean
   isProduct: boolean
-  isStockTrackingEnabled?: boolean
-  hasRecipe?: boolean
-
   isSubmitting: boolean
 
   handleQuickAddCategory: () => void
@@ -39,8 +36,6 @@ export default function ProductModal({
   handleImage,
   isEditing,
   isProduct,
-  isStockTrackingEnabled = true,
-  hasRecipe = false,
   isSubmitting,
 
   handleQuickAddCategory,
@@ -244,30 +239,6 @@ export default function ProductModal({
               />
             </div>
           </div>
-
-          {isEditing && isProduct && isStockTrackingEnabled && (
-            !hasRecipe ? (
-              <div className='flex flex-col gap-1.5'>
-                <label className='text-[13px] font-bold text-gray-600 flex items-center justify-between'>
-                  <span>Số lượng tồn kho</span>
-                  <span className='text-[11px] font-normal text-gray-400'>Kiểm kê / Điều chỉnh số lượng thực tế</span>
-                </label>
-                <input
-                  type='number'
-                  step='any'
-                  min='0'
-                  placeholder='0'
-                  value={productForm.stockQuantity ?? ''}
-                  onChange={(e) => setProductForm(prev => ({ ...prev, stockQuantity: e.target.value }))}
-                  className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
-                />
-              </div>
-            ) : (
-              <div className='p-3 bg-blue-50/80 border border-blue-200 rounded-lg text-blue-800 text-[12.5px] flex items-center gap-2 font-medium'>
-                <span>ℹ️ Món này quản lý tồn kho tự động theo <strong>Công thức nguyên liệu (BOM)</strong>.</span>
-              </div>
-            )
-          )}
 
           <div className='flex flex-col gap-2'>
             <label className='text-[13px] font-bold text-gray-600'>

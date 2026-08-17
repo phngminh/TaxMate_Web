@@ -15,15 +15,13 @@ const categories = [
     businessCategoryId: 'd1111111-1111-1111-1111-111111111111',
     name: 'Ăn uống, nhà hàng (F&B)',
     icon: UtensilsCrossed,
-    color: 'text-green-500',
-    defaultStockTracking: true
+    color: 'text-green-500'
   },
   {
     businessCategoryId: 'd2222222-2222-2222-2222-222222222222',
     name: 'Dịch vụ (Service)',
     icon: Handshake,
-    color: 'text-purple-500',
-    defaultStockTracking: false
+    color: 'text-purple-500'
   }
 ]
 
@@ -181,8 +179,7 @@ export default function BusinessModal({
                           setForm((prev) => ({
                             ...prev,
                             categoryId: category.businessCategoryId,
-                            isStockTrackingEnabled:
-                              prev.isStockTrackingEnabled ?? category.defaultStockTracking
+                            isStockTrackingEnabled: false
                           }))
                         }}
                         className={`flex h-12 w-full items-center justify-between rounded-xl border px-5 py-6 transition-all ${
@@ -214,40 +211,6 @@ export default function BusinessModal({
                   })}
                 </div>
               </div>
-
-              {form.categoryId === 'd1111111-1111-1111-1111-111111111111' && (
-                <div className='rounded-xl border border-gray-200 bg-gray-50 p-4'>
-                  <div className='flex items-center justify-between'>
-                    <div>
-                      <div className='text-sm font-semibold text-gray-800'>
-                        Quản lý tồn kho tự động
-                      </div>
-                      <div className='text-xs text-gray-500 mt-0.5'>
-                        Tự động trừ kho nguyên liệu khi hoàn tất đơn bán hàng.
-                      </div>
-                    </div>
-                    <label className='relative inline-flex cursor-pointer items-center'>
-                      <input
-                        type='checkbox'
-                        className='peer sr-only'
-                        checked={form.isStockTrackingEnabled ?? true}
-                        onChange={(e) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            isStockTrackingEnabled: e.target.checked
-                          }))
-                        }
-                      />
-                      <div className="peer h-6 w-11 rounded-full bg-gray-300 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-green-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none"></div>
-                    </label>
-                  </div>
-                  {!(form.isStockTrackingEnabled ?? true) && (
-                    <div className='mt-2 rounded-md bg-amber-50 p-2 text-xs text-amber-700 border border-amber-200'>
-                      💡 <strong>Chế độ tính giá vốn:</strong> Công thức món vẫn được sử dụng để tính giá vốn và lãi lỗ, nhưng kho sẽ không bị trừ khi bán.
-                    </div>
-                  )}
-                </div>
-              )}
 
               <button
                 type='button'

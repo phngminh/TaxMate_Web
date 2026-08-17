@@ -211,7 +211,7 @@ export default function ProfitReport({ businessId }: Props) {
               </div>
               <div className='flex items-center gap-1 text-[11px] text-[#9ca3af] mt-2'>
                 <Clock size={11} />
-                <span>Giá nhập kho/nguyên vật liệu</span>
+                <span>Giá nhập hàng/nguyên vật liệu</span>
               </div>
             </div>
 
