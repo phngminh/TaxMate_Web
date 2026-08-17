@@ -21,6 +21,7 @@ import SubscriptionPage from '../pages/landingPage/subscription'
 import { BusinessProvider } from './BusinessContext'
 import BusinessList from '../pages/admin/user/business'
 import Expense from '../pages/businessOwner/expense/expense'
+import ExpenseCategoryPage from '../pages/businessOwner/expense/expenseCategory'
 import Purchase from '../pages/businessOwner/purchase'
 import BankConfig from '../pages/businessOwner/bankConfig'
 import EInvoiceConfig from '../pages/businessOwner/einvoiceConfig'
@@ -82,6 +83,7 @@ export default function useRouteElements() {
             { path: path.BUSINESS_OWNER_INGREDIENTS, element: <Ingredient /> },
             { path: path.BUSINESS_OWNER_ORDERS, element: <Order /> },
             { path: path.BUSINESS_OWNER_EXPENSES, element: <Expense /> },
+            { path: path.BUSINESS_OWNER_EXPENSE_CATEGORIES, element: <ExpenseCategoryPage /> },
             { path: path.BUSINESS_OWNER_PURCHASE_EXPENSES, element: <Purchase /> },
             { path: path.BUSINESS_OWNER_SUPPLIER, element: <Purchase /> },
             { path: path.BUSINESS_OWNER_REPORTS, element: <Report /> },

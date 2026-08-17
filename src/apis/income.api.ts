@@ -12,6 +12,16 @@ export const createIncomeCategory = async (businessId: string, body: CreateIncom
   return response.data
 }
 
+export const updateIncomeCategory = async (categoryId: string, body: CreateIncomeCategoryRequest) => {
+  const response = await http.put<ApiResponse<IncomeCategory>>(`/IncomeCategory/${categoryId}`, body)
+  return response.data
+}
+
+export const deleteIncomeCategory = async (categoryId: string) => {
+  const response = await http.delete<ApiResponse<boolean>>(`/IncomeCategory/${categoryId}`)
+  return response.data
+}
+
 export const getAllIncomes = async (
   businessId: string,
   pageNumber = 1,
