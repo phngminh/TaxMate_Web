@@ -447,7 +447,7 @@ export default function OwnerHeader() {
             <DropdownMenuTrigger>
               <div className='cursor-pointer'>
                 <NavItem
-                  isActive={expenseOpen || location.pathname.includes('/expenses') || location.pathname.includes('/purchase-expenses') || location.pathname.includes('/supplier')}
+                  isActive={expenseOpen || location.pathname.includes('/expenses') || location.pathname.includes('/expense-categories') || location.pathname.includes('/purchase-expenses') || location.pathname.includes('/supplier')}
                   label={
                     <div className='flex items-center gap-1'>
                       <span>Thu Chi</span>
@@ -474,6 +474,13 @@ export default function OwnerHeader() {
                 onClick={() => navigate(path.BUSINESS_OWNER_EXPENSES)}
               >
                 Sổ quỹ Thu - Chi
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
+                onClick={() => navigate(path.BUSINESS_OWNER_EXPENSE_CATEGORIES)}
+              >
+                Quản lý danh mục
               </DropdownMenuItem>
 
               <DropdownMenuItem
