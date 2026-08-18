@@ -127,7 +127,7 @@ function AssistantMessage({
               : 'text-gray-700'
           }`}
         >
-          <div className='whitespace-pre-wrap break-words'>
+          <div className='whitespace-pre-wrap break-word'>
             {message.content}
           </div>
 
@@ -168,7 +168,7 @@ function UserMessage({
   return (
     <div className='flex justify-end'>
       <div className='max-w-[80%] rounded-2xl rounded-tr-sm bg-[#6b4cfa] px-4 py-2.5 text-sm text-white'>
-        <div className='whitespace-pre-wrap break-words'>
+        <div className='whitespace-pre-wrap break-word'>
           {message.content}
         </div>
 
@@ -183,6 +183,7 @@ function UserMessage({
 export default function FloatingAIAssistant({
   onClick
 }: FloatingAIAssistantProps) {
+  const [isVisible, setIsVisible] = useState(true)
   const [isOpen, setIsOpen] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
 
@@ -203,6 +204,34 @@ export default function FloatingAIAssistant({
   const messageEndRef = useRef<HTMLDivElement | null>(
     null
   )
+
+  useEffect(() => {
+    const handleOpenAssistant = () => {
+      setIsOpen(true)
+    }
+
+    window.addEventListener(
+      'taxmate:open-ai-assistant',
+      handleOpenAssistant
+    )
+
+    return () => {
+      window.removeEventListener(
+        'taxmate:open-ai-assistant',
+        handleOpenAssistant
+      )
+    }
+  }, [])
+
+  useEffect(() => {
+    const handleOpenAI = () => {
+      setIsVisible(true)
+      setIsOpen(true)
+      setIsExpanded(true)
+    }
+    window.addEventListener('open-ai-assistant', handleOpenAI)
+    return () => window.removeEventListener('open-ai-assistant', handleOpenAI)
+  }, [])
 
   useEffect(() => {
     if (!isOpen) {
@@ -315,6 +344,10 @@ export default function FloatingAIAssistant({
       event.preventDefault()
       void handleSend()
     }
+  }
+
+  if (!isVisible) {
+    return null
   }
 
   if (isOpen) {
@@ -531,7 +564,18 @@ export default function FloatingAIAssistant({
   }
 
   return (
-    <div className='fixed bottom-10 right-8 z-30'>
+    <div className='fixed bottom-10 right-8 z-30 group/container'>
+      <button
+        type='button'
+        onClick={(e) => {
+          e.stopPropagation()
+          setIsVisible(false)
+        }}
+        className='absolute -top-2 -right-2 z-40 flex size-6 items-center justify-center rounded-full bg-white shadow-md border border-gray-200 text-gray-500 hover:text-gray-800 opacity-0 group-hover/container:opacity-100 transition-opacity'
+      >
+        <X size={14} />
+      </button>
+
       <button
         type='button'
         onClick={() => {

@@ -182,7 +182,9 @@ export default function BusinessModal({
                             ...prev,
                             categoryId: category.businessCategoryId,
                             isStockTrackingEnabled:
-                              prev.isStockTrackingEnabled ?? category.defaultStockTracking
+                              prev.categoryId === category.businessCategoryId
+                                ? prev.isStockTrackingEnabled ?? category.defaultStockTracking
+                                : category.defaultStockTracking
                           }))
                         }}
                         className={`flex h-12 w-full items-center justify-between rounded-xl border px-5 py-6 transition-all ${
