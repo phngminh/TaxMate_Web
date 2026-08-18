@@ -16,6 +16,7 @@ const path = {
   BUSINESS_OWNER_INGREDIENTS: '/business-owner/ingredients',
   BUSINESS_OWNER_ORDERS: '/business-owner/orders',
   BUSINESS_OWNER_EXPENSES: '/business-owner/expenses',
+  BUSINESS_OWNER_EXPENSE_CATEGORIES: '/business-owner/expense-categories',
   BUSINESS_OWNER_PURCHASE_EXPENSES: '/business-owner/purchase-expenses',
   BUSINESS_OWNER_SUPPLIER: '/business-owner/supplier',
   BUSINESS_OWNER_REPORTS: '/business-owner/reports',

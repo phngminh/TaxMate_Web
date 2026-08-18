@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, type ChangeEvent } from 'react'
+import React, { useState, useMemo, useRef, useEffect, type ChangeEvent } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { Search, Plus, ChevronDown, Scan, Trash2, Edit2, ShoppingBag, RotateCcw, Package, AlertTriangle, Lock, Unlock, ArrowUp, ArrowDown } from 'lucide-react'
 import type { Product, ProductForm } from '../../../types/product.type'
@@ -27,6 +27,7 @@ export default function Product() {
   const [categories, setCategories] = useState<ProductCategory[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
+  const [expandedProductId, setExpandedProductId] = useState<string | null>(null)
   const [searchParams, setSearchParams] = useSearchParams()
   const categoryFromUrl = searchParams.get('category')
   const [selectedCategory, setSelectedCategory] = useState(categoryFromUrl || 'all')
@@ -656,22 +657,32 @@ export default function Product() {
             <table className='w-full text-left border-collapse'>
               <thead>
                 <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13.5px] font-bold border-b border-[#cbd5e1]/40'>
-                  <th className='w-32 px-6 py-4'>Hình ảnh</th>
-                  <th className='w-48 px-6 py-4 whitespace-nowrap'>Tên sản phẩm</th>
-                  <th className='w-48 px-6 py-4'>Danh mục</th>
-                  <th className='w-28 px-6 py-4 text-center whitespace-nowrap'>Đơn vị tính</th>
-                  {currentBusiness?.isStockTrackingEnabled !== false && (
-                    <th className='w-32 px-6 py-4 text-center whitespace-nowrap'>Tồn kho</th>
-                  )}
-                  <th 
-                    className='w-40 px-6 py-4 text-right cursor-pointer hover:bg-[#d0e3f5] transition-colors select-none'
+                  <th className='w-[20%] min-w-24 px-6 py-4 whitespace-nowrap'>
+                    Hình ảnh
+                  </th>
+
+                  <th className='w-[20%] px-6 py-4 whitespace-nowrap'>
+                    Tên sản phẩm
+                  </th>
+
+                  <th className='w-[15%] px-6 py-4 whitespace-nowrap'>
+                    Danh mục
+                  </th>
+
+                  <th
+                    className='w-[15%] px-6 py-4 text-right cursor-pointer hover:bg-[#d0e3f5] transition-colors select-none'
                     onClick={() => handleSort('price')}
                   >
                     <div className='flex items-center justify-end gap-1'>
                       Giá bán
+
                       <span className='w-4 h-4 flex items-center justify-center text-blue-900'>
                         {sortConfig?.key === 'price' ? (
-                          sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                          sortConfig.direction === 'asc' ? (
+                            <ArrowUp size={14} />
+                          ) : (
+                            <ArrowDown size={14} />
+                          )
                         ) : (
                           <div className='flex flex-col opacity-40'>
                             <ArrowUp size={10} className='-mb-1' />
@@ -681,16 +692,25 @@ export default function Product() {
                       </span>
                     </div>
                   </th>
-                  <th className='w-32 px-6 py-4 text-center'>Trạng thái</th>
-                  <th 
-                    className='w-32 px-6 py-4 text-center cursor-pointer hover:bg-[#d0e3f5] transition-colors select-none whitespace-nowrap'
+
+                  <th className='w-[15%] px-6 py-4 text-center'>
+                    Trạng thái
+                  </th>
+
+                  <th
+                    className='w-[15%] px-6 py-4 text-center cursor-pointer hover:bg-[#d0e3f5] transition-colors select-none whitespace-nowrap'
                     onClick={() => handleSort('createdAt')}
                   >
                     <div className='flex items-center justify-center gap-1'>
                       Ngày tạo
+
                       <span className='w-4 h-4 flex items-center justify-center text-blue-900'>
                         {sortConfig?.key === 'createdAt' ? (
-                          sortConfig.direction === 'asc' ? <ArrowUp size={14} /> : <ArrowDown size={14} />
+                          sortConfig.direction === 'asc' ? (
+                            <ArrowUp size={14} />
+                          ) : (
+                            <ArrowDown size={14} />
+                          )
                         ) : (
                           <div className='flex flex-col opacity-40'>
                             <ArrowUp size={10} className='-mb-1' />
@@ -700,151 +720,371 @@ export default function Product() {
                       </span>
                     </div>
                   </th>
-                  <th className='w-36 px-6 py-4 text-center'>Thao tác</th>
+
+                  <th className='w-[10%] px-6 py-4 text-center'>
+                    Thao tác
+                  </th>
                 </tr>
               </thead>
+
               <tbody className='divide-y divide-gray-100'>
                 {sortedProducts.length > 0 ? (
-                  sortedProducts.map((product) => (
-                    <tr 
-                      key={product.id} 
-                      className='hover:bg-[#fcfdfe] transition-colors group'
-                    >
-                      <td className='py-3 px-6'>
-                        {product.imageUrl ? (
-                          <img
-                            src={product.imageUrl}
-                            alt={product.name}
-                            className='size-20 rounded-xl object-cover border border-gray-200'
-                          />
-                        ) : (
-                          <div className='size-20 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center'>
-                            <Package
-                              size={24}
-                              className='text-blue-500'
-                            />
-                          </div>
-                        )}
-                      </td>
-                      <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>
-                        {product.name}
-                      </td>
-                      <td className='py-4 px-6 text-[13.5px] text-gray-600 font-medium'>
-                        <span className='inline-block bg-[#f3f4f6] text-gray-600 text-[12.5px] px-3.5 py-1 rounded-full font-bold border border-gray-200/40'>
-                          {categories.find(c => c.id === product.productCategoryId)?.name ?? 'N/A'}
-                        </span>
-                      </td>
-                      <td className='py-4 px-6 text-center text-sm'>
-                        {product.unit ?? 'N/A'}
-                      </td>
-                      {currentBusiness?.isStockTrackingEnabled !== false && (
-                        <td className='py-4 px-6 text-center whitespace-nowrap'>
-                          {product.hasRecipe ? (
-                            product.availableQuantity === null || product.availableQuantity === undefined ? (
-                              <span className='inline-block bg-amber-50 text-amber-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-amber-200/60'>
-                                Chưa tính được tồn
-                              </span>
-                            ) : product.availableQuantity <= 0 ? (
-                              <span className='inline-block bg-red-50 text-red-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-red-200/60'>
-                                Có thể bán: 0
-                              </span>
-                            ) : (
-                              <span className='inline-block bg-purple-50 text-purple-700 text-[12.5px] px-3 py-0.5 rounded-full font-bold border border-purple-200/60'>
-                                Có thể bán: {product.availableQuantity.toLocaleString('vi-VN')} {product.unit ?? ''}
-                              </span>
+                  sortedProducts.map((product) => {
+                    const isExpanded = expandedProductId === product.id
+                    return (
+                      <React.Fragment key={product.id}>
+                        <tr
+                          onClick={() =>
+                            setExpandedProductId(
+                              isExpanded ? null : product.id
                             )
-                          ) : product.stockQuantity === null || product.stockQuantity === undefined ? (
-                            <span className='text-gray-400 font-medium text-[13px]'>N/A</span>
-                          ) : product.stockQuantity === 0 ? (
-                            <span className='inline-block bg-red-50 text-red-600 text-[12px] px-2.5 py-0.5 rounded-full font-bold border border-red-200/60'>
-                              0 (Hết hàng)
-                            </span>
-                          ) : (
-                            <span className='text-gray-900 font-bold text-[13.5px]'>
-                              {product.stockQuantity.toLocaleString('vi-VN')}
-                            </span>
-                          )}
-                        </td>
-                      )}
-                      <td className='py-4 px-6 text-right text-[14.5px] font-bold text-gray-900 whitespace-nowrap'>
-                        {
-                          product.currentPrice != null
-                            ? product.currentPrice.toLocaleString('vi-VN') + ' đ'
-                            : 'N/A'
-                        }
-                      </td>
-                      <td className='py-4 px-6 text-center'>
-                        <span
-                          className={`inline-block text-[12px] px-3 py-1 rounded-full font-bold border whitespace-nowrap ${
-                            product.status === 'Active'
-                              ? 'bg-emerald-50 text-emerald-600 border-emerald-200/60'
-                              : 'bg-red-50 text-red-500 border-red-200/60'
-                          }`}
+                          }
+                          className={`
+                            hover:bg-[#fcfdfe]
+                            transition-colors
+                            duration-200
+                            group
+                            cursor-pointer
+                            ${isExpanded ? 'bg-[#fcfdfe]' : ''}
+                          `}
                         >
-                          {product.status === 'Active' ? 'Đang kinh doanh' : 'Ngừng kinh doanh'}
-                        </span>
-                      </td>
-                      <td className='py-4 px-6 text-center text-[13.5px] text-gray-600 font-medium'>
-                        {new Date(typeof product.createdAt === 'string' && !product.createdAt.endsWith('Z') ? product.createdAt + 'Z' : product.createdAt).toLocaleDateString('vi-VN')}
-                      </td>
-                      <td className='py-4 px-6 text-center'>
-                        <div className='flex items-center justify-center gap-2 opacity-70 group-hover:opacity-100 transition-opacity'>
-                          <button
-                            onClick={(e) => handleOpenEditModal(product, e)}
-                            className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors cursor-pointer'
-                            title='Sửa'
-                          >
-                            <Edit2 size={15} />
-                          </button>
-
-                          <button
-                            onClick={(e) => handleOpenToggleStatusModal(product, e)}
-                            className={`p-1.5 rounded-md cursor-pointer transition-colors ${
-                              product.status === 'Active'
-                                ? 'text-red-500 hover:bg-red-50'
-                                : 'text-green-600 hover:bg-green-50'
-                            }`}
-                            title={
-                              product.status === 'Active'
-                                ? 'Ngừng kinh doanh'
-                                : 'Kích hoạt'
-                            }
-                          >
-                            {product.status === 'Active' ? (
-                              <Lock size={15} />
+                          <td className='py-3 px-6'>
+                            {product.imageUrl ? (
+                              <img
+                                src={product.imageUrl}
+                                alt={product.name}
+                                className='size-20 rounded-xl object-cover border border-gray-200'
+                              />
                             ) : (
-                              <Unlock size={15} />
+                              <div className='size-20 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center'>
+                                <Package
+                                  size={24}
+                                  className='text-blue-500'
+                                />
+                              </div>
                             )}
-                          </button>
+                          </td>
 
-                          <button
-                            onClick={(e) => handleOpenDeleteModal(product, e)}
-                            className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors cursor-pointer'
-                            title='Xoá'
+                          <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>
+                            {product.name}
+                          </td>
+
+                          <td className='py-4 px-6 text-[13.5px] text-gray-600 font-medium whitespace-nowrap'>
+                            <span className='inline-block bg-[#f3f4f6] text-gray-600 text-[12.5px] px-3.5 py-1 rounded-full font-bold border border-gray-200/40'>
+                              {categories.find(
+                                (c) => c.id === product.productCategoryId
+                              )?.name ?? 'N/A'}
+                            </span>
+                          </td>
+
+                          <td className='py-4 px-6 text-right text-[14.5px] font-bold text-gray-900 whitespace-nowrap'>
+                            {product.currentPrice != null
+                              ? product.currentPrice.toLocaleString('vi-VN') + ' đ'
+                              : 'N/A'}
+                          </td>
+
+                          <td className='py-4 px-6 text-center'>
+                            <span
+                              className={`
+                                inline-block
+                                text-[12px]
+                                px-3
+                                py-1
+                                rounded-full
+                                font-bold
+                                border
+                                whitespace-nowrap
+                                ${
+                                  product.status === 'Active'
+                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-200/60'
+                                    : 'bg-red-50 text-red-500 border-red-200/60'
+                                }
+                              `}
+                            >
+                              {product.status === 'Active'
+                                ? 'Đang kinh doanh'
+                                : 'Ngừng kinh doanh'}
+                            </span>
+                          </td>
+
+                          <td className='py-4 px-6 text-center text-[13.5px] text-gray-600 font-medium'>
+                            {new Date(
+                              typeof product.createdAt === 'string' &&
+                              !product.createdAt.endsWith('Z')
+                                ? product.createdAt + 'Z'
+                                : product.createdAt
+                            ).toLocaleDateString('vi-VN')}
+                          </td>
+
+                          <td className='py-4 px-6 text-center'>
+                            <div className='flex items-center justify-center gap-2 opacity-70 group-hover:opacity-100 transition-opacity'>
+                              <button
+                                onClick={(e) =>
+                                  handleOpenEditModal(product, e)
+                                }
+                                className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors cursor-pointer'
+                                title='Sửa'
+                              >
+                                <Edit2 size={15} />
+                              </button>
+
+                              <button
+                                onClick={(e) =>
+                                  handleOpenToggleStatusModal(product, e)
+                                }
+                                className={`
+                                  p-1.5
+                                  rounded-md
+                                  cursor-pointer
+                                  transition-colors
+                                  ${
+                                    product.status === 'Active'
+                                      ? 'text-red-500 hover:bg-red-50'
+                                      : 'text-green-600 hover:bg-green-50'
+                                  }
+                                `}
+                                title={
+                                  product.status === 'Active'
+                                    ? 'Ngừng kinh doanh'
+                                    : 'Kích hoạt'
+                                }
+                              >
+                                {product.status === 'Active' ? (
+                                  <Lock size={15} />
+                                ) : (
+                                  <Unlock size={15} />
+                                )}
+                              </button>
+
+                              <button
+                                onClick={(e) =>
+                                  handleOpenDeleteModal(product, e)
+                                }
+                                className='p-1.5 text-gray-500 hover:text-[#D32F2F] hover:bg-red-50 rounded-md transition-colors cursor-pointer'
+                                title='Xoá'
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        <tr>
+                          <td
+                            colSpan={7}
+                            className='p-0 border-b border-gray-100 bg-[#f8fbff]'
                           >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                            <div
+                              className={`
+                                grid
+                                transition-[grid-template-rows,opacity]
+                                duration-300
+                                ease-out
+                                ${
+                                  isExpanded
+                                    ? 'grid-rows-[1fr] opacity-100'
+                                    : 'grid-rows-[0fr] opacity-0'
+                                }
+                              `}
+                            >
+                              <div className='overflow-hidden'>
+                                <div
+                                  className={`
+                                    px-6
+                                    transition-transform
+                                    duration-300
+                                    ease-out
+                                    ${
+                                      isExpanded
+                                        ? 'translate-y-0'
+                                        : '-translate-y-2'
+                                    }
+                                  `}
+                                >
+                                  <div className='py-6 px-4'>
+                                    <div className='flex gap-6 mb-8'>
+                                      <div className='w-24 h-24 shrink-0 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-200 p-1'>
+                                        {product.imageUrl ? (
+                                          <img
+                                            src={product.imageUrl}
+                                            alt={product.name}
+                                            className='w-full h-full object-cover rounded-lg'
+                                          />
+                                        ) : (
+                                          <Package
+                                            size={32}
+                                            className='text-gray-300'
+                                          />
+                                        )}
+                                      </div>
+
+                                      <div className='flex-1'>
+                                        <h3 className='text-[16px] font-bold text-gray-900 mb-2'>
+                                          {product.name}
+                                        </h3>
+                                        <div className='flex gap-2 mb-6'>
+                                          {product.hasRecipe && (
+                                            <span className='px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-[12px] font-medium border border-gray-200'>
+                                              Món chế biến
+                                            </span>
+                                          )}
+                                          <span
+                                            className={`
+                                              px-2
+                                              py-0.5
+                                              rounded
+                                              text-[12px]
+                                              font-medium
+                                              border
+                                              ${
+                                                product.status === 'Active'
+                                                  ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                                                  : 'bg-red-50 text-red-500 border-red-200'
+                                              }
+                                            `}
+                                          >
+                                            {product.status === 'Active'
+                                              ? 'Đang kinh doanh'
+                                              : 'Ngừng kinh doanh'}
+                                          </span>
+                                        </div>
+
+                                        <div className='grid grid-cols-4 gap-y-6 gap-x-4'>
+                                          <div>
+                                            <div className='text-[13px] text-gray-500 mb-1'>
+                                              Mã món
+                                            </div>
+                                            <div className='font-semibold text-[14px] text-gray-900'>
+                                              {product.productCode || 'N/A'}
+                                            </div>
+                                          </div>
+
+                                          <div>
+                                            <div className='text-[13px] text-gray-500 mb-1'>
+                                              Nhóm món
+                                            </div>
+                                            <div className='font-semibold text-[14px] text-gray-900'>
+                                              {categories.find(
+                                                (c) =>
+                                                  c.id ===
+                                                  product.productCategoryId
+                                              )?.name ?? 'N/A'}
+                                            </div>
+                                          </div>
+
+                                          <div>
+                                            <div className='text-[13px] text-gray-500 mb-1'>
+                                              Giá vốn
+                                            </div>
+                                            <div className='font-semibold text-[14px] text-gray-900'>
+                                              {product.costPrice != null
+                                                ? product.costPrice.toLocaleString(
+                                                    'vi-VN'
+                                                  )
+                                                : '0'}
+                                            </div>
+                                          </div>
+
+                                          <div>
+                                            <div className='text-[13px] text-gray-500 mb-1'>
+                                              Giá bán
+                                            </div>
+                                            <div className='font-semibold text-[14px] text-gray-900'>
+                                              {product.currentPrice != null
+                                                ? product.currentPrice.toLocaleString(
+                                                    'vi-VN'
+                                                  )
+                                                : '0'}
+                                            </div>
+                                          </div>
+
+                                          <div>
+                                            <div className='text-[13px] text-gray-500 mb-1'>
+                                              Đơn vị tính
+                                            </div>
+                                            <div className='font-semibold text-[14px] text-gray-900'>
+                                              {product.unit || 'N/A'}
+                                            </div>
+                                          </div>
+
+                                          {currentBusiness?.isStockTrackingEnabled !==
+                                            false && (
+                                            <div>
+                                              <div className='text-[13px] text-gray-500 mb-1'>
+                                                Tồn kho
+                                              </div>
+
+                                              <div className='font-semibold text-[14px] text-gray-900'>
+                                                {product.hasRecipe ? (
+                                                  product.availableQuantity ===
+                                                    null ||
+                                                  product.availableQuantity ===
+                                                    undefined ? (
+                                                    'Chưa tính được tồn'
+                                                  ) : product.availableQuantity <=
+                                                    0 ? (
+                                                    '0'
+                                                  ) : (
+                                                    product.availableQuantity.toLocaleString(
+                                                      'vi-VN'
+                                                    )
+                                                  )
+                                                ) : product.stockQuantity === null ||
+                                                  product.stockQuantity ===
+                                                    undefined ? (
+                                                  'N/A'
+                                                ) : product.stockQuantity ===
+                                                  0 ? (
+                                                  '0'
+                                                ) : (
+                                                  product.stockQuantity.toLocaleString(
+                                                    'vi-VN'
+                                                  )
+                                                )}
+                                              </div>
+                                            </div>
+                                          )}
+
+                                          <div>
+                                            <div className='text-[13px] text-gray-500 mb-1'>
+                                              Ngày tạo
+                                            </div>
+                                            <div className='font-semibold text-[14px] text-gray-900'>
+                                              {product.createdAt ? new Date(product.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      </React.Fragment>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan={currentBusiness?.isStockTrackingEnabled !== false ? 9 : 8}>
+                    <td colSpan={7}>
                       <div className='flex flex-col items-center justify-center py-20 px-4'>
                         <ShoppingBag
                           size={48}
                           className='text-gray-300 mb-4 stroke-[1.5]'
                         />
+
                         <p className='text-gray-500 font-bold text-[15px] mb-2'>
                           Không tìm thấy sản phẩm nào
                         </p>
+
                         <p className='text-gray-400 text-[13px] mb-4 text-center max-w-xs'>
-                          Hãy thử đổi từ khóa tìm kiếm hoặc đặt lại các bộ lọc hiện tại của bạn.
+                          Hãy thử đổi từ khóa tìm kiếm hoặc đặt lại các
+                          bộ lọc hiện tại của bạn.
                         </p>
+
                         <button
                           onClick={handleResetFilters}
-                          className='px-4 py-2 bg-[#D32F2F] text-white text-[13px] font-bold rounded-[8px] hover:bg-[#B71C1C]'
+                          className='px-4 py-2 bg-[#D32F2F] text-white text-[13px] font-bold rounded-[8px] hover:bg-[#B71C1C] transition-colors'
                         >
                           Đặt lại bộ lọc
                         </button>

@@ -12,6 +12,16 @@ export const createExpenseCategory = async (businessId: string, body: CreateExpe
   return response.data
 }
 
+export const updateExpenseCategory = async (categoryId: string, body: CreateExpenseCategoryRequest) => {
+  const response = await http.put<ApiResponse<ExpenseCategory>>(`/ExpenseCategory/${categoryId}`, body)
+  return response.data
+}
+
+export const deleteExpenseCategory = async (categoryId: string) => {
+  const response = await http.delete<ApiResponse<boolean>>(`/ExpenseCategory/${categoryId}`)
+  return response.data
+}
+
 export const getAllExpenses = async (
   businessId: string,
   pageNumber = 1,

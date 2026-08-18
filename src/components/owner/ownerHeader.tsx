@@ -123,18 +123,25 @@ export default function OwnerHeader() {
     if (!user) return
 
     const fetchBusiness = async () => {
-      if (!user) return
-
       try {
         const res = await getBusinessProfiles(user.id)
         const items = res.data.items
         setBusinesses(items)
 
-        if (items.length > 0) {
-          setCurrentBusiness(items[0])
-        } else {
+        if (items.length === 0) {
           setShowBusinessModal(true)
+          return
         }
+
+        if (currentBusiness) {
+          const matchedBusiness = items.find((business) => business.id === currentBusiness.id)
+          if (matchedBusiness) {
+            setCurrentBusiness(matchedBusiness)
+            return
+          }
+        }
+
+        setCurrentBusiness(items[0])
       } catch (error) {
         console.error(error)
       }
@@ -421,7 +428,7 @@ export default function OwnerHeader() {
                 className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
                 onClick={() => navigate(path.BUSINESS_OWNER_PRODUCT_CATEGORIES)}
               >
-                Quản lý danh mục
+                Danh mục sản phẩm
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -447,7 +454,7 @@ export default function OwnerHeader() {
             <DropdownMenuTrigger>
               <div className='cursor-pointer'>
                 <NavItem
-                  isActive={expenseOpen || location.pathname.includes('/expenses') || location.pathname.includes('/purchase-expenses') || location.pathname.includes('/supplier')}
+                  isActive={expenseOpen || location.pathname.includes('/expenses') || location.pathname.includes('/expense-categories') || location.pathname.includes('/purchase-expenses') || location.pathname.includes('/supplier')}
                   label={
                     <div className='flex items-center gap-1'>
                       <span>Thu Chi</span>
@@ -478,17 +485,28 @@ export default function OwnerHeader() {
 
               <DropdownMenuItem
                 className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
-                onClick={() => navigate(path.BUSINESS_OWNER_PURCHASE_EXPENSES)}
+                onClick={() => navigate(path.BUSINESS_OWNER_EXPENSE_CATEGORIES)}
               >
-                Hóa đơn nhập kho
+                Danh mục Thu - Chi
               </DropdownMenuItem>
 
-              <DropdownMenuItem
-                className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
-                onClick={() => navigate(path.BUSINESS_OWNER_SUPPLIER)}
-              >
-                Đối tác Nhà cung cấp
-              </DropdownMenuItem>
+              {!isServiceStore && (
+                <>
+                  <DropdownMenuItem
+                    className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
+                    onClick={() => navigate(path.BUSINESS_OWNER_PURCHASE_EXPENSES)}
+                  >
+                    Hóa đơn nhập kho
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem
+                    className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
+                    onClick={() => navigate(path.BUSINESS_OWNER_SUPPLIER)}
+                  >
+                    Đối tác Nhà cung cấp
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 

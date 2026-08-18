@@ -20,6 +20,7 @@ interface ExpenseRecord {
   originalDateStr: string
   rawAmount: number
   paymentMethod: string
+  rawPaymentMethod: string
 }
 
 
@@ -157,35 +158,52 @@ export default function Expense() {
       setExpenseCategories(expCats.data || [])
       setIncomeCategories(incCats.data || [])
 
-      const mappedExps: ExpenseRecord[] = (exps.data?.items || []).map(e => ({
-        id: e.expenseId,
-        content: e.expenseTitle,
-        subContent: e.paymentMethod || 'Khác',
-        category: e.categoryName,
-        categoryColor: 'orange',
-        date: new Date(typeof e.expenseDate === 'string' && !e.expenseDate.endsWith('Z') ? e.expenseDate + 'Z' : e.expenseDate).toLocaleDateString('vi-VN'),
-        amount: -e.amount,
-        type: 'expense',
-        categoryId: e.expenseCategoryId,
-        originalDateStr: new Date(typeof e.expenseDate === 'string' && !e.expenseDate.endsWith('Z') ? e.expenseDate + 'Z' : e.expenseDate).toISOString().split('T')[0],
-        rawAmount: e.amount,
-        paymentMethod: e.paymentMethod || 'Tiền mặt'
-      }))
+      const mapPaymentMethod = (pm?: string | null) => {
+        if (!pm) return 'Tiền mặt'
+        const lower = pm.toLowerCase()
+        if (lower === 'cash' || lower === 'tiền mặt') return 'Tiền mặt'
+        if (lower === 'transfer' || lower === 'banktransfer' || lower === 'chuyển khoản') return 'Chuyển khoản'
+        if (lower === 'ewallet' || lower === 'ví điện tử') return 'Ví điện tử'
+        return pm
+      }
 
-      const mappedIncs: ExpenseRecord[] = (incs.data?.items || []).map(e => ({
-        id: e.incomeId,
-        content: e.incomeTitle,
-        subContent: e.paymentMethod || 'Khác',
-        category: e.categoryName,
-        categoryColor: 'green',
-        date: new Date(typeof e.incomeDate === 'string' && !e.incomeDate.endsWith('Z') ? e.incomeDate + 'Z' : e.incomeDate).toLocaleDateString('vi-VN'),
-        amount: e.amount,
-        type: 'income',
-        categoryId: e.incomeCategoryId,
-        originalDateStr: new Date(typeof e.incomeDate === 'string' && !e.incomeDate.endsWith('Z') ? e.incomeDate + 'Z' : e.incomeDate).toISOString().split('T')[0],
-        rawAmount: e.amount,
-        paymentMethod: e.paymentMethod || 'Tiền mặt'
-      }))
+      const mappedExps: ExpenseRecord[] = (exps.data?.items || []).map(e => {
+        const pm = mapPaymentMethod(e.paymentMethod)
+        return {
+          id: e.expenseId,
+          content: e.expenseTitle,
+          subContent: pm,
+          category: e.categoryName,
+          categoryColor: 'orange',
+          date: new Date(typeof e.expenseDate === 'string' && !e.expenseDate.endsWith('Z') ? e.expenseDate + 'Z' : e.expenseDate).toLocaleDateString('vi-VN'),
+          amount: -e.amount,
+          type: 'expense',
+          categoryId: e.expenseCategoryId,
+          originalDateStr: new Date(typeof e.expenseDate === 'string' && !e.expenseDate.endsWith('Z') ? e.expenseDate + 'Z' : e.expenseDate).toISOString().split('T')[0],
+          rawAmount: e.amount,
+          paymentMethod: pm,
+          rawPaymentMethod: e.paymentMethod || 'Cash'
+        }
+      })
+
+      const mappedIncs: ExpenseRecord[] = (incs.data?.items || []).map(e => {
+        const pm = mapPaymentMethod(e.paymentMethod)
+        return {
+          id: e.incomeId,
+          content: e.incomeTitle,
+          subContent: pm,
+          category: e.categoryName,
+          categoryColor: 'green',
+          date: new Date(typeof e.incomeDate === 'string' && !e.incomeDate.endsWith('Z') ? e.incomeDate + 'Z' : e.incomeDate).toLocaleDateString('vi-VN'),
+          amount: e.amount,
+          type: 'income',
+          categoryId: e.incomeCategoryId,
+          originalDateStr: new Date(typeof e.incomeDate === 'string' && !e.incomeDate.endsWith('Z') ? e.incomeDate + 'Z' : e.incomeDate).toISOString().split('T')[0],
+          rawAmount: e.amount,
+          paymentMethod: pm,
+          rawPaymentMethod: e.paymentMethod || 'Cash'
+        }
+      })
 
       // Sort by date descending
       const merged = [...mappedExps, ...mappedIncs].sort((a, b) => {
@@ -442,7 +460,6 @@ export default function Expense() {
               { val: 'Tất cả', label: 'Tất cả' },
               { val: 'Tiền mặt', label: 'Tiền mặt' },
               { val: 'Chuyển khoản', label: 'Chuyển khoản' },
-              { val: 'Ví điện tử', label: 'Ví điện tử' },
             ]}
           />
 
@@ -751,9 +768,8 @@ export default function Expense() {
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
                   <select name='paymentMethod' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 bg-white'>
-                    <option value='Tiền mặt'>Tiền mặt</option>
-                    <option value='Chuyển khoản'>Chuyển khoản</option>
-                    <option value='Ví điện tử'>Ví điện tử</option>
+                    <option value='Cash'>Tiền mặt</option>
+                    <option value='Transfer'>Chuyển khoản</option>
                   </select>
                 </div>
                 <div className='flex flex-col gap-1.5'>
@@ -804,9 +820,8 @@ export default function Expense() {
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
                   <select name='paymentMethod' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 bg-white'>
-                    <option value='Tiền mặt'>Tiền mặt</option>
-                    <option value='Chuyển khoản'>Chuyển khoản</option>
-                    <option value='Ví điện tử'>Ví điện tử</option>
+                    <option value='Cash'>Tiền mặt</option>
+                    <option value='Transfer'>Chuyển khoản</option>
                   </select>
                 </div>
                 <div className='flex flex-col gap-1.5'>
@@ -857,10 +872,9 @@ export default function Expense() {
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
-                  <select name='paymentMethod' defaultValue={editingRecord.paymentMethod} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 bg-white ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`}>
-                    <option value='Tiền mặt'>Tiền mặt</option>
-                    <option value='Chuyển khoản'>Chuyển khoản</option>
-                    <option value='Ví điện tử'>Ví điện tử</option>
+                  <select name='paymentMethod' defaultValue={editingRecord.rawPaymentMethod} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 bg-white ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`}>
+                    <option value='Cash'>Tiền mặt</option>
+                    <option value='Transfer'>Chuyển khoản</option>
                   </select>
                 </div>
                 <div className='flex flex-col gap-1.5'>
