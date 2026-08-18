@@ -490,19 +490,23 @@ export default function OwnerHeader() {
                 Danh mục Thu - Chi
               </DropdownMenuItem>
 
-              <DropdownMenuItem
-                className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
-                onClick={() => navigate(path.BUSINESS_OWNER_PURCHASE_EXPENSES)}
-              >
-                Hóa đơn nhập kho
-              </DropdownMenuItem>
+              {!isServiceStore && (
+                <>
+                  <DropdownMenuItem
+                    className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
+                    onClick={() => navigate(path.BUSINESS_OWNER_PURCHASE_EXPENSES)}
+                  >
+                    Hóa đơn nhập kho
+                  </DropdownMenuItem>
 
-              <DropdownMenuItem
-                className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
-                onClick={() => navigate(path.BUSINESS_OWNER_SUPPLIER)}
-              >
-                Đối tác Nhà cung cấp
-              </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
+                    onClick={() => navigate(path.BUSINESS_OWNER_SUPPLIER)}
+                  >
+                    Đối tác Nhà cung cấp
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
