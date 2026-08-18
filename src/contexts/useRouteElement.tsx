@@ -28,6 +28,13 @@ import EInvoiceConfig from '../pages/businessOwner/einvoiceConfig'
 import OwnerSubscription from '../pages/businessOwner/ownerSubscription'
 import Report from '../pages/businessOwner/report/ownerReport'
 import { useAuth } from './AuthContext'
+import TaxDashboard from '../pages/businessOwner/taxDashboard'
+import TaxPeriodDetailPage from '../pages/businessOwner/taxPeriod/taxPeriodDetail'
+import TaxPeriodPreviewPage from '../pages/businessOwner/taxPeriod/taxPeriodPreview'
+
+import TaxCalculationPage from '../pages/businessOwner/taxPeriod/taxCalculation'
+
+import TaxDeclarationPage from '../pages/businessOwner/taxPeriod/taxDeclaration'
 
 export default function useRouteElements() {
   const { isAuthenticated, isLoading, user } = useAuth()
@@ -87,6 +94,28 @@ export default function useRouteElements() {
             { path: path.BUSINESS_OWNER_PURCHASE_EXPENSES, element: <Purchase /> },
             { path: path.BUSINESS_OWNER_SUPPLIER, element: <Purchase /> },
             { path: path.BUSINESS_OWNER_REPORTS, element: <Report /> },
+            { path: path.BUSINESS_OWNER_TAX, element: <TaxDashboard /> },
+            { path: path.BUSINESS_OWNER_TAX_PERIOD, element: <TaxPeriodDetailPage /> },
+            {
+              path:
+                path.BUSINESS_OWNER_TAX_PERIOD_PREVIEW,
+              element:
+                <TaxPeriodPreviewPage />
+            },
+
+            {
+              path:
+                path.BUSINESS_OWNER_TAX_PERIOD_CALCULATION,
+              element:
+                <TaxCalculationPage />
+            },
+
+            {
+              path:
+                path.BUSINESS_OWNER_TAX_PERIOD_DECLARATION,
+              element:
+                <TaxDeclarationPage />
+            },
             { path: path.BUSINESS_OWNER_BANK_CONFIG, element: <BankConfig /> },
             { path: path.BUSINESS_OWNER_EINVOICE_CONFIG, element: <EInvoiceConfig /> },
             { path: path.BUSINESS_OWNER_SUBSCRIPTION, element: <OwnerSubscription /> }
