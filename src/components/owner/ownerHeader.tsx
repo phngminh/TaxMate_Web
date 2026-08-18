@@ -497,6 +497,15 @@ export default function OwnerHeader() {
               <NavItem label='Báo cáo' isActive={isActive} />
             )}
           </NavLink>
+
+          <NavLink to={path.BUSINESS_OWNER_TAX}>
+            {({ isActive }) => (
+              <NavItem
+                label='Thuế'
+                isActive={isActive}
+              />
+            )}
+          </NavLink>
         </div>
       </div>
 

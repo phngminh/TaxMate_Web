@@ -206,6 +206,24 @@ export default function FloatingAIAssistant({
   )
 
   useEffect(() => {
+    const handleOpenAssistant = () => {
+      setIsOpen(true)
+    }
+
+    window.addEventListener(
+      'taxmate:open-ai-assistant',
+      handleOpenAssistant
+    )
+
+    return () => {
+      window.removeEventListener(
+        'taxmate:open-ai-assistant',
+        handleOpenAssistant
+      )
+    }
+  }, [])
+
+  useEffect(() => {
     const handleOpenAI = () => {
       setIsVisible(true)
       setIsOpen(true)

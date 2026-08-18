@@ -19,6 +19,11 @@ const path = {
   BUSINESS_OWNER_PURCHASE_EXPENSES: '/business-owner/purchase-expenses',
   BUSINESS_OWNER_SUPPLIER: '/business-owner/supplier',
   BUSINESS_OWNER_REPORTS: '/business-owner/reports',
+  BUSINESS_OWNER_TAX: '/business-owner/tax',
+  BUSINESS_OWNER_TAX_PERIOD: '/business-owner/tax-period/:taxPeriodId',
+  BUSINESS_OWNER_TAX_PERIOD_PREVIEW: '/business-owner/tax-period/:taxPeriodId/preview',
+  BUSINESS_OWNER_TAX_PERIOD_CALCULATION: '/business-owner/tax-period/:taxPeriodId/calculation',
+  BUSINESS_OWNER_TAX_PERIOD_DECLARATION: '/business-owner/tax-period/:taxPeriodId/declaration',
   BUSINESS_OWNER_SUBSCRIPTION: '/business-owner/subscription',
   BUSINESS_OWNER_BANK_CONFIG: '/business-owner/bank-config',
   BUSINESS_OWNER_INCOME: '/business-owner/expenses/income',
@@ -32,6 +37,7 @@ const path = {
   ADMIN_BUSINESSES_LIST: '/admin/businesses/list',
   ADMIN_USERS_SUBSCRIPTIONS: '/admin/users/subscriptions',
   ADMIN_LEGAL_DOCUMENTS: '/admin/legal/documents',
+
 }
 
 export function getHomePathForRole(role: string | undefined): string {
