@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { Eye, Search, Box, X, Scan, RotateCcw, Loader2, PlayCircle } from 'lucide-react'
+import { Eye, Search, Box, X, Scan, RotateCcw, Loader2, PlayCircle, Trash2, CheckCircle } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useBusiness } from '../../contexts/BusinessContext'
-import { getOrders, getOrderById } from '../../apis/order.api'
+import { getOrders, getOrderById, cancelOrder, confirmPayment } from '../../apis/order.api'
 import type { Order, OrderDetail } from '../../types/order.type'
 import path from '../../constants/path'
 import {
@@ -24,6 +24,12 @@ export default function OrderPage() {
   const [loading, setLoading] = useState(true)
   const [selectedOrder, setSelectedOrder] = useState<OrderDetail | null>(null)
   const [loadingDetail, setLoadingDetail] = useState(false)
+
+  // Confirm cancel state
+  const [showConfirmCancelModal, setShowConfirmCancelModal] = useState(false)
+  const [targetCancelOrderId, setTargetCancelOrderId] = useState<string | null>(null)
+  const [cancellingOrder, setCancellingOrder] = useState(false)
+  const [confirmingPayment, setConfirmingPayment] = useState(false)
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState('')
@@ -88,6 +94,56 @@ export default function OrderPage() {
       toast.error('Không thể tải thông tin chi tiết đơn hàng.')
     } finally {
       setLoadingDetail(false)
+    }
+  }
+
+  const triggerCancelOrder = (orderId: string) => {
+    setTargetCancelOrderId(orderId)
+    setShowConfirmCancelModal(true)
+  }
+
+  const handleConfirmCancelOrder = async () => {
+    if (!targetCancelOrderId) return
+    try {
+      setCancellingOrder(true)
+      const res = await cancelOrder(targetCancelOrderId)
+      if (res.success) {
+        toast.success('Đã hủy đơn hàng thành công.')
+        setShowConfirmCancelModal(false)
+        if (selectedOrder?.transactionId === targetCancelOrderId) {
+          setSelectedOrder(null)
+        }
+        fetchOrders()
+      }
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        toast.error('Đơn hàng đã được thanh toán qua ngân hàng, không thể hủy.')
+        setShowConfirmCancelModal(false)
+        fetchOrders()
+      } else {
+        toast.error(err?.response?.data?.message || 'Hủy đơn hàng thất bại.')
+      }
+    } finally {
+      setCancellingOrder(false)
+    }
+  }
+
+  const handleConfirmPaymentOrder = async (orderId: string) => {
+    try {
+      setConfirmingPayment(true)
+      const res = await confirmPayment(orderId)
+      if (res.success) {
+        toast.success('Xác nhận thanh toán thành công!')
+        fetchOrders()
+        const detailRes = await getOrderById(orderId)
+        if (detailRes.success && detailRes.data) {
+          setSelectedOrder(detailRes.data)
+        }
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Xác nhận thanh toán thất bại.')
+    } finally {
+      setConfirmingPayment(false)
     }
   }
 
@@ -468,13 +524,22 @@ export default function OrderPage() {
 
                           <td className='py-4 px-6 text-center'>
                             <div className='flex items-center justify-center gap-1 select-none'>
-                              {order.status === 'Draft' && order.itemCount > 0 && (
+                              {(order.status === 'Draft' || order.status === 'AwaitingPayment') && order.itemCount > 0 && (
                                 <button
                                   onClick={() => navigate(`${path.BUSINESS_OWNER_POS}?resumeOrderId=${order.transactionId}`)}
                                   className='p-1.5 text-[#004795] hover:text-white hover:bg-[#004795] rounded-md transition-all duration-150 cursor-pointer'
-                                  title='Tiếp tục bán đơn này tại POS'
+                                  title='Tiếp tục xử lý tại POS'
                                 >
                                   <PlayCircle size={16} />
+                                </button>
+                              )}
+                              {(order.status === 'Draft' || order.status === 'AwaitingPayment') && (
+                                <button
+                                  onClick={() => triggerCancelOrder(order.transactionId)}
+                                  className='p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer'
+                                  title='Hủy đơn hàng'
+                                >
+                                  <Trash2 size={16} />
                                 </button>
                               )}
                               <button
@@ -518,45 +583,27 @@ export default function OrderPage() {
             </div>
           )}
 
-          {filteredOrders.length > 0 && totalPages > 1 && (
-            <div className='mt-4 mb-12'>
-              <Pagination className='mt-6'>
-                <PaginationContent className='gap-2'>
+          {/* Phân trang */}
+          {!loading && filteredOrders.length > 0 && (
+            <div className='p-4 border-t border-gray-100 flex items-center justify-between'>
+              <span className='text-[13px] text-gray-500 font-semibold'>
+                Hiển thị <span className='font-bold text-gray-800'>{filteredOrders.length}</span> đơn hàng
+              </span>
+              <Pagination>
+                <PaginationContent>
                   <PaginationItem>
                     <PaginationPrevious
-                      onClick={() => changePage(Math.max(1, page - 1))}
-                      className={`h-10 px-4 rounded-lg border transition-all ${
-                        page === 1
-                          ? 'pointer-events-none opacity-40'
-                          : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
-                      }`}
+                      onClick={() => changePage(page - 1)}
+                      className={page === 1 ? 'pointer-events-none opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                     />
                   </PaginationItem>
-
-                  {[...Array(totalPages)].map((_, i) => (
-                    <PaginationItem key={i + 1}>
-                      <PaginationLink
-                        isActive={page === i + 1}
-                        onClick={() => changePage(i + 1)}
-                        className={`h-10 w-10 rounded-lg font-semibold transition-all cursor-pointer ${
-                          page === i + 1
-                            ? 'bg-[#D32F2F] text-white border-[#D32F2F] hover:bg-[#B71C1C]'
-                            : 'border-gray-300 text-gray-700 hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
-                        }`}
-                      >
-                        {i + 1}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
-
+                  <PaginationItem>
+                    <PaginationLink isActive>{page}</PaginationLink>
+                  </PaginationItem>
                   <PaginationItem>
                     <PaginationNext
-                      onClick={() => changePage(Math.min(totalPages, page + 1))}
-                      className={`h-10 px-4 rounded-lg border transition-all ${
-                        page === totalPages
-                          ? 'pointer-events-none opacity-40'
-                          : 'cursor-pointer hover:bg-red-50 hover:border-red-300 hover:text-[#D32F2F]'
-                      }`}
+                      onClick={() => changePage(page + 1)}
+                      className={filteredOrders.length < pageSize ? 'pointer-events-none opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                     />
                   </PaginationItem>
                 </PaginationContent>
@@ -566,54 +613,71 @@ export default function OrderPage() {
         </div>
       </div>
 
-      {/* MODAL CHI TIẾT ĐƠN HÀNG */}
+      {/* DETAIL DRAWER / MODAL */}
       {selectedOrder && (
-        <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-200'>
-          <div className='bg-white rounded-[16px] shadow-2xl max-w-xl w-full overflow-hidden animate-in zoom-in-95 duration-200'>
-            <div className='flex items-center justify-between px-8 py-4 bg-[#fef2f2] border-b border-red-100'>
-              <h3 className='text-[16px] font-bold text-gray-900'>
-                Chi tiết đơn hàng: {selectedOrder.transactionCode}
-              </h3>
+        <div className='fixed inset-0 bg-black/40 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-in fade-in duration-150'>
+          <div className='bg-white rounded-[16px] shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]'>
+            {/* Header modal */}
+            <div className='px-6 py-4 bg-gray-50 border-b border-gray-100 flex items-center justify-between'>
+              <div>
+                <h3 className='font-extrabold text-[15px] text-gray-800 flex items-center gap-2'>
+                  <span>Chi tiết đơn: {selectedOrder.transactionCode}</span>
+                  {getStatusBadge(selectedOrder.status)}
+                </h3>
+                <span className='text-[11px] font-semibold text-gray-400'>
+                  Ngày tạo: {formatDateTime(selectedOrder.transactionDate)}
+                </span>
+              </div>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className='text-gray-400 hover:text-gray-600 transition-colors p-1 rounded-md hover:bg-gray-100 cursor-pointer'
+                className='p-1 text-gray-400 hover:text-gray-700 transition-colors cursor-pointer'
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <div className='p-6 flex flex-col gap-6 max-h-[80vh] overflow-y-auto'>
-              <div className='grid grid-cols-2 gap-4 text-[13.5px] border-b border-gray-100 pb-4 font-semibold text-slate-600'>
-                <div>
-                  <span className='text-gray-500 block text-[11px] font-bold uppercase tracking-wider mb-0.5'>Thời gian</span>
-                  <span className='font-bold text-gray-800'>{formatDateTime(selectedOrder.transactionDate)}</span>
+            {/* Content body */}
+            <div className='p-6 overflow-y-auto space-y-4 text-xs'>
+              {/* Thông tin thanh toán & hóa đơn */}
+              <div className='bg-slate-50 p-3.5 rounded-[12px] border border-slate-100 space-y-1.5 font-semibold text-slate-600'>
+                <div className='flex justify-between'>
+                  <span>Số hóa đơn:</span>
+                  <span className='font-bold text-slate-800'>{selectedOrder.invoiceNumber || 'Chưa xuất'}</span>
                 </div>
-                <div>
-                  <span className='text-gray-500 block text-[11px] font-bold uppercase tracking-wider mb-0.5'>Trạng thái</span>
-                  {getStatusBadge(selectedOrder.status)}
+                <div className='flex justify-between'>
+                  <span>Phương thức:</span>
+                  <span className='font-bold text-slate-800'>
+                    {selectedOrder.payments.map(p => (p.paymentMethod === 'Cash' ? 'Tiền mặt' : p.paymentMethod === 'Transfer' ? 'Chuyển khoản' : p.paymentMethod)).join(', ') || 'Chưa thanh toán'}
+                  </span>
                 </div>
+                {selectedOrder.officialPdfUrl && (
+                  <div className='flex justify-between items-center pt-1 border-t border-slate-200/60'>
+                    <span>Hóa đơn điện tử:</span>
+                    <a
+                      href={selectedOrder.officialPdfUrl}
+                      target='_blank'
+                      rel='noreferrer'
+                      className='text-blue-600 hover:underline font-bold'
+                    >
+                      Xem bản gốc PDF
+                    </a>
+                  </div>
+                )}
               </div>
 
+              {/* Danh sách món hàng */}
               <div>
-                <h4 className='text-[13px] font-bold text-gray-500 uppercase tracking-wider mb-3 select-none'>Danh sách sản phẩm</h4>
-                <div className='flex flex-col gap-3'>
-                  {selectedOrder.items.map(item => (
-                    <div
-                      key={item.transactionItemId}
-                      className='flex items-center justify-between gap-4 p-3 border border-gray-100 rounded-lg hover:bg-gray-50/50 transition-colors'
-                    >
-                      <div className='flex items-center gap-3'>
-                        <div className='w-11 h-11 flex items-center justify-center rounded-lg border-2 border-dashed border-gray-200 text-gray-400 bg-gray-50'>
-                          <Box size={18} />
-                        </div>
-                        <div>
-                          <span className='font-bold text-gray-900 block text-[13px]'>{item.productName}</span>
-                          <span className='text-[11.5px] text-gray-500 font-semibold'>
-                            Số lượng: {item.quantity} {item.unit || 'món'} x {item.unitPrice.toLocaleString('vi-VN')} đ
-                          </span>
-                        </div>
+                <h4 className='font-bold text-slate-800 text-[13px] mb-2'>Danh sách mặt hàng</h4>
+                <div className='border border-slate-100 rounded-lg overflow-hidden divide-y divide-slate-100'>
+                  {selectedOrder.items.map((item, idx) => (
+                    <div key={item.transactionItemId} className='p-2.5 flex items-center justify-between bg-white'>
+                      <div>
+                        <span className='font-bold text-slate-800 block text-[12px]'>{item.productName}</span>
+                        <span className='text-slate-400 text-[10.5px] font-semibold'>
+                          {item.quantity} x {item.unitPrice.toLocaleString('vi-VN')} đ
+                        </span>
                       </div>
-                      <span className='font-bold text-gray-900 text-[13.5px]'>
+                      <span className='font-bold text-slate-800 text-[12px]'>
                         {item.lineTotal.toLocaleString('vi-VN')} đ
                       </span>
                     </div>
@@ -621,42 +685,26 @@ export default function OrderPage() {
                 </div>
               </div>
 
-              <div className='border-t border-gray-100 pt-4 flex flex-col gap-2 font-semibold text-slate-500 text-xs'>
-                <div className='flex justify-between'>
-                  <span className='text-gray-400'>Tổng số sản phẩm:</span>
-                  <span className='font-bold text-gray-800'>{totalProducts} sản phẩm</span>
-                </div>
-                <div className='flex justify-between'>
-                  <span className='text-gray-400'>Tạm tính:</span>
-                  <span className='font-bold text-gray-800'>{selectedOrder.subTotal.toLocaleString('vi-VN')} đ</span>
+              {/* Tổng cộng */}
+              <div className='pt-2 border-t border-gray-100 space-y-1.5 text-right'>
+                <div className='flex justify-between text-slate-500 font-semibold'>
+                  <span>Tạm tính:</span>
+                  <span>{selectedOrder.subTotal.toLocaleString('vi-VN')} đ</span>
                 </div>
                 {selectedOrder.discountAmount > 0 && (
-                  <div className='flex justify-between text-emerald-600'>
+                  <div className='flex justify-between text-emerald-600 font-semibold'>
                     <span>Giảm giá:</span>
-                    <span className='font-bold'>-{selectedOrder.discountAmount.toLocaleString('vi-VN')} đ</span>
+                    <span>-{selectedOrder.discountAmount.toLocaleString('vi-VN')} đ</span>
                   </div>
                 )}
-                <div className='flex justify-between'>
-                  <span className='text-gray-400'>Phương thức thanh toán:</span>
-                  <span className='font-bold text-gray-800'>
-                    {selectedOrder.payments[0]?.paymentMethod === 'Cash'
-                      ? 'Tiền mặt'
-                      : selectedOrder.payments[0]?.paymentMethod === 'Transfer'
-                      ? 'Chuyển khoản'
-                      : selectedOrder.payments[0]?.paymentMethod === 'EWallet'
-                      ? 'Thẻ'
-                      : 'Chưa thanh toán'}
-                  </span>
-                </div>
-                {selectedOrder.payments[0]?.bankName && (
-                  <div className='flex justify-between'>
-                    <span className='text-gray-400'>Ngân hàng:</span>
-                    <span className='font-bold text-gray-800'>{selectedOrder.payments[0].bankName}</span>
+                {selectedOrder.surchargeAmount > 0 && (
+                  <div className='flex justify-between text-orange-600 font-semibold'>
+                    <span>Phụ thu ({selectedOrder.surchargeName}):</span>
+                    <span>+{selectedOrder.surchargeAmount.toLocaleString('vi-VN')} đ</span>
                   </div>
                 )}
-
-                <div className='flex justify-between text-[15px] border-t border-gray-100 pt-3 mt-1'>
-                  <span className='font-black text-gray-800'>Tổng cộng:</span>
+                <div className='flex justify-between items-baseline pt-2 border-t border-gray-200'>
+                  <span className='font-bold text-slate-800 text-[14px]'>Tổng thanh toán:</span>
                   <span className='font-black text-[#D32F2F] text-[16.5px]'>
                     {selectedOrder.totalAmount.toLocaleString('vi-VN')} đ
                   </span>
@@ -673,7 +721,7 @@ export default function OrderPage() {
                     </button>
                     {selectedOrder.payments[0]?.paymentMethod === 'Transfer' && (
                       <button
-                        onClick={() => handleViewOfficialXml(`http://localhost:5086/api/Invoice/${selectedOrder.invoiceNumber}/pdf`)} // placeholder or real xml
+                        onClick={() => handleViewOfficialXml(`http://localhost:5086/api/Invoice/${selectedOrder.invoiceNumber}/pdf`)}
                         className='flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-md text-[11.5px] font-bold transition-all cursor-pointer'
                       >
                         Tải XML gốc
@@ -682,22 +730,79 @@ export default function OrderPage() {
                   </div>
                 )}
 
-                {/* TIẾP TỤC BÁN TẠI POS CHO ĐƠN NHÁP */}
-                {selectedOrder.status === 'Draft' && selectedOrder.items.length > 0 && (
-                  <div className='mt-4 pt-3 border-t border-dashed border-blue-100 select-none'>
+                {/* THAO TÁC CHO ĐƠN NHÁP HOẶC CHỜ THANH TOÁN */}
+                {(selectedOrder.status === 'Draft' || selectedOrder.status === 'AwaitingPayment') && (
+                  <div className='mt-4 pt-3 border-t border-dashed border-blue-100 flex flex-col gap-2 select-none'>
+                    <div className='flex gap-2'>
+                      <button
+                        onClick={() => {
+                          setSelectedOrder(null)
+                          navigate(`${path.BUSINESS_OWNER_POS}?resumeOrderId=${selectedOrder.transactionId}`)
+                        }}
+                        className='flex-1 flex items-center justify-center gap-1.5 bg-[#004795] hover:bg-[#003875] text-white text-[12px] font-bold py-2.5 rounded-lg shadow-xs transition-all cursor-pointer'
+                      >
+                        <PlayCircle size={15} />
+                        Tiếp tục xử lý tại POS
+                      </button>
+
+                      {selectedOrder.status === 'AwaitingPayment' && (
+                        <button
+                          onClick={() => handleConfirmPaymentOrder(selectedOrder.transactionId)}
+                          disabled={confirmingPayment}
+                          className='flex-1 flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white text-[12px] font-bold py-2.5 rounded-lg shadow-xs transition-all cursor-pointer'
+                        >
+                          {confirmingPayment ? <Loader2 size={14} className='animate-spin' /> : <CheckCircle size={15} />}
+                          Xác nhận đã nhận tiền
+                        </button>
+                      )}
+                    </div>
+
                     <button
-                      onClick={() => {
-                        setSelectedOrder(null)
-                        navigate(`${path.BUSINESS_OWNER_POS}?resumeOrderId=${selectedOrder.transactionId}`)
-                      }}
-                      className='w-full flex items-center justify-center gap-2 bg-[#004795] hover:bg-[#003875] text-white text-[12px] font-extrabold py-2.5 rounded-lg shadow-[0_2px_8px_rgba(0,71,149,0.3)] hover:shadow-[0_4px_14px_rgba(0,71,149,0.4)] transition-all duration-150 cursor-pointer'
+                      onClick={() => triggerCancelOrder(selectedOrder.transactionId)}
+                      className='w-full flex items-center justify-center gap-1.5 border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 text-[12px] font-bold py-2 rounded-lg transition-all cursor-pointer'
                     >
-                      <PlayCircle size={15} />
-                      Tiếp tục bán đơn này tại POS
+                      <Trash2 size={14} />
+                      Hủy đơn hàng này
                     </button>
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL XÁC NHẬN HỦY ĐƠN HÀNG */}
+      {showConfirmCancelModal && (
+        <div className='fixed inset-0 bg-black/50 backdrop-blur-xs z-60 flex items-center justify-center p-4 animate-in fade-in duration-150'>
+          <div className='bg-white rounded-[16px] shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-150 p-6 text-center select-none'>
+            <div className='bg-red-100 text-red-600 size-14 rounded-full flex items-center justify-center mx-auto mb-3'>
+              <Trash2 size={24} />
+            </div>
+            <h3 className='text-slate-900 font-extrabold text-[16px] mb-1.5'>
+              Hủy đơn hàng này?
+            </h3>
+            <p className='text-slate-600 text-xs font-semibold leading-relaxed mb-6 bg-slate-50 p-3 rounded-lg border border-slate-200'>
+              “Tôi đã xác nhận khách chưa chuyển khoản”
+            </p>
+            <div className='flex gap-3'>
+              <button
+                type='button'
+                onClick={() => setShowConfirmCancelModal(false)}
+                disabled={cancellingOrder}
+                className='flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer'
+              >
+                Quay lại
+              </button>
+              <button
+                type='button'
+                onClick={handleConfirmCancelOrder}
+                disabled={cancellingOrder}
+                className='flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer'
+              >
+                {cancellingOrder && <Loader2 size={13} className='animate-spin' />}
+                Xác nhận hủy
+              </button>
             </div>
           </div>
         </div>

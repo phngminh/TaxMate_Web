@@ -48,6 +48,11 @@ export const removeOrderItem = async (orderId: string, itemId: string) => {
   return response.data
 }
 
+export const reopenOrder = async (orderId: string) => {
+  const response = await http.post<ApiResponse<string>>(`/Order/${orderId}/reopen`)
+  return response.data
+}
+
 export const cancelOrder = async (orderId: string) => {
   const response = await http.post<ApiResponse<string>>(`/Order/${orderId}/cancel`)
   return response.data
