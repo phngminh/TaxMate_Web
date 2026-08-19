@@ -79,6 +79,83 @@ function InfoRow({
   )
 }
 
+function ConfirmDialog({
+  open,
+  title,
+  description,
+  confirmLabel,
+  isProcessing,
+  onConfirm,
+  onCancel
+}: {
+  open: boolean
+  title: string
+  description: string
+  confirmLabel: string
+  isProcessing?: boolean
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  if (!open) return null
+
+  return (
+    <div
+      className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4'
+      role='presentation'
+    >
+      <div
+        role='dialog'
+        aria-modal='true'
+        aria-labelledby='confirm-dialog-title'
+        aria-describedby='confirm-dialog-description'
+        className='w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl'
+      >
+        <div className='flex items-start gap-4'>
+          <div className='flex size-11 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600'>
+            <AlertTriangle size={22} />
+          </div>
+
+          <div className='min-w-0'>
+            <h2
+              id='confirm-dialog-title'
+              className='text-lg font-black text-gray-900'
+            >
+              {title}
+            </h2>
+
+            <p
+              id='confirm-dialog-description'
+              className='mt-2 text-sm leading-6 text-gray-500'
+            >
+              {description}
+            </p>
+          </div>
+        </div>
+
+        <div className='mt-6 flex justify-end gap-3'>
+          <button
+            type='button'
+            disabled={isProcessing}
+            onClick={onCancel}
+            className='h-11 rounded-xl border border-gray-300 bg-white px-5 text-sm font-bold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60'
+          >
+            Hủy
+          </button>
+
+          <button
+            type='button'
+            disabled={isProcessing}
+            onClick={onConfirm}
+            className='h-11 min-w-32 rounded-xl bg-red-600 px-5 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300'
+          >
+            {isProcessing ? 'Đang xử lý...' : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function TaxCalculationPage() {
   const navigate = useNavigate()
 
@@ -102,6 +179,11 @@ export default function TaxCalculationPage() {
   const [
     isCalculating,
     setIsCalculating
+  ] = useState(false)
+
+  const [
+    isCalculateConfirmOpen,
+    setIsCalculateConfirmOpen
   ] = useState(false)
 
   const [
@@ -174,7 +256,7 @@ export default function TaxCalculationPage() {
       )
     }, [taxPeriod])
 
-  async function handleCalculate() {
+  function handleCalculate() {
     if (
       !taxPeriod ||
       !taxPeriodId
@@ -204,12 +286,11 @@ export default function TaxCalculationPage() {
       return
     }
 
-    const confirmed =
-      window.confirm(
-        'Bạn có chắc muốn tính thuế cho kỳ này?'
-      )
+    setIsCalculateConfirmOpen(true)
+  }
 
-    if (!confirmed) {
+  async function confirmCalculate() {
+    if (!taxPeriodId) {
       return
     }
 
@@ -220,6 +301,8 @@ export default function TaxCalculationPage() {
         await calculateTaxPeriod(
           taxPeriodId
         )
+
+      setIsCalculateConfirmOpen(false)
 
       toast.success(
         `Đã tính thuế. Tổng thuế phải nộp: ${formatMoney(
@@ -444,6 +527,20 @@ export default function TaxCalculationPage() {
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={isCalculateConfirmOpen}
+        title='Xác nhận tính thuế'
+        description='Hệ thống sẽ tính số thuế GTGT và TNCN từ dữ liệu của kỳ này. Bạn muốn tiếp tục?'
+        confirmLabel='Tính thuế'
+        isProcessing={isCalculating}
+        onCancel={() =>
+          setIsCalculateConfirmOpen(false)
+        }
+        onConfirm={() => {
+          void confirmCalculate()
+        }}
+      />
     </div>
   )
 }

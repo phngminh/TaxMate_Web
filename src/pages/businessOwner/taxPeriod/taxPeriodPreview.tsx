@@ -79,6 +79,83 @@ function InfoRow({
   )
 }
 
+function ConfirmDialog({
+  open,
+  title,
+  description,
+  confirmLabel,
+  isProcessing,
+  onConfirm,
+  onCancel
+}: {
+  open: boolean
+  title: string
+  description: string
+  confirmLabel: string
+  isProcessing?: boolean
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  if (!open) return null
+
+  return (
+    <div
+      className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4'
+      role='presentation'
+    >
+      <div
+        role='dialog'
+        aria-modal='true'
+        aria-labelledby='confirm-dialog-title'
+        aria-describedby='confirm-dialog-description'
+        className='w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl'
+      >
+        <div className='flex items-start gap-4'>
+          <div className='flex size-11 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600'>
+            <AlertTriangle size={22} />
+          </div>
+
+          <div className='min-w-0'>
+            <h2
+              id='confirm-dialog-title'
+              className='text-lg font-black text-gray-900'
+            >
+              {title}
+            </h2>
+
+            <p
+              id='confirm-dialog-description'
+              className='mt-2 text-sm leading-6 text-gray-500'
+            >
+              {description}
+            </p>
+          </div>
+        </div>
+
+        <div className='mt-6 flex justify-end gap-3'>
+          <button
+            type='button'
+            disabled={isProcessing}
+            onClick={onCancel}
+            className='h-11 rounded-xl border border-gray-300 bg-white px-5 text-sm font-bold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60'
+          >
+            Hủy
+          </button>
+
+          <button
+            type='button'
+            disabled={isProcessing}
+            onClick={onConfirm}
+            className='h-11 min-w-32 rounded-xl bg-red-600 px-5 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300'
+          >
+            {isProcessing ? 'Đang xử lý...' : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function TaxPeriodPreviewPage() {
   const navigate = useNavigate()
 
@@ -110,6 +187,11 @@ export default function TaxPeriodPreviewPage() {
   const [
     isClosing,
     setIsClosing
+  ] = useState(false)
+
+  const [
+    isCloseConfirmOpen,
+    setIsCloseConfirmOpen
   ] = useState(false)
 
   const [
@@ -174,7 +256,7 @@ export default function TaxPeriodPreviewPage() {
     }
   }, [taxPeriodId])
 
-  async function handleClosePeriod() {
+  function handleClosePeriod() {
     if (
       !taxPeriodId ||
       !taxPeriod ||
@@ -197,15 +279,14 @@ export default function TaxPeriodPreviewPage() {
       return
     }
 
-    const message =
-      preview.warnings.length > 0
-        ? 'Kỳ này vẫn còn cảnh báo dữ liệu. Bạn vẫn muốn chốt kỳ thuế?'
-        : 'Bạn có chắc muốn chốt kỳ thuế này?'
+    setIsCloseConfirmOpen(true)
+  }
 
-    const confirmed =
-      window.confirm(message)
-
-    if (!confirmed) {
+  async function confirmClosePeriod() {
+    if (
+      !taxPeriodId ||
+      !preview
+    ) {
       return
     }
 
@@ -215,9 +296,12 @@ export default function TaxPeriodPreviewPage() {
       await closeTaxPeriod(
         taxPeriodId,
         {
-          confirmWarnings: true
+          confirmWarnings:
+            preview.warnings.length > 0
         }
       )
+
+      setIsCloseConfirmOpen(false)
 
       toast.success(
         'Chốt kỳ thuế thành công.'
@@ -553,6 +637,28 @@ export default function TaxPeriodPreviewPage() {
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={isCloseConfirmOpen}
+        title={
+          preview.warnings.length > 0
+            ? 'Chốt kỳ khi vẫn còn cảnh báo?'
+            : 'Xác nhận chốt kỳ thuế'
+        }
+        description={
+          preview.warnings.length > 0
+            ? 'Kỳ thuế vẫn còn cảnh báo dữ liệu. Nếu tiếp tục, dữ liệu hiện tại sẽ được dùng làm căn cứ tính thuế và tạo tờ khai.'
+            : 'Sau khi chốt, dữ liệu của kỳ này sẽ được dùng làm căn cứ tính thuế và tạo tờ khai.'
+        }
+        confirmLabel='Chốt kỳ thuế'
+        isProcessing={isClosing}
+        onCancel={() =>
+          setIsCloseConfirmOpen(false)
+        }
+        onConfirm={() => {
+          void confirmClosePeriod()
+        }}
+      />
     </div>
   )
 }

@@ -82,6 +82,83 @@ function InfoRow({
   )
 }
 
+function ConfirmDialog({
+  open,
+  title,
+  description,
+  confirmLabel,
+  isProcessing,
+  onConfirm,
+  onCancel
+}: {
+  open: boolean
+  title: string
+  description: string
+  confirmLabel: string
+  isProcessing?: boolean
+  onConfirm: () => void
+  onCancel: () => void
+}) {
+  if (!open) return null
+
+  return (
+    <div
+      className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4'
+      role='presentation'
+    >
+      <div
+        role='dialog'
+        aria-modal='true'
+        aria-labelledby='confirm-dialog-title'
+        aria-describedby='confirm-dialog-description'
+        className='w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl'
+      >
+        <div className='flex items-start gap-4'>
+          <div className='flex size-11 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600'>
+            <AlertTriangle size={22} />
+          </div>
+
+          <div className='min-w-0'>
+            <h2
+              id='confirm-dialog-title'
+              className='text-lg font-black text-gray-900'
+            >
+              {title}
+            </h2>
+
+            <p
+              id='confirm-dialog-description'
+              className='mt-2 text-sm leading-6 text-gray-500'
+            >
+              {description}
+            </p>
+          </div>
+        </div>
+
+        <div className='mt-6 flex justify-end gap-3'>
+          <button
+            type='button'
+            disabled={isProcessing}
+            onClick={onCancel}
+            className='h-11 rounded-xl border border-gray-300 bg-white px-5 text-sm font-bold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60'
+          >
+            Hủy
+          </button>
+
+          <button
+            type='button'
+            disabled={isProcessing}
+            onClick={onConfirm}
+            className='h-11 min-w-32 rounded-xl bg-red-600 px-5 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300'
+          >
+            {isProcessing ? 'Đang xử lý...' : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function TaxDeclarationPage() {
   const navigate = useNavigate()
 
@@ -123,6 +200,11 @@ export default function TaxDeclarationPage() {
   const [
     isSubmitting,
     setIsSubmitting
+  ] = useState(false)
+
+  const [
+    isSubmitConfirmOpen,
+    setIsSubmitConfirmOpen
   ] = useState(false)
 
   const [
@@ -292,7 +374,7 @@ export default function TaxDeclarationPage() {
     }
   }
 
-  async function handleSubmit() {
+  function handleSubmit() {
     if (!declaration?.id) {
       toast.warning(
         'Bạn cần tạo tờ khai trước khi gửi.'
@@ -310,12 +392,11 @@ export default function TaxDeclarationPage() {
       return
     }
 
-    const confirmed =
-      window.confirm(
-        'Bạn có chắc muốn gửi tờ khai này? Sau khi gửi, tờ khai sẽ chuyển sang trạng thái đã gửi.'
-      )
+    setIsSubmitConfirmOpen(true)
+  }
 
-    if (!confirmed) {
+  async function confirmSubmit() {
+    if (!declaration?.id) {
       return
     }
 
@@ -328,6 +409,7 @@ export default function TaxDeclarationPage() {
         )
 
       setDeclaration(result)
+      setIsSubmitConfirmOpen(false)
 
       toast.success(
         `Tờ khai ${result.declarationCode} đã được gửi thành công.`
@@ -715,6 +797,20 @@ export default function TaxDeclarationPage() {
           </>
         )}
       </div>
+
+      <ConfirmDialog
+        open={isSubmitConfirmOpen}
+        title='Xác nhận gửi tờ khai'
+        description='Sau khi gửi, tờ khai sẽ chuyển sang trạng thái Đã gửi. Vui lòng kiểm tra kỹ thông tin trước khi tiếp tục.'
+        confirmLabel='Gửi tờ khai'
+        isProcessing={isSubmitting}
+        onCancel={() =>
+          setIsSubmitConfirmOpen(false)
+        }
+        onConfirm={() => {
+          void confirmSubmit()
+        }}
+      />
     </div>
   )
 }
