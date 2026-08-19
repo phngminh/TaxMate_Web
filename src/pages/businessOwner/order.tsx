@@ -270,18 +270,19 @@ export default function OrderPage() {
       year: 'numeric'
     })
   }
+
   const getInvoicePdfUrl = (invoiceNumber: string) => {
-  const apiBaseUrl = (http.defaults.baseURL || '').replace(/\/$/, '')
-  return `${apiBaseUrl}/Invoice/${invoiceNumber}/pdf`
-}
-  const handlePrintPdf = (invoiceNumber?: string) => {
-  if (!invoiceNumber) {
-    toast.warn('Hóa đơn chưa được phát hành.')
-    return
+    const apiBaseUrl = (http.defaults.baseURL || '').replace(/\/$/, '')
+    return `${apiBaseUrl}/Invoice/${invoiceNumber}/pdf`
   }
 
-  window.open(getInvoicePdfUrl(invoiceNumber), '_blank')
-}
+  const handlePrintPdf = (invoiceNumber?: string) => {
+    if (!invoiceNumber) {
+      toast.warn('Hóa đơn chưa được phát hành.')
+      return
+    }
+    window.open(getInvoicePdfUrl(invoiceNumber), '_blank')
+  }
 
   const handleViewOfficialXml = (xmlUrl?: string) => {
     if (!xmlUrl) {
@@ -723,9 +724,9 @@ export default function OrderPage() {
                     >
                       In hóa đơn (PDF)
                     </button>
-                    {selectedOrder.payments[0]?.paymentMethod === 'Transfer' && (
+                    {selectedOrder.officialXmlUrl && (
                       <button
-                        onClick={() => handleViewOfficialXml(getInvoicePdfUrl(selectedOrder.invoiceNumber!))}
+                        onClick={() => handleViewOfficialXml(selectedOrder.officialXmlUrl)}
                         className='flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2 rounded-md text-[11.5px] font-bold transition-all cursor-pointer'
                       >
                         Tải XML gốc
