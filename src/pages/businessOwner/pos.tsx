@@ -24,7 +24,10 @@ import {
   Trash2,
   Minus,
   ShoppingCart,
-  User
+  User,
+  QrCode,
+  Edit3,
+  AlertCircle
 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import http from '../../utils/http'
@@ -39,6 +42,7 @@ import {
   addOrderItem,
   updateOrderItem,
   removeOrderItem,
+  reopenOrder,
   cancelOrder,
   cancelAllDrafts,
   checkoutOrder,
@@ -172,6 +176,16 @@ export default function POS() {
   const [successInvoiceStatus, setSuccessInvoiceStatus] = useState<string | null>(null)
   const [successTaxAuthorityCode, setSuccessTaxAuthorityCode] = useState<string | null>(null)
 
+  // Confirm Reopen / Edit Order State
+  const [showConfirmReopenModal, setShowConfirmReopenModal] = useState(false)
+  const [targetReopenOrderId, setTargetReopenOrderId] = useState<string | null>(null)
+  const [reopeningOrder, setReopeningOrder] = useState(false)
+
+  // Confirm Cancel Order State
+  const [showConfirmCancelModal, setShowConfirmCancelModal] = useState(false)
+  const [targetCancelOrderId, setTargetCancelOrderId] = useState<string | null>(null)
+  const [cancellingOrder, setCancellingOrder] = useState(false)
+
   // Flag to prevent concurrent initialization in StrictMode
   const isInitializingRef = useRef(false)
 
@@ -242,31 +256,37 @@ export default function POS() {
     }
   }
 
-  // Fetch open drafts count for header badge
+  // Fetch open drafts count for header badge (bao gồm Draft và AwaitingPayment song song trực tiếp từ DB)
   const fetchOpenDraftCount = async () => {
     if (!businessId) return
     try {
-      const res = await getOrders(businessId, { status: 'Draft', pageSize: 50 })
-      if (res.success && res.data?.items) {
-        const validDrafts = res.data.items.filter(o => o.itemCount > 0)
-        setOpenDraftCount(validDrafts.length)
-      }
+      const [draftsRes, awaitingRes] = await Promise.all([
+        getOrders(businessId, { status: 'Draft', pageSize: 50 }),
+        getOrders(businessId, { status: 'AwaitingPayment', pageSize: 50 })
+      ])
+      const drafts = draftsRes.success && draftsRes.data?.items ? draftsRes.data.items : []
+      const awaiting = awaitingRes.success && awaitingRes.data?.items ? awaitingRes.data.items : []
+      const combined = [...drafts, ...awaiting].filter(o => o.itemCount > 0)
+      setOpenDraftCount(combined.length)
     } catch (err) {
       console.error('Failed to fetch open draft count:', err)
     }
   }
 
-  // Fetch open drafts list for drawer
+  // Fetch open drafts list for drawer (bao gồm Draft và AwaitingPayment song song trực tiếp từ DB)
   const fetchOpenDraftOrders = async () => {
     if (!businessId) return
     try {
       setLoadingOpenOrders(true)
-      const res = await getOrders(businessId, { status: 'Draft', pageSize: 50 })
-      if (res.success && res.data?.items) {
-        const validDrafts = res.data.items.filter(o => o.itemCount > 0)
-        setOpenDraftOrders(validDrafts)
-        setOpenDraftCount(validDrafts.length)
-      }
+      const [draftsRes, awaitingRes] = await Promise.all([
+        getOrders(businessId, { status: 'Draft', pageSize: 50 }),
+        getOrders(businessId, { status: 'AwaitingPayment', pageSize: 50 })
+      ])
+      const drafts = draftsRes.success && draftsRes.data?.items ? draftsRes.data.items : []
+      const awaiting = awaitingRes.success && awaitingRes.data?.items ? awaitingRes.data.items : []
+      const combined = [...drafts, ...awaiting].filter(o => o.itemCount > 0)
+      setOpenDraftOrders(combined)
+      setOpenDraftCount(combined.length)
     } catch (err) {
       console.error('Failed to fetch open draft orders:', err)
       toast.error('Không thể tải danh sách đơn chờ.')
@@ -319,6 +339,18 @@ export default function POS() {
         updatedTabs = [...tabs, resumedTab]
       }
 
+      if (detail.data.status === 'AwaitingPayment') {
+        const transferPayment = detail.data.payments?.find(p => p.paymentMethod === 'Transfer' && p.paymentAccountId)
+        if (transferPayment?.paymentAccountId) {
+          const matchedAcc = paymentAccounts.find(
+            a => a.paymentAccountId.toLowerCase() === transferPayment.paymentAccountId!.toLowerCase()
+          )
+          if (matchedAcc) {
+            setSelectedAccount(matchedAcc)
+          }
+        }
+      }
+
       setTabs(updatedTabs)
       setActiveTabId(resumedTab.tabId)
       updateSessionTabs(updatedTabs)
@@ -367,34 +399,42 @@ export default function POS() {
     }
   }
 
-  // Cancel all drafts
+  // Cancel all drafts (chỉ xóa tab Draft, giữ nguyên tab và đơn AwaitingPayment)
   const handleCancelAllDrafts = async () => {
     if (!businessId) return
     try {
       setCancellingAll(true)
       await cancelAllDrafts(businessId)
-      toast.success('Đã hủy tất cả đơn hàng chờ thành công.')
+      toast.success('Đã hủy tất cả đơn nháp thành công.')
 
-      const resetTab: POSTab = {
-        tabId: 'T-1',
-        orderId: null,
-        code: 'Đơn 1',
-        items: [],
-        totalAmount: 0,
-        status: 'Draft',
-        isPersisted: false
+      // Giữ lại các tab AwaitingPayment
+      const awaitingTabs = tabs.filter(t => t.status === 'AwaitingPayment')
+      if (awaitingTabs.length > 0) {
+        setTabs(awaitingTabs)
+        setActiveTabId(awaitingTabs[0].tabId)
+        updateSessionTabs(awaitingTabs)
+      } else {
+        const resetTab: POSTab = {
+          tabId: 'T-1',
+          orderId: null,
+          code: 'Đơn 1',
+          items: [],
+          totalAmount: 0,
+          status: 'Draft',
+          isPersisted: false
+        }
+        setTabs([resetTab])
+        setActiveTabId('T-1')
+        updateSessionTabs([])
       }
-      setTabs([resetTab])
-      setActiveTabId('T-1')
-      updateSessionTabs([])
 
-      setOpenDraftOrders([])
-      setOpenDraftCount(0)
       setShowConfirmCancelAll(false)
       setShowOpenOrdersPanel(false)
+      fetchOpenDraftOrders()
+      fetchOpenDraftCount()
     } catch (err: any) {
       console.error('Cancel all drafts failed:', err)
-      toast.error(err?.response?.data?.message || 'Không thể hủy danh sách đơn chờ.')
+      toast.error(err?.response?.data?.message || 'Không thể hủy danh sách đơn nháp.')
     } finally {
       setCancellingAll(false)
     }
@@ -526,7 +566,7 @@ export default function POS() {
         if (resumeOrderId) {
           try {
             const detailRes = await getOrderById(resumeOrderId)
-            if (detailRes.success && detailRes.data && detailRes.data.status === 'Draft') {
+            if (detailRes.success && detailRes.data && (detailRes.data.status === 'Draft' || detailRes.data.status === 'AwaitingPayment')) {
               const draft = detailRes.data
               const resumedTab: POSTab = {
                 tabId: 'T-1',
@@ -571,7 +611,7 @@ export default function POS() {
             let tabIndex = 1
 
             for (const res of results) {
-              if (res.status === 'fulfilled' && res.value.success && res.value.data?.status === 'Draft') {
+              if (res.status === 'fulfilled' && res.value.success && res.value.data && (res.value.data.status === 'Draft' || res.value.data.status === 'AwaitingPayment')) {
                 const order = res.value.data
                 validTabs.push({
                   tabId: `T-${tabIndex++}`,
@@ -1097,6 +1137,14 @@ export default function POS() {
           selectedAccount &&
           (selectedAccount.isSePayConnected || !!selectedAccount.sePayBankAccountXid)
         if (isDynamicQR) {
+          // Cập nhật tab sang trạng thái AwaitingPayment
+          const updatedTabs = tabs.map(t =>
+            t.tabId === tabId ? { ...t, status: 'AwaitingPayment' } : t
+          )
+          setTabs(updatedTabs)
+          updateSessionTabs(updatedTabs)
+          fetchOpenDraftCount()
+
           // Nếu là QR động (SePay): Mở overlay "Đang chờ nhận tiền..." và chờ SignalR đối soát tự động
           setAwaitingOrderId(orderId)
           setAwaitingOrderCode(activeTab.code)
@@ -1191,11 +1239,12 @@ export default function POS() {
     }
   }
 
-  const handleManualConfirm = async () => {
-    if (!awaitingOrderId) return
+  const handleManualConfirm = async (customOrderId?: string) => {
+    const orderIdToConfirm = customOrderId || awaitingOrderId || activeTab?.orderId
+    if (!orderIdToConfirm) return
     try {
       setCheckingOut(true)
-      const res = await confirmPayment(awaitingOrderId)
+      const res = await confirmPayment(orderIdToConfirm)
       if (res.success) {
         toast.success('Xác nhận thanh toán thủ công thành công!')
         setShowAwaitingOverlay(false)
@@ -1203,9 +1252,9 @@ export default function POS() {
         // Đợi 300ms để backend tạo hóa đơn điện tử
         await delay(400)
 
-        const detail = await getOrderById(awaitingOrderId)
-        setSuccessOrderCode(awaitingOrderCode)
-        setSuccessAmount(awaitingAmount)
+        const detail = await getOrderById(orderIdToConfirm)
+        setSuccessOrderCode(detail.data?.transactionCode || awaitingOrderCode || activeTab?.code || '')
+        setSuccessAmount(detail.data?.totalAmount || awaitingAmount || activeTab?.totalAmount || 0)
         setSuccessInvoiceNumber(detail.data?.invoiceNumber || null)
         setSuccessOfficialPdfUrl(detail.data?.officialPdfUrl || null)
         setSuccessOfficialXmlUrl(detail.data?.officialXmlUrl || null)
@@ -1213,7 +1262,10 @@ export default function POS() {
         setSuccessTaxAuthorityCode(detail.data?.taxAuthorityCode || null)
         setShowSuccessOverlay(true)
 
-        if (activeTab) {
+        const targetTab = tabs.find(t => t.orderId === orderIdToConfirm)
+        if (targetTab) {
+          await removeFinishedTab(targetTab.tabId)
+        } else if (activeTab) {
           await removeFinishedTab(activeTab.tabId)
         }
       }
@@ -1221,6 +1273,111 @@ export default function POS() {
       toast.error(err?.response?.data?.message || 'Xác nhận thất bại.')
     } finally {
       setCheckingOut(false)
+    }
+  }
+
+  // 9. Thao tác xử lý Đơn AwaitingPayment (Tiếp tục, Chỉnh sửa, Hủy)
+  const handleContinuePayment = async (orderId: string, code: string, amount: number) => {
+    let matchedAcc: PaymentAccount | null = null
+    try {
+      const detail = await getOrderById(orderId)
+      if (detail.success && detail.data) {
+        const transferPayment = detail.data.payments?.find(p => p.paymentMethod === 'Transfer' && p.paymentAccountId)
+        if (transferPayment?.paymentAccountId) {
+          matchedAcc =
+            paymentAccounts.find(
+              a => a.paymentAccountId.toLowerCase() === transferPayment.paymentAccountId!.toLowerCase()
+            ) || null
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load order payment account for QR:', err)
+    }
+
+    if (!matchedAcc) {
+      toast.error('Không tìm thấy tài khoản ngân hàng đã dùng cho đơn này. Vui lòng chỉnh sửa hoặc hủy đơn.')
+      return
+    }
+
+    setSelectedAccount(matchedAcc)
+    setAwaitingOrderId(orderId)
+    setAwaitingOrderCode(code)
+    setAwaitingAmount(amount)
+    setShowAwaitingOverlay(true)
+  }
+
+  const triggerReopenOrder = (orderId: string) => {
+    setTargetReopenOrderId(orderId)
+    setShowConfirmReopenModal(true)
+  }
+
+  const handleConfirmReopenOrder = async () => {
+    if (!targetReopenOrderId) return
+    try {
+      setReopeningOrder(true)
+      const res = await reopenOrder(targetReopenOrderId)
+      if (res.success) {
+        toast.success('Đã chuyển đơn về nháp để chỉnh sửa.')
+        setShowConfirmReopenModal(false)
+        setShowAwaitingOverlay(false)
+
+        const updatedTabs = tabs.map(t =>
+          t.orderId === targetReopenOrderId ? { ...t, status: 'Draft' } : t
+        )
+        setTabs(updatedTabs)
+        updateSessionTabs(updatedTabs)
+        fetchOpenDraftCount()
+        fetchOpenDraftOrders()
+      }
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        toast.error('Đơn hàng đã được thanh toán qua ngân hàng, không thể chỉnh sửa.')
+        setShowConfirmReopenModal(false)
+        setShowAwaitingOverlay(false)
+        fetchOpenDraftOrders()
+        fetchOpenDraftCount()
+      } else {
+        toast.error(err?.response?.data?.message || 'Chuyển đơn về nháp thất bại.')
+      }
+    } finally {
+      setReopeningOrder(false)
+    }
+  }
+
+  const triggerCancelOrder = (orderId: string) => {
+    setTargetCancelOrderId(orderId)
+    setShowConfirmCancelModal(true)
+  }
+
+  const handleConfirmCancelOrder = async () => {
+    if (!targetCancelOrderId) return
+    try {
+      setCancellingOrder(true)
+      const res = await cancelOrder(targetCancelOrderId)
+      if (res.success) {
+        toast.success('Đã hủy đơn hàng thành công.')
+        setShowConfirmCancelModal(false)
+        setShowAwaitingOverlay(false)
+
+        const targetTab = tabs.find(t => t.orderId === targetCancelOrderId)
+        if (targetTab) {
+          await removeFinishedTab(targetTab.tabId)
+        }
+        fetchOpenDraftOrders()
+        fetchOpenDraftCount()
+      }
+    } catch (err: any) {
+      if (err?.response?.status === 409) {
+        toast.error('Đơn hàng đã được thanh toán qua ngân hàng, không thể hủy.')
+        setShowConfirmCancelModal(false)
+        setShowAwaitingOverlay(false)
+        fetchOpenDraftOrders()
+        fetchOpenDraftCount()
+      } else {
+        toast.error(err?.response?.data?.message || 'Hủy đơn hàng thất bại.')
+      }
+    } finally {
+      setCancellingOrder(false)
     }
   }
 
@@ -1233,6 +1390,12 @@ export default function POS() {
       return matchesSearch && matchesCategory
     })
   }, [products, searchQuery, selectedCategoryId])
+
+  // Count of purely 'Draft' orders for bulk cancellation
+  const draftOrderCount = useMemo(
+    () => openDraftOrders.filter(o => o.status === 'Draft').length,
+    [openDraftOrders]
+  )
 
   const formatPrice = (value: number) => {
     return value.toLocaleString('vi-VN')
@@ -1333,7 +1496,7 @@ export default function POS() {
                     <Utensils className='text-[#b90a0a] size-7 stroke-[1.5]' />
                   )}
                 </div>
-                <div className='text-[12px] font-semibold text-slate-700 mb-1 line-clamp-2 min-h-[32px] text-center leading-snug flex items-center justify-center'>
+                <div className='text-[12px] font-semibold text-slate-700 mb-1 line-clamp-2 min-h-8 text-center leading-snug flex items-center justify-center'>
                   {product.name}
                 </div>
                 <div className='text-[12.5px] font-black text-slate-900 text-center mt-auto'>
@@ -1440,7 +1603,7 @@ export default function POS() {
               <ClipboardList size={13} className='shrink-0' />
               <span>Đơn chờ</span>
               {openDraftCount > 0 && (
-                <span className='absolute -top-1.5 -right-1.5 bg-[#b90a0a] text-white text-[9px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm animate-pulse'>
+                <span className='absolute -top-1.5 -right-1.5 bg-[#b90a0a] text-white text-[9px] font-black min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-sm animate-pulse'>
                   {openDraftCount > 9 ? '9+' : openDraftCount}
                 </span>
               )}
@@ -1468,7 +1631,7 @@ export default function POS() {
 
             {/* Nút Home */}
             <button
-              onClick={() => navigate(path.BUSINESS_OWNER_HOME)}
+              onClick={() => navigate(-1)}
               className='p-1.5 rounded-md text-white/80 hover:text-white hover:bg-white/20 transition-all cursor-pointer'
               title='Về trang chủ quản lý'
             >
@@ -1543,7 +1706,7 @@ export default function POS() {
                     >
                       <Minus className='size-3 stroke-[2.5]' />
                     </button>
-                    <span className='min-w-[24px] px-1 text-center font-bold text-slate-800 text-xs tabular-nums'>
+                    <span className='min-w-6 px-1 text-center font-bold text-slate-800 text-xs tabular-nums'>
                       {item.quantity}
                     </span>
                     <button
@@ -1709,26 +1872,70 @@ export default function POS() {
               )}
             </div>
 
-            {/* Nút checkout VIP with price & badge */}
-            <div className='pt-1'>
-              <button
-                onClick={handleCheckoutClick}
-                disabled={checkingOut || loadingCart || activeTab.items.length === 0}
-                className='w-full flex items-center justify-between bg-[#b90a0a] hover:bg-[#a00909] disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-extrabold py-3 px-4 rounded-xl text-xs transition-all shadow-sm hover:shadow-md active:scale-[0.99] cursor-pointer'
-              >
-                <div className='flex items-center gap-2'>
-                  {checkingOut ? (
-                    <Loader2 className='animate-spin size-4' />
-                  ) : (
-                    <Check className='size-4 stroke-3' />
-                  )}
-                  <span className='font-extrabold text-[13px]'>Xác nhận & Thanh toán</span>
+            {/* Nút checkout VIP hoặc 4 thao tác AwaitingPayment */}
+            {activeTab.status === 'AwaitingPayment' ? (
+              <div className='pt-1 space-y-2.5'>
+                <div className='bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-800 text-xs flex items-center gap-2 font-bold'>
+                  <Loader2 className='size-4 text-amber-600 animate-spin shrink-0' />
+                  <span>Đơn hàng đang chờ thanh toán SePay</span>
                 </div>
-                <span className='font-black text-sm tabular-nums bg-white/15 px-2.5 py-0.5 rounded-md'>
-                  {formatPrice(activeTab.totalAmount)} đ
-                </span>
-              </button>
-            </div>
+                <div className='grid grid-cols-2 gap-2 select-none'>
+                  <button
+                    type='button'
+                    onClick={() => handleContinuePayment(activeTab.orderId || '', activeTab.code, activeTab.totalAmount)}
+                    className='bg-[#004795] hover:bg-[#003875] text-white py-2.5 px-3 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer'
+                  >
+                    <QrCode size={15} />
+                    Tiếp tục thanh toán
+                  </button>
+                  <button
+                    type='button'
+                    onClick={() => handleManualConfirm(activeTab.orderId || '')}
+                    disabled={checkingOut}
+                    className='bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white py-2.5 px-3 rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer'
+                  >
+                    {checkingOut ? <Loader2 size={15} className='animate-spin' /> : <Check size={15} />}
+                    Xác nhận đã nhận tiền
+                  </button>
+                  <button
+                    type='button'
+                    onClick={() => triggerReopenOrder(activeTab.orderId || '')}
+                    className='border border-amber-400 bg-amber-50 hover:bg-amber-100 text-amber-900 py-2.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer'
+                  >
+                    <Edit3 size={15} />
+                    Chỉnh sửa đơn
+                  </button>
+                  <button
+                    type='button'
+                    onClick={() => triggerCancelOrder(activeTab.orderId || '')}
+                    className='border border-red-300 bg-red-50 hover:bg-red-100 text-red-700 py-2.5 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer'
+                  >
+                    <Trash2 size={15} />
+                    Hủy đơn
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className='pt-1'>
+                <button
+                  onClick={handleCheckoutClick}
+                  disabled={checkingOut || loadingCart || activeTab.items.length === 0}
+                  className='w-full flex items-center justify-between bg-[#b90a0a] hover:bg-[#a00909] disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-extrabold py-3 px-4 rounded-xl text-xs transition-all shadow-sm hover:shadow-md active:scale-[0.99] cursor-pointer'
+                >
+                  <div className='flex items-center gap-2'>
+                    {checkingOut ? (
+                      <Loader2 className='animate-spin size-4' />
+                    ) : (
+                      <Check className='size-4 stroke-3' />
+                    )}
+                    <span className='font-extrabold text-[13px]'>Xác nhận & Thanh toán</span>
+                  </div>
+                  <span className='font-black text-sm tabular-nums bg-white/15 px-2.5 py-0.5 rounded-md'>
+                    {formatPrice(activeTab.totalAmount)} đ
+                  </span>
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1967,27 +2174,49 @@ export default function POS() {
               </div>
             </div>
 
-            {/* SANDBOX CONTROLS */}
-            <div className='w-full border-t border-gray-100 pt-4 flex flex-col gap-2.5'>
+            {/* THAO TÁC XỬ LÝ ĐƠN CHỜ THANH TOÁN */}
+            <div className='w-full border-t border-gray-100 pt-4 flex flex-col gap-2'>
+              <button
+                type='button'
+                onClick={() => handleManualConfirm(awaitingOrderId)}
+                disabled={checkingOut}
+                className='w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white py-2 rounded-md text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer'
+              >
+                {checkingOut ? <Loader2 className='animate-spin size-4' /> : <Check size={16} />}
+                Xác nhận đã nhận tiền (Thủ công)
+              </button>
+
+              <div className='grid grid-cols-2 gap-2'>
+                <button
+                  type='button'
+                  onClick={() => triggerReopenOrder(awaitingOrderId)}
+                  className='border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 py-2 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer'
+                >
+                  <Edit3 size={14} />
+                  Chỉnh sửa đơn
+                </button>
+                <button
+                  type='button'
+                  onClick={() => triggerCancelOrder(awaitingOrderId)}
+                  className='border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 py-2 rounded-md text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer'
+                >
+                  <Trash2 size={14} />
+                  Hủy đơn
+                </button>
+              </div>
+
               <button
                 type='button'
                 onClick={handleSimulatePayment}
                 disabled={simulatingSePay}
-                className='w-full bg-[#FF8C00] hover:bg-[#e07b00] disabled:bg-gray-300 text-white py-2 rounded-md text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5 cursor-pointer'
+                className='w-full border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 py-1.5 rounded-md text-[11px] font-semibold transition-all flex items-center justify-center gap-1.5 cursor-pointer mt-1'
               >
                 {simulatingSePay ? (
-                  <Loader2 className='animate-spin size-4' />
+                  <Loader2 className='animate-spin size-3.5' />
                 ) : (
-                  <PlayCircle size={16} />
+                  <PlayCircle size={14} />
                 )}
-                Giả lập SePay Sandbox Webhook
-              </button>
-              <button
-                type='button'
-                onClick={handleManualConfirm}
-                className='w-full border border-[#b90a0a] text-[#b90a0a] hover:bg-[#ffebeb] py-2 rounded-md text-xs font-bold transition-all cursor-pointer'
-              >
-                Xác nhận đã nhận tiền (Thủ công)
+                Giả lập SePay Sandbox Webhook (Test)
               </button>
             </div>
           </div>
@@ -2190,7 +2419,7 @@ export default function POS() {
           />
 
           {/* Drawer slide-in from right */}
-          <div className='fixed right-0 top-0 bottom-0 w-[360px] bg-white z-50 shadow-[-8px_0_32px_rgba(0,0,0,0.15)] flex flex-col animate-in slide-in-from-right duration-250'>
+          <div className='fixed right-0 top-0 bottom-0 w-90 bg-white z-50 shadow-[-8px_0_32px_rgba(0,0,0,0.15)] flex flex-col animate-in slide-in-from-right duration-250'>
             {/* Drawer Header */}
             <div className='bg-[#004795] px-5 py-4 flex items-center justify-between shrink-0 select-none'>
               <div className='flex items-center gap-2.5'>
@@ -2207,14 +2436,14 @@ export default function POS() {
                 </div>
               </div>
               <div className='flex items-center gap-1.5'>
-                {openDraftOrders.length > 0 && (
+                {draftOrderCount > 0 && (
                   <button
                     onClick={() => setShowConfirmCancelAll(true)}
                     className='flex items-center gap-1 px-2.5 py-1.5 bg-red-600/80 hover:bg-red-600 text-white rounded-md text-[11px] font-bold transition-all shadow-xs cursor-pointer'
-                    title='Hủy toàn bộ đơn chờ'
+                    title='Hủy toàn bộ đơn nháp'
                   >
                     <Trash2 size={12} />
-                    <span>Hủy tất cả</span>
+                    <span>Hủy tất cả ({draftOrderCount})</span>
                   </button>
                 )}
                 <button
@@ -2280,9 +2509,13 @@ export default function POS() {
                             <span className='size-1.5 bg-emerald-400 rounded-full inline-block' />
                             Tab {isOpenInTab.tabId}
                           </span>
+                        ) : order.status === 'AwaitingPayment' ? (
+                          <span className='shrink-0 bg-amber-50 text-amber-700 text-[9.5px] font-bold px-2 py-0.5 rounded-full border border-amber-300'>
+                            Chờ chuyển khoản
+                          </span>
                         ) : (
-                          <span className='shrink-0 bg-amber-50 text-amber-600 text-[9.5px] font-bold px-2 py-0.5 rounded-full border border-amber-200/70'>
-                            Chờ xử lý
+                          <span className='shrink-0 bg-slate-100 text-slate-600 text-[9.5px] font-bold px-2 py-0.5 rounded-full border border-slate-200'>
+                            Đơn nháp
                           </span>
                         )}
                       </div>
@@ -2323,11 +2556,11 @@ export default function POS() {
                               Mở lại đơn này
                             </button>
                             <button
-                              onClick={() => handleCancelDraftFromPanel(order.transactionId)}
+                              onClick={() => triggerCancelOrder(order.transactionId)}
                               className='flex items-center justify-center gap-1 border border-slate-200 hover:border-red-300 hover:bg-red-50 hover:text-[#b90a0a] text-slate-400 text-[11px] font-bold px-3 py-1.5 rounded-md transition-colors cursor-pointer'
-                              title='Hủy đơn nháp'
+                              title='Hủy đơn'
                             >
-                              <X size={12} />
+                              <Trash2 size={12} />
                               Hủy
                             </button>
                           </>
@@ -2355,7 +2588,7 @@ export default function POS() {
         </>
       )}
 
-      {/* MODAL XÁC NHẬN HỦY TẤT CẢ ĐƠN CHỜ */}
+      {/* MODAL XÁC NHẬN HỦY TẤT CẢ ĐƠN NHÁP */}
       {showConfirmCancelAll && (
         <div className='fixed inset-0 bg-black/50 backdrop-blur-xs z-60 flex items-center justify-center p-4 animate-in fade-in duration-150'>
           <div className='bg-white rounded-[16px] shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-150 p-6 text-center select-none'>
@@ -2363,10 +2596,10 @@ export default function POS() {
               <Trash2 size={24} />
             </div>
             <h3 className='text-slate-900 font-extrabold text-[16px] mb-1.5'>
-              Hủy toàn bộ đơn chờ?
+              Hủy toàn bộ đơn nháp?
             </h3>
             <p className='text-slate-500 text-xs font-medium leading-relaxed mb-6'>
-              Bạn có chắc chắn muốn hủy tất cả <span className='font-bold text-red-600'>{openDraftOrders.length}</span> đơn hàng đang chờ? Thao tác này sẽ xóa các đơn nháp và làm mới giao diện POS.
+              Bạn có chắc chắn muốn hủy tất cả <span className='font-bold text-red-600'>{draftOrderCount}</span> đơn hàng nháp? Thao tác này sẽ xóa các đơn nháp và làm mới giao diện POS.
             </p>
             <div className='flex gap-3'>
               <button
@@ -2384,6 +2617,78 @@ export default function POS() {
                 className='flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer'
               >
                 {cancellingAll && <Loader2 size={13} className='animate-spin' />}
+                Xác nhận hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL XÁC NHẬN CHỈNH SỬA ĐƠN HÀNG (REOPEN) */}
+      {showConfirmReopenModal && (
+        <div className='fixed inset-0 bg-black/50 backdrop-blur-xs z-60 flex items-center justify-center p-4 animate-in fade-in duration-150'>
+          <div className='bg-white rounded-[16px] shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-150 p-6 text-center select-none'>
+            <div className='bg-amber-100 text-amber-600 size-14 rounded-full flex items-center justify-center mx-auto mb-3'>
+              <Edit3 size={24} />
+            </div>
+            <h3 className='text-slate-900 font-extrabold text-[16px] mb-1.5'>
+              Chỉnh sửa đơn hàng?
+            </h3>
+            <p className='text-slate-600 text-xs font-semibold leading-relaxed mb-6 bg-slate-50 p-3 rounded-lg border border-slate-200'>
+              “Tôi đã xác nhận khách chưa chuyển khoản”
+            </p>
+            <div className='flex gap-3'>
+              <button
+                type='button'
+                onClick={() => setShowConfirmReopenModal(false)}
+                disabled={reopeningOrder}
+                className='flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer'
+              >
+                Quay lại
+              </button>
+              <button
+                type='button'
+                onClick={handleConfirmReopenOrder}
+                disabled={reopeningOrder}
+                className='flex-1 py-2.5 bg-[#004795] hover:bg-[#003875] disabled:bg-gray-300 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer'
+              >
+                {reopeningOrder && <Loader2 size={13} className='animate-spin' />}
+                Xác nhận sửa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL XÁC NHẬN HỦY ĐƠN HÀNG (CANCEL) */}
+      {showConfirmCancelModal && (
+        <div className='fixed inset-0 bg-black/50 backdrop-blur-xs z-60 flex items-center justify-center p-4 animate-in fade-in duration-150'>
+          <div className='bg-white rounded-[16px] shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-150 p-6 text-center select-none'>
+            <div className='bg-red-100 text-red-600 size-14 rounded-full flex items-center justify-center mx-auto mb-3'>
+              <Trash2 size={24} />
+            </div>
+            <h3 className='text-slate-900 font-extrabold text-[16px] mb-1.5'>
+              Hủy đơn hàng này?
+            </h3>
+            <p className='text-slate-600 text-xs font-semibold leading-relaxed mb-6 bg-slate-50 p-3 rounded-lg border border-slate-200'>
+              “Tôi đã xác nhận khách chưa chuyển khoản”
+            </p>
+            <div className='flex gap-3'>
+              <button
+                type='button'
+                onClick={() => setShowConfirmCancelModal(false)}
+                disabled={cancellingOrder}
+                className='flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer'
+              >
+                Quay lại
+              </button>
+              <button
+                type='button'
+                onClick={handleConfirmCancelOrder}
+                disabled={cancellingOrder}
+                className='flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer'
+              >
+                {cancellingOrder && <Loader2 size={13} className='animate-spin' />}
                 Xác nhận hủy
               </button>
             </div>

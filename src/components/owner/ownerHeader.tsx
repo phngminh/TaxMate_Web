@@ -2,7 +2,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import imgLogo from '../../assets/logo3.png'
 import path from '../../constants/path'
-import { Bell, User, HeadphonesIcon, Heart, Store, Settings, LogOut, Plus, FileDown, ChevronDown, CreditCard, FileText } from 'lucide-react'
+import { Bell, User, HeadphonesIcon, Heart, Store, LogOut, Plus, FileDown, ChevronDown, CreditCard, FileText } from 'lucide-react'
 import { useBusiness } from '../../contexts/BusinessContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
@@ -17,6 +17,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu'
+import { getTaxDashboard } from '../../apis/taxDashboard.api'
+import { mapTaxDashboardApiToUi } from '../../utils/taxDashboardMapper'
 
 function NavItem({ label, isActive }: {
   label: ReactNode
@@ -40,12 +42,10 @@ function NavItem({ label, isActive }: {
 const menuItems = [
   { icon: HeadphonesIcon, label: 'Hỗ trợ' },
   { icon: Heart,          label: 'Gói của tôi' },
-  { icon: FileDown,       label: 'Xuất S1A-HKD' },
-  { icon: FileDown,       label: 'Xuất S2A-HKD' },
   { icon: CreditCard,     label: 'Tài khoản Nhận tiền' },
   { icon: FileText,       label: 'Cấu hình HĐĐT' },
-  { icon: Store,          label: 'Cài đặt Cửa hàng' },
-  { icon: Settings,       label: 'Cài đặt cá nhân' },
+  // { icon: Store,          label: 'Cài đặt Cửa hàng' },
+  // { icon: Settings,       label: 'Cài đặt cá nhân' },
 ]
 
 export default function OwnerHeader() {
@@ -83,6 +83,9 @@ export default function OwnerHeader() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
+
+  const [accumulatedRevenue, setAccumulatedRevenue] = useState(0)
+  const isOverOneBillion = accumulatedRevenue >= 1_000_000_000
 
   const isServiceStore =
     currentBusiness?.mainCategoryId === 'd2222222-2222-2222-2222-222222222222' ||
@@ -149,6 +152,30 @@ export default function OwnerHeader() {
 
     fetchBusiness()
   }, [user])
+
+  useEffect(() => {
+    if (!currentBusiness?.id) {
+      setAccumulatedRevenue(0)
+      return
+    }
+
+    const fetchRevenue = async () => {
+      try {
+        const response = await getTaxDashboard({
+          businessId: currentBusiness.id,
+          year: new Date().getFullYear()
+        })
+
+        const dashboard = mapTaxDashboardApiToUi(response)
+        setAccumulatedRevenue(dashboard.accumulatedRevenue ?? 0)
+      } catch (error) {
+        console.error('[OwnerHeader] Failed to get revenue:', error)
+        setAccumulatedRevenue(0)
+      }
+    }
+
+    void fetchRevenue()
+  }, [currentBusiness?.id])
 
   useEffect(() => {
     const fetchCurrentSubscription = async () => {
@@ -605,11 +632,7 @@ export default function OwnerHeader() {
                     key={label}
                     className='w-full flex items-center gap-4 px-5 py-3.5 hover:bg-[#fef2f2] group transition-colors cursor-pointer border-b border-transparent hover:border-gray-50'
                     onClick={() => {
-                      if (label === 'Xuất S1A-HKD') {
-                        openExportS1aModal()
-                      } else if (label === 'Xuất S2A-HKD') {
-                        openExportS2aModal()
-                      } else if (label === 'Gói của tôi') {
+                      if (label === 'Gói của tôi') {
                         navigate(path.BUSINESS_OWNER_SUBSCRIPTION)
                         setProfileOpen(false)
                       } else if (label === 'Tài khoản Nhận tiền') {
@@ -628,6 +651,40 @@ export default function OwnerHeader() {
                     <span className='flex-1 text-left text-[15px] text-[#1d1d1d] font-medium group-hover:text-[#9b0000]'>{label}</span>
                   </button>
                 ))}
+
+                {!isOverOneBillion && (
+                  <button
+                    className='w-full flex items-center gap-4 px-5 py-3.5 hover:bg-[#fef2f2] group transition-colors cursor-pointer'
+                    onClick={openExportS1aModal}
+                  >
+                    <FileDown
+                      size={20}
+                      strokeWidth={2}
+                      className='text-[#c0392b] shrink-0'
+                    />
+
+                    <span className='flex-1 text-left text-[15px] text-[#1d1d1d] font-medium group-hover:text-[#9b0000]'>
+                      Xuất S1A-HKD
+                    </span>
+                  </button>
+                )}
+
+                {isOverOneBillion && (
+                  <button
+                    className='w-full flex items-center gap-4 px-5 py-3.5 hover:bg-[#fef2f2] group transition-colors cursor-pointer'
+                    onClick={openExportS2aModal}
+                  >
+                    <FileDown
+                      size={20}
+                      strokeWidth={2}
+                      className='text-[#c0392b] shrink-0'
+                    />
+
+                    <span className='flex-1 text-left text-[15px] text-[#1d1d1d] font-medium group-hover:text-[#9b0000]'>
+                      Xuất S2A-HKD
+                    </span>
+                  </button>
+                )}
 
                 <div className='mx-5 my-2 h-px bg-gray-100' />
 

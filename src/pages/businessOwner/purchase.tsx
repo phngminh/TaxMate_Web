@@ -15,7 +15,9 @@ import {
   Layers,
   FileText,
   Boxes,
-  AlertTriangle
+  AlertTriangle,
+  ImagePlus,
+  ExternalLink
 } from 'lucide-react'
 import {
   Pagination,
@@ -38,6 +40,7 @@ import { getSuppliers, createSupplier, updateSupplier, deleteSupplier } from '..
 import { getIngredientPurchases, createIngredientPurchase, deleteIngredientPurchase, getIngredientPurchaseById } from '../../apis/ingredientPurchase.api'
 import { getAllIngredients } from '../../apis/ingredient.api'
 import { getAllProducts, updateProductCostPrice } from '../../apis/product.api'
+import { uploadImage } from '../../apis/image.api'
 import type { Supplier } from '../../types/supplier.type'
 import type { ExpenseDTO, ExpenseCategory } from '../../types/expense.type'
 import type { Ingredient } from '../../types/ingredient.type'
@@ -49,7 +52,6 @@ interface PurchaseLineItem {
   name: string
   quantity: number
   costPrice: number
-  taxPercent: number
 }
 
 interface MaterialPurchaseGroupDetail {
@@ -57,6 +59,7 @@ interface MaterialPurchaseGroupDetail {
   date: string
   supplierName: string
   totalAmount: number
+  receiptImageUrl?: string
   items: {
     id: string
     name: string
@@ -122,10 +125,11 @@ export default function PurchasePage() {
   // C. Unified Purchase Invoice Form
   const [purchaseType, setPurchaseType] = useState<'Product' | 'Material'>('Product')
   const [purchaseSupplierId, setPurchaseSupplierId] = useState('')
-  const [purchaseInvoiceNumber, setPurchaseInvoiceNumber] = useState('')
   const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0, 10))
   const [purchaseNote, setPurchaseNote] = useState('')
   const [purchaseItems, setPurchaseItems] = useState<PurchaseLineItem[]>([])
+  const [invoiceImageFile, setInvoiceImageFile] = useState<File | null>(null)
+  const [invoiceImagePreview, setInvoiceImagePreview] = useState<string | null>(null)
   
   // D. Selected items for details modal
   const [selectedExpenseDetail, setSelectedExpenseDetail] = useState<ExpenseDTO | null>(null)
@@ -304,6 +308,19 @@ export default function PurchasePage() {
     }
   }
 
+  const handleInvoiceImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Dung lượng ảnh tối đa là 5MB')
+      return
+    }
+
+    setInvoiceImageFile(file)
+    setInvoiceImagePreview(URL.createObjectURL(file))
+  }
+
   // C. Unified Purchase Invoices Save
   const handleSavePurchase = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -317,45 +334,52 @@ export default function PurchasePage() {
       toast.error('Vui lòng chọn nhà cung cấp.')
       return
     }
-    if (!purchaseInvoiceNumber.trim()) {
-      toast.error('Vui lòng nhập số hóa đơn.')
-      return
-    }
 
     const supplierObj = suppliers.find(s => s.id === purchaseSupplierId)
     const supplierName = supplierObj?.name || 'Unknown'
+    const autoInvoiceCode = `PNK-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
 
     try {
       setActionLoading(true)
 
+      let uploadedImageUrl: string | undefined
+      if (invoiceImageFile) {
+        try {
+          uploadedImageUrl = await uploadImage(invoiceImageFile)
+        } catch (uploadErr: any) {
+          toast.error(uploadErr?.message || 'Không thể tải lên ảnh hóa đơn.')
+          setActionLoading(false)
+          return
+        }
+      }
+
       if (purchaseType === 'Material') {
         // Save raw materials to IngredientPurchase
         for (const item of purchaseItems) {
-          let lineTotal = item.quantity * item.costPrice
-          lineTotal = lineTotal * (1 + item.taxPercent / 100)
+          const lineTotal = item.quantity * item.costPrice
 
           await createIngredientPurchase(businessId, {
             ingredientId: item.itemId,
             quantity: item.quantity,
             totalCost: lineTotal,
             purchaseDate: new Date(typeof purchaseDate === 'string' && !purchaseDate.endsWith('Z') ? purchaseDate + 'Z' : purchaseDate).toISOString(),
-            invoiceNumber: purchaseInvoiceNumber.trim(),
+            invoiceNumber: autoInvoiceCode,
             supplierId: purchaseSupplierId,
-            supplierName
+            supplierName,
+            receiptImageUrl: uploadedImageUrl
           })
         }
       } else {
         // Save products as aggregated General Expense under "Chi phí nhập hàng"
         let totalProductCost = 0
         const detailsLines = purchaseItems.map(p => {
-          let lineTotal = p.quantity * p.costPrice
-          lineTotal = lineTotal * (1 + p.taxPercent / 100)
+          const lineTotal = p.quantity * p.costPrice
           totalProductCost += lineTotal
 
-          return `- ${p.name}: ${p.quantity} x ${formatPrice(p.costPrice)} đ (thuế ${p.taxPercent}%)`
+          return `- ${p.name}: ${p.quantity} x ${formatPrice(p.costPrice)} đ`
         })
 
-        const noteContent = `Nhà cung cấp: ${supplierName}\nSố hóa đơn: ${purchaseInvoiceNumber}\nGhi chú: ${purchaseNote}\n\nSản phẩm nhập kho:\n${detailsLines.join('\n')}`
+        const noteContent = `Nhà cung cấp: ${supplierName}\nMã phiếu nhập: ${autoInvoiceCode}\nGhi chú: ${purchaseNote}\n\nSản phẩm nhập kho:\n${detailsLines.join('\n')}`
 
         // Find or create category
         const catsRes = await getExpenseCategories(businessId)
@@ -363,26 +387,20 @@ export default function PurchasePage() {
 
         await createExpense(businessId, {
           expenseCategoryId: categoryId,
-          expenseTitle: `Nhập hàng hóa đơn ${purchaseInvoiceNumber}`,
+          expenseTitle: `Nhập hàng ngày ${purchaseDate} (${autoInvoiceCode})`,
           amount: totalProductCost,
           expenseDate: new Date(typeof purchaseDate === 'string' && !purchaseDate.endsWith('Z') ? purchaseDate + 'Z' : purchaseDate).toISOString(),
           paymentMethod: 'Cash',
           note: noteContent,
-          supplierId: purchaseSupplierId
+          supplierId: purchaseSupplierId,
+          receiptImageUrl: uploadedImageUrl
         })
 
         // Automatically update Product CostPrice & StockQuantity via Moving Weighted Average
         for (const item of purchaseItems) {
-          let lineUnitCost = item.costPrice
-          if (item.quantity > 0) {
-            let lineTotal = item.quantity * item.costPrice
-            lineTotal = lineTotal * (1 + item.taxPercent / 100)
-            lineUnitCost = lineTotal / item.quantity
-          }
-
           await updateProductCostPrice(item.itemId, {
             incomingQuantity: item.quantity,
-            incomingCostPrice: lineUnitCost
+            incomingCostPrice: item.costPrice
           })
         }
       }
@@ -433,10 +451,11 @@ export default function PurchasePage() {
   const resetPurchaseForm = () => {
     setPurchaseType('Product')
     setPurchaseSupplierId('')
-    setPurchaseInvoiceNumber('')
     setPurchaseDate(new Date().toISOString().slice(0, 10))
     setPurchaseNote('')
     setPurchaseItems([])
+    setInvoiceImageFile(null)
+    setInvoiceImagePreview(null)
   }
 
   const addLineItem = (itemId: string) => {
@@ -450,8 +469,7 @@ export default function PurchasePage() {
           itemId: itemObj.id,
           name: itemObj.name,
           quantity: 1,
-          costPrice: itemObj.estimatedPrice || 0,
-          taxPercent: 0
+          costPrice: itemObj.estimatedPrice || 0
         }
       ])
     } else {
@@ -464,8 +482,7 @@ export default function PurchasePage() {
           itemId: itemObj.id,
           name: itemObj.name,
           quantity: 1,
-          costPrice: itemObj.currentPrice || 0,
-          taxPercent: 0
+          costPrice: itemObj.currentPrice || 0
         }
       ])
     }
@@ -496,6 +513,7 @@ export default function PurchasePage() {
       amount: number
       type: 'Product' | 'Material'
       summary: string
+      receiptImageUrl?: string
       materialItems?: { id: string; name: string; quantity: number; unit: string; totalCost: number }[]
     }[] = []
 
@@ -509,6 +527,7 @@ export default function PurchasePage() {
         date: string
         supplierName: string
         amount: number
+        receiptImageUrl?: string
         items: { id: string; name: string; quantity: number; unit: string; totalCost: number }[]
       }
     >()
@@ -523,12 +542,16 @@ export default function PurchasePage() {
           date: m.purchaseDate,
           supplierName: m.supplierName || 'Vãng lai',
           amount: 0,
+          receiptImageUrl: m.receiptImageUrl,
           items: []
         })
       }
       const group = materialMap.get(key)!
       group.ids.push(m.id)
       group.amount += m.totalCost
+      if (!group.receiptImageUrl && m.receiptImageUrl) {
+        group.receiptImageUrl = m.receiptImageUrl
+      }
       group.items.push({
         id: m.id,
         name: m.ingredientName,
@@ -551,6 +574,7 @@ export default function PurchasePage() {
         amount: group.amount,
         type: 'Material',
         summary: `Nguyên liệu: ${itemSummaries}`,
+        receiptImageUrl: group.receiptImageUrl,
         materialItems: group.items
       })
     })
@@ -566,6 +590,7 @@ export default function PurchasePage() {
         supplierName: string
         amount: number
         summary: string
+        receiptImageUrl?: string
       }
     >()
 
@@ -586,7 +611,8 @@ export default function PurchasePage() {
             date: e.expenseDate,
             supplierName: e.supplierName || 'Vãng lai',
             amount: e.amount,
-            summary: e.note || e.expenseTitle
+            summary: e.note || e.expenseTitle,
+            receiptImageUrl: e.receiptImageUrl
           })
         }
       })
@@ -600,7 +626,8 @@ export default function PurchasePage() {
         supplierName: group.supplierName,
         amount: group.amount,
         type: 'Product',
-        summary: group.summary
+        summary: group.summary,
+        receiptImageUrl: group.receiptImageUrl
       })
     })
 
@@ -692,7 +719,19 @@ export default function PurchasePage() {
                       <tbody className='divide-y divide-gray-100 text-xs font-semibold text-gray-600'>
                         {paginatedPurchases.map(p => (
                           <tr key={p.id} className='hover:bg-[#fcfdfe] transition-colors'>
-                            <td className='py-4 px-5 text-gray-900 font-bold font-mono'>{p.invoiceNumber}</td>
+                            <td className='py-4 px-5 font-mono'>
+                              <div className='flex items-center gap-1.5'>
+                                <span className='text-gray-900 font-bold'>{p.invoiceNumber}</span>
+                                {p.receiptImageUrl && (
+                                  <span
+                                    className='inline-flex items-center text-[#D32F2F] bg-red-50 p-1 rounded-md'
+                                    title='Đã đính kèm ảnh chứng từ / hóa đơn'
+                                  >
+                                    <Receipt size={13} />
+                                  </span>
+                                )}
+                              </div>
+                            </td>
                             <td className='py-4 px-5'>
                               <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] ${
                                 p.type === 'Product'
@@ -722,11 +761,13 @@ export default function PurchasePage() {
                                       (p.ids && p.ids.includes(m.id)) ||
                                       m.id === p.id
                                     )
+                                    const firstWithImage = matched.find(m => m.receiptImageUrl)
                                     setSelectedMaterialDetail({
                                       invoiceNumber: p.invoiceNumber,
                                       date: p.date,
                                       supplierName: p.supplierName,
                                       totalAmount: p.amount,
+                                      receiptImageUrl: p.receiptImageUrl || firstWithImage?.receiptImageUrl,
                                       items: p.materialItems && p.materialItems.length > 0 ? p.materialItems : matched.map(m => ({
                                         id: m.id,
                                         name: m.ingredientName,
@@ -998,7 +1039,7 @@ export default function PurchasePage() {
 
             <form onSubmit={handleSavePurchase} className='p-6 flex flex-col gap-5 max-h-[85vh] overflow-y-auto'>
               {/* Form Metadata */}
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-4 border-b border-gray-100 pb-5'>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-gray-100 pb-5'>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[12.5px] font-bold text-gray-600'>Loại hàng hóa nhập <span className='text-red-500'>*</span></label>
                   <select
@@ -1063,18 +1104,6 @@ export default function PurchasePage() {
                     ))}
                   </select>
                 </div>
-
-                <div className='flex flex-col gap-1.5'>
-                  <label className='text-[12.5px] font-bold text-gray-600'>Số hóa đơn nhập hàng <span className='text-red-500'>*</span></label>
-                  <input
-                    type='text'
-                    required
-                    placeholder='Ví dụ: HDNK-003...'
-                    value={purchaseInvoiceNumber}
-                    onChange={e => setPurchaseInvoiceNumber(e.target.value)}
-                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] font-semibold text-gray-800 font-mono'
-                  />
-                </div>
               </div>
 
               {/* Add item to invoice */}
@@ -1122,17 +1151,15 @@ export default function PurchasePage() {
                       <thead>
                         <tr className='bg-slate-100 text-slate-600 font-bold border-b border-slate-200 select-none sticky top-0 z-10 shadow-xs'>
                           <th className='p-3'>Tên mặt hàng</th>
-                          <th className='p-3 text-center w-20'>Số lượng</th>
-                          <th className='p-3 text-right w-28'>Giá mua (đ)</th>
-                          <th className='p-3 text-center w-20'>VAT (%)</th>
-                          <th className='p-3 text-right w-28'>Thành tiền</th>
+                          <th className='p-3 text-center w-24'>Số lượng</th>
+                          <th className='p-3 text-right w-36'>Giá mua (đ)</th>
+                          <th className='p-3 text-right w-36'>Thành tiền</th>
                           <th className='p-3 text-center w-12'></th>
                         </tr>
                       </thead>
                       <tbody className='divide-y divide-slate-100 bg-white'>
                         {purchaseItems.map((item, idx) => {
-                          const itemSubtotal = item.quantity * item.costPrice
-                          const itemTotal = itemSubtotal * (1 + item.taxPercent / 100)
+                          const itemTotal = item.quantity * item.costPrice
 
                           return (
                             <tr key={item.itemId} className='hover:bg-slate-50/50 transition-colors'>
@@ -1143,7 +1170,7 @@ export default function PurchasePage() {
                                   min='1'
                                   value={item.quantity}
                                   onChange={e => updateLineItem(idx, { quantity: parseInt(e.target.value) || 1 })}
-                                  className='w-14 border border-slate-200 rounded px-1.5 py-1 text-center font-bold text-slate-800'
+                                  className='w-16 border border-slate-200 rounded px-1.5 py-1 text-center font-bold text-slate-800'
                                 />
                               </td>
                               <td className='p-3 text-right'>
@@ -1152,20 +1179,8 @@ export default function PurchasePage() {
                                   min='0'
                                   value={item.costPrice}
                                   onChange={e => updateLineItem(idx, { costPrice: parseFloat(e.target.value) || 0 })}
-                                  className='w-24 border border-slate-200 rounded px-1.5 py-1 text-right font-bold text-slate-800 font-mono'
+                                  className='w-28 border border-slate-200 rounded px-1.5 py-1 text-right font-bold text-slate-800 font-mono'
                                 />
-                              </td>
-                              <td className='p-3 text-center'>
-                                <select
-                                  value={item.taxPercent}
-                                  onChange={e => updateLineItem(idx, { taxPercent: parseInt(e.target.value) || 0 })}
-                                  className='border border-slate-200 rounded px-1.5 py-1 font-bold text-slate-800 cursor-pointer bg-white'
-                                >
-                                  <option value={0}>0%</option>
-                                  <option value={5}>5%</option>
-                                  <option value={8}>8%</option>
-                                  <option value={10}>10%</option>
-                                </select>
                               </td>
                               <td className='p-3 text-right font-black text-slate-800 font-mono'>
                                 {formatPrice(itemTotal)} đ
@@ -1215,6 +1230,71 @@ export default function PurchasePage() {
                 </div>
               </div>
 
+              {/* Receipt Image Upload */}
+              <div className='flex flex-col gap-2 border-t border-gray-100 pt-5'>
+                <div className='flex items-center justify-between'>
+                  <label className='text-[12.5px] font-bold text-gray-700 flex items-center gap-1.5'>
+                    <Receipt className='size-4 text-[#D32F2F]' />
+                    <span>Ảnh chụp hóa đơn / Phiếu thu</span>
+                    <span className='text-[11px] font-normal text-gray-400'>(Tùy chọn)</span>
+                  </label>
+                  {invoiceImagePreview && (
+                    <button
+                      type='button'
+                      onClick={() => {
+                        setInvoiceImageFile(null)
+                        setInvoiceImagePreview(null)
+                      }}
+                      className='text-[11.5px] text-red-500 hover:text-red-700 font-bold flex items-center gap-1 cursor-pointer transition-colors'
+                    >
+                      <X size={13} /> Xóa ảnh đã chọn
+                    </button>
+                  )}
+                </div>
+
+                <label
+                  htmlFor='purchase-receipt-image'
+                  className={`border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition-all ${
+                    invoiceImagePreview
+                      ? 'border-gray-300 bg-slate-50/50 p-2 min-h-44 relative group hover:border-[#D32F2F]'
+                      : 'border-gray-200 hover:border-[#D32F2F] hover:bg-red-50/20 py-6 px-4 bg-slate-50/40'
+                  }`}
+                >
+                  {invoiceImagePreview ? (
+                    <div className='relative w-full flex flex-col items-center justify-center py-2'>
+                      <img
+                        src={invoiceImagePreview}
+                        alt='Receipt Preview'
+                        className='max-h-52 max-w-full object-contain rounded-lg shadow-xs border border-gray-200 bg-white'
+                      />
+                      <div className='absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center text-white text-xs font-bold gap-2'>
+                        <ImagePlus size={16} /> Thay đổi ảnh hóa đơn
+                      </div>
+                    </div>
+                  ) : (
+                    <div className='flex flex-col items-center text-center'>
+                      <div className='p-3 rounded-full bg-red-50 text-[#D32F2F] mb-2.5 shadow-2xs'>
+                        <ImagePlus size={22} />
+                      </div>
+                      <p className='text-[13px] font-bold text-gray-700'>
+                        Kéo thả hoặc nhấp để tải lên ảnh hóa đơn / chứng từ
+                      </p>
+                      <p className='text-[11.5px] text-gray-400 mt-1 font-medium'>
+                        Hỗ trợ JPG, PNG, WEBP (Tối đa 5MB)
+                      </p>
+                    </div>
+                  )}
+
+                  <input
+                    id='purchase-receipt-image'
+                    type='file'
+                    accept='image/*'
+                    hidden
+                    onChange={handleInvoiceImageChange}
+                  />
+                </label>
+              </div>
+
               {/* Totals Summary */}
               {purchaseItems.length > 0 && (
                 <div className='bg-red-50/30 rounded-[12px] border border-red-100/50 p-4 flex justify-between items-center select-none'>
@@ -1222,8 +1302,7 @@ export default function PurchasePage() {
                   <span className='font-black text-[#D32F2F] text-lg font-mono'>
                     {formatPrice(
                       purchaseItems.reduce((acc, curr) => {
-                        const sub = curr.quantity * curr.costPrice
-                        return acc + sub * (1 + curr.taxPercent / 100)
+                        return acc + curr.quantity * curr.costPrice
                       }, 0)
                     )} đ
                   </span>
@@ -1411,6 +1490,43 @@ export default function PurchasePage() {
                         )}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Attached Receipt Image */}
+              {(selectedExpenseDetail?.receiptImageUrl || selectedMaterialDetail?.receiptImageUrl) && (
+                <div className='flex flex-col gap-2.5 bg-slate-50/80 border border-slate-200/80 rounded-xl p-4'>
+                  <div className='flex items-center justify-between'>
+                    <span className='flex items-center gap-1.5 text-xs font-black text-gray-800 uppercase tracking-wide'>
+                      <Receipt size={14} className='text-[#D32F2F]' />
+                      Ảnh chụp hóa đơn / chứng từ đính kèm
+                    </span>
+                    <a
+                      href={selectedExpenseDetail?.receiptImageUrl || selectedMaterialDetail?.receiptImageUrl}
+                      target='_blank'
+                      rel='noopener noreferrer'
+                      className='inline-flex items-center gap-1 text-[#D32F2F] hover:text-[#B71C1C] hover:underline text-xs font-bold'
+                    >
+                      <ExternalLink size={12} /> Mở ảnh gốc
+                    </a>
+                  </div>
+
+                  <div
+                    onClick={() => {
+                      const url = selectedExpenseDetail?.receiptImageUrl || selectedMaterialDetail?.receiptImageUrl
+                      if (url) window.open(url, '_blank')
+                    }}
+                    className='relative rounded-xl overflow-hidden border border-gray-200 bg-white cursor-pointer group flex justify-center items-center p-2 min-h-40 max-h-80 hover:border-[#D32F2F] transition-all'
+                  >
+                    <img
+                      src={selectedExpenseDetail?.receiptImageUrl || selectedMaterialDetail?.receiptImageUrl}
+                      alt='Receipt Image'
+                      className='max-h-76 w-auto max-w-full object-contain rounded-lg transition-transform duration-200 group-hover:scale-[1.01]'
+                    />
+                    <div className='absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1.5 rounded-lg'>
+                      <ExternalLink size={14} /> Nhấp để xem kích thước đầy đủ
+                    </div>
                   </div>
                 </div>
               )}

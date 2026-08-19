@@ -230,6 +230,10 @@ export default function EInvoiceConfig() {
     return quotaRemaining <= quotaWarningThreshold
   }, [quotaRemaining, quotaWarningThreshold])
 
+  const availableTemplates = useMemo(() => {
+    return templates.filter(t => t.template_code !== '1')
+  }, [templates])
+
   return (
     <div className='bg-[#f8f9fa] pt-6 pb-12 min-h-[calc(100vh-51px)] px-6'>
       <div className='max-w-5xl mx-auto'>
@@ -367,7 +371,7 @@ export default function EInvoiceConfig() {
                         <Loader2 className='animate-spin text-[#D32F2F] size-6' />
                         <span className='text-xs text-gray-500 font-semibold ml-2'>Đang tải mẫu hóa đơn...</span>
                       </div>
-                    ) : selectedProviderId && templates.length > 0 ? (
+                    ) : selectedProviderId && availableTemplates.length > 0 ? (
                       <div className='flex flex-col gap-1.5'>
                         <label className='text-[13px] font-bold text-gray-600'>
                           Mẫu hóa đơn & Ký hiệu <span className='text-red-500'>*</span>
@@ -377,7 +381,7 @@ export default function EInvoiceConfig() {
                           onChange={(e) => {
                             const code = e.target.value
                             setSelectedTemplateCode(code)
-                            const matchedTemplate = templates.find(t => t.template_code === code)
+                            const matchedTemplate = availableTemplates.find(t => t.template_code === code)
                             if (matchedTemplate) {
                               setSelectedSymbol(matchedTemplate.invoice_series)
                             } else {
@@ -387,7 +391,7 @@ export default function EInvoiceConfig() {
                           className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-[#D32F2F] bg-white transition-all font-medium text-gray-800 cursor-pointer'
                         >
                           <option value=''>-- Chọn mẫu hóa đơn --</option>
-                          {templates.map(t => (
+                          {availableTemplates.map(t => (
                             <option key={t.template_code} value={t.template_code}>
                               {t.template_code} ({t.invoice_series}) - {t.invoice_label}
                             </option>

@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from 'react'
-import { ArrowUpCircle, ArrowDownCircle, MoreVertical, RotateCcw, Plus, ChevronRight } from 'lucide-react'
+import { ArrowUpCircle, ArrowDownCircle, MoreVertical, RotateCcw, Plus, ChevronRight, ImagePlus, Loader2 } from 'lucide-react'
 import { useBusiness } from '../../../contexts/BusinessContext'
 import { getAllExpenses, createExpense, getExpenseCategories, updateExpense, deleteExpense, createExpenseCategory } from '../../../apis/expense.api'
 import { getAllIncomes, createIncome, getIncomeCategories, updateIncome, deleteIncome, createIncomeCategory } from '../../../apis/income.api'
+import { uploadImage } from '../../../apis/image.api'
 import { toast } from 'react-toastify'
 import type { ExpenseCategory } from '../../../types/expense.type'
 import type { IncomeCategory } from '../../../types/income.type'
@@ -21,6 +22,7 @@ interface ExpenseRecord {
   rawAmount: number
   paymentMethod: string
   rawPaymentMethod: string
+  imageUrl?: string
 }
 
 
@@ -87,6 +89,16 @@ function FilterGroup({
 
 export default function Expense() {
   const { businessId } = useBusiness()
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [addExpenseImage, setAddExpenseImage] = useState<File | null>(null)
+  const [addExpenseImagePreview, setAddExpenseImagePreview] = useState<string | null>(null)
+
+  const [addIncomeImage, setAddIncomeImage] = useState<File | null>(null)
+  const [addIncomeImagePreview, setAddIncomeImagePreview] = useState<string | null>(null)
+
+  const [editImage, setEditImage] = useState<File | null>(null)
+  const [editImagePreview, setEditImagePreview] = useState<string | null>(null)
 
   const [priceFilter, setPriceFilter] = useState('all')
   const [expenseCategoryFilter, setExpenseCategoryFilter] = useState('Tất cả')
@@ -182,7 +194,8 @@ export default function Expense() {
           originalDateStr: new Date(typeof e.expenseDate === 'string' && !e.expenseDate.endsWith('Z') ? e.expenseDate + 'Z' : e.expenseDate).toISOString().split('T')[0],
           rawAmount: e.amount,
           paymentMethod: pm,
-          rawPaymentMethod: e.paymentMethod || 'Cash'
+          rawPaymentMethod: e.paymentMethod || 'Cash',
+          imageUrl: e.receiptImageUrl
         }
       })
 
@@ -201,7 +214,8 @@ export default function Expense() {
           originalDateStr: new Date(typeof e.incomeDate === 'string' && !e.incomeDate.endsWith('Z') ? e.incomeDate + 'Z' : e.incomeDate).toISOString().split('T')[0],
           rawAmount: e.amount,
           paymentMethod: pm,
-          rawPaymentMethod: e.paymentMethod || 'Cash'
+          rawPaymentMethod: e.paymentMethod || 'Cash',
+          imageUrl: e.receiptImageUrl
         }
       })
 
@@ -319,18 +333,28 @@ export default function Expense() {
     }
 
     try {
+      setIsSubmitting(true)
+      let receiptImageUrl = undefined
+      if (addExpenseImage) {
+        receiptImageUrl = await uploadImage(addExpenseImage)
+      }
       await createExpense(businessId, {
         expenseTitle: fd.get('title') as string,
         expenseCategoryId: fd.get('categoryId') as string,
         amount: Number(fd.get('amount')),
         paymentMethod: fd.get('paymentMethod') as string,
-        expenseDate: selectedDateStr
+        expenseDate: selectedDateStr,
+        receiptImageUrl
       })
       toast.success('Thêm khoản chi thành công!')
       setIsAddExpenseOpen(false)
+      setAddExpenseImage(null)
+      setAddExpenseImagePreview(null)
       fetchData()
     } catch (error) {
       toast.error('Có lỗi xảy ra khi thêm khoản chi')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -349,18 +373,28 @@ export default function Expense() {
     }
 
     try {
+      setIsSubmitting(true)
+      let receiptImageUrl = undefined
+      if (addIncomeImage) {
+        receiptImageUrl = await uploadImage(addIncomeImage)
+      }
       await createIncome(businessId, {
         incomeTitle: fd.get('title') as string,
         incomeCategoryId: fd.get('categoryId') as string,
         amount: Number(fd.get('amount')),
         paymentMethod: fd.get('paymentMethod') as string,
-        incomeDate: selectedDateStr
+        incomeDate: selectedDateStr,
+        receiptImageUrl
       })
       toast.success('Thêm khoản thu thành công!')
       setIsAddIncomeOpen(false)
+      setAddIncomeImage(null)
+      setAddIncomeImagePreview(null)
       fetchData()
     } catch (error) {
       toast.error('Có lỗi xảy ra khi thêm khoản thu')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -376,13 +410,19 @@ export default function Expense() {
     }
 
     try {
+      setIsSubmitting(true)
+      let receiptImageUrl = editingRecord.imageUrl
+      if (editImage) {
+        receiptImageUrl = await uploadImage(editImage)
+      }
       if (editingRecord.type === 'expense') {
         await updateExpense(editingRecord.id, {
           expenseTitle: fd.get('title') as string,
           expenseCategoryId: fd.get('categoryId') as string,
           amount: Number(fd.get('amount')),
           paymentMethod: fd.get('paymentMethod') as string,
-          expenseDate: selectedDateStr
+          expenseDate: selectedDateStr,
+          receiptImageUrl
         })
       } else {
         await updateIncome(editingRecord.id, {
@@ -390,14 +430,19 @@ export default function Expense() {
           incomeCategoryId: fd.get('categoryId') as string,
           amount: Number(fd.get('amount')),
           paymentMethod: fd.get('paymentMethod') as string,
-          incomeDate: selectedDateStr
+          incomeDate: selectedDateStr,
+          receiptImageUrl
         })
       }
       toast.success('Cập nhật giao dịch thành công!')
       setIsEditModalOpen(false)
+      setEditImage(null)
+      setEditImagePreview(null)
       fetchData()
     } catch (error) {
       toast.error('Có lỗi xảy ra khi cập nhật giao dịch')
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -578,7 +623,7 @@ export default function Expense() {
                           {r.amount.toLocaleString('vi-VN')}
                         </td>
                         <td className='py-3.5 px-3'>
-                          <button onClick={() => { setEditingRecord(r); setIsEditModalOpen(true); }} className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
+                          <button onClick={() => { setEditingRecord(r); setIsEditModalOpen(true); setEditImage(null); setEditImagePreview(r.imageUrl || null); }} className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
                             <MoreVertical size={14} />
                           </button>
                         </td>
@@ -674,7 +719,7 @@ export default function Expense() {
                           +{fmt(r.amount)}
                         </td>
                         <td className='py-3.5 px-3'>
-                          <button onClick={() => { setEditingRecord(r); setIsEditModalOpen(true); }} className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
+                          <button onClick={() => { setEditingRecord(r); setIsEditModalOpen(true); setEditImage(null); setEditImagePreview(r.imageUrl || null); }} className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
                             <MoreVertical size={14} />
                           </button>
                         </td>
@@ -777,9 +822,39 @@ export default function Expense() {
                   <input name='date' type='date' max={new Date().toISOString().split('T')[0]} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800' />
                 </div>
               </div>
+              
+              <div className='flex flex-col gap-2'>
+                <label className='text-[13px] font-bold text-gray-600'>Hình ảnh chứng từ</label>
+                <label className='border-2 border-dashed border-gray-300 rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:border-orange-400 transition overflow-hidden relative bg-gray-50/50'>
+                  {addExpenseImagePreview ? (
+                    <img src={addExpenseImagePreview} className='h-full w-full object-contain' />
+                  ) : (
+                    <>
+                      <ImagePlus className='w-6 h-6 text-gray-400 mb-2' />
+                      <p className='text-xs font-medium text-gray-500'>Tải lên hình ảnh</p>
+                    </>
+                  )}
+                  <input
+                    type='file'
+                    accept='image/*'
+                    hidden
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        setAddExpenseImage(file)
+                        setAddExpenseImagePreview(URL.createObjectURL(file))
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+
               <div className='flex items-center justify-end gap-3 mt-1 pt-4 border-t border-gray-100'>
                 <button type='button' onClick={() => setIsAddExpenseOpen(false)} className='px-6 py-2 border-2 border-gray-200 text-gray-600 text-[13px] font-bold rounded-[8px] hover:bg-gray-50 transition-colors'>Hủy</button>
-                <button type='submit' className='px-6 py-2 text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs' style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}>Lưu khoản chi</button>
+                <button type='submit' disabled={isSubmitting} className='px-6 py-2 text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs flex items-center gap-2 disabled:opacity-70' style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}>
+                  {isSubmitting && <Loader2 className='size-4 animate-spin' />}
+                  Lưu khoản chi
+                </button>
               </div>
             </form>
           </div>
@@ -829,9 +904,39 @@ export default function Expense() {
                   <input name='date' type='date' max={new Date().toISOString().split('T')[0]} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800' />
                 </div>
               </div>
+
+              <div className='flex flex-col gap-2'>
+                <label className='text-[13px] font-bold text-gray-600'>Hình ảnh chứng từ</label>
+                <label className='border-2 border-dashed border-gray-300 rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-400 transition overflow-hidden relative bg-gray-50/50'>
+                  {addIncomeImagePreview ? (
+                    <img src={addIncomeImagePreview} className='h-full w-full object-contain' />
+                  ) : (
+                    <>
+                      <ImagePlus className='w-6 h-6 text-gray-400 mb-2' />
+                      <p className='text-xs font-medium text-gray-500'>Tải lên hình ảnh</p>
+                    </>
+                  )}
+                  <input
+                    type='file'
+                    accept='image/*'
+                    hidden
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        setAddIncomeImage(file)
+                        setAddIncomeImagePreview(URL.createObjectURL(file))
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+
               <div className='flex items-center justify-end gap-3 mt-1 pt-4 border-t border-gray-100'>
                 <button type='button' onClick={() => setIsAddIncomeOpen(false)} className='px-6 py-2 border-2 border-gray-200 text-gray-600 text-[13px] font-bold rounded-[8px] hover:bg-gray-50 transition-colors'>Hủy</button>
-                <button type='submit' className='px-6 py-2 text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs' style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>Lưu khoản thu</button>
+                <button type='submit' disabled={isSubmitting} className='px-6 py-2 text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs flex items-center gap-2 disabled:opacity-70' style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
+                  {isSubmitting && <Loader2 className='size-4 animate-spin' />}
+                  Lưu khoản thu
+                </button>
               </div>
             </form>
           </div>
@@ -882,11 +987,41 @@ export default function Expense() {
                   <input name='date' type='date' defaultValue={editingRecord.originalDateStr} max={new Date().toISOString().split('T')[0]} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`} />
                 </div>
               </div>
+
+              <div className='flex flex-col gap-2'>
+                <label className='text-[13px] font-bold text-gray-600'>Hình ảnh chứng từ</label>
+                <label className={`border-2 border-dashed border-gray-300 rounded-xl h-32 flex flex-col items-center justify-center cursor-pointer transition overflow-hidden relative bg-gray-50/50 ${editingRecord.type === 'expense' ? 'hover:border-orange-400' : 'hover:border-emerald-400'}`}>
+                  {editImagePreview ? (
+                    <img src={editImagePreview} className='h-full w-full object-contain' />
+                  ) : (
+                    <>
+                      <ImagePlus className='w-6 h-6 text-gray-400 mb-2' />
+                      <p className='text-xs font-medium text-gray-500'>Tải lên hình ảnh</p>
+                    </>
+                  )}
+                  <input
+                    type='file'
+                    accept='image/*'
+                    hidden
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        setEditImage(file)
+                        setEditImagePreview(URL.createObjectURL(file))
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+
               <div className='flex items-center justify-between gap-3 mt-1 pt-4 border-t border-gray-100'>
                 <button type='button' onClick={() => setIsConfirmDeleteOpen(true)} className='px-6 py-2 border-2 border-red-100 text-red-500 hover:bg-red-50 text-[13px] font-bold rounded-[8px] transition-colors'>Xóa</button>
                 <div className='flex gap-3'>
                   <button type='button' onClick={() => setIsEditModalOpen(false)} className='px-6 py-2 border-2 border-gray-200 text-gray-600 text-[13px] font-bold rounded-[8px] hover:bg-gray-50 transition-colors'>Hủy</button>
-                  <button type='submit' className='px-6 py-2 text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs' style={{ background: editingRecord.type === 'expense' ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>Lưu</button>
+                  <button type='submit' disabled={isSubmitting} className='px-6 py-2 text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs flex items-center gap-2 disabled:opacity-70' style={{ background: editingRecord.type === 'expense' ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>
+                    {isSubmitting && <Loader2 className='size-4 animate-spin' />}
+                    Lưu
+                  </button>
                 </div>
               </div>
             </form>

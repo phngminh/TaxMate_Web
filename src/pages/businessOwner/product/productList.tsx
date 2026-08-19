@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect, type ChangeEvent } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
-import { Search, Plus, ChevronDown, Scan, Trash2, Edit2, ShoppingBag, RotateCcw, Package, AlertTriangle, Lock, Unlock, ArrowUp, ArrowDown } from 'lucide-react'
+import { Search, Plus, ChevronDown, Scan, Trash2, Edit2, ShoppingBag, RotateCcw, Package, AlertTriangle, Lock, Unlock, ArrowUp, ArrowDown, Eye, X } from 'lucide-react'
 import type { Product, ProductForm } from '../../../types/product.type'
 import { createProduct, deleteProduct, getAllProducts, toggleProductStatus, updateProduct } from '../../../apis/product.api'
 import { useBusiness } from '../../../contexts/BusinessContext'
@@ -68,6 +68,8 @@ export default function Product() {
   const [showQuickCategoryForm, setShowQuickCategoryForm] = useState(false)
   const [quickCategoryName, setQuickCategoryName] = useState('')
 
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
+
   const [isCreateCategoryModalOpen, setIsCreateCategoryModalOpen] = useState(false)
   const [categoryForm, setCategoryForm] = useState({
     name: '',
@@ -128,6 +130,7 @@ export default function Product() {
         statusParam,
         categoryParam
       )
+      console.log('Fetched products:', res.data.items)
 
       setProducts(res.data.items)
       setTotalPages(res.data.totalPages)
@@ -750,13 +753,35 @@ export default function Product() {
                         >
                           <td className='py-3 px-6'>
                             {product.imageUrl ? (
-                              <img
-                                src={product.imageUrl}
-                                alt={product.name}
-                                className='size-20 rounded-xl object-cover border border-gray-200'
-                              />
+                              <div
+                                className='relative size-20 rounded-xl overflow-hidden border border-gray-200 group/image'
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <img
+                                  src={product.imageUrl}
+                                  alt={product.name}
+                                  className='size-full object-cover transition-transform duration-200 group-hover/image:scale-105'
+                                />
+                                <button
+                                  type='button'
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setPreviewImage(product.imageUrl ?? null)
+                                  }}
+                                  className='absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover/image:opacity-100 transition-opacity duration-200 cursor-pointer'
+                                  title='Xem ảnh'
+                                >
+                                  <Eye
+                                    size={22}
+                                    className='text-white drop-shadow-md'
+                                  />
+                                </button>
+                              </div>
                             ) : (
-                              <div className='size-20 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center'>
+                              <div
+                                className='size-20 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center'
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 <Package
                                   size={24}
                                   className='text-blue-500'
@@ -902,28 +927,13 @@ export default function Product() {
                                 >
                                   <div className='py-6 px-4'>
                                     <div className='flex gap-6 mb-8'>
-                                      <div className='w-24 h-24 shrink-0 rounded-xl bg-gray-50 flex items-center justify-center border border-gray-200 p-1'>
-                                        {product.imageUrl ? (
-                                          <img
-                                            src={product.imageUrl}
-                                            alt={product.name}
-                                            className='w-full h-full object-cover rounded-lg'
-                                          />
-                                        ) : (
-                                          <Package
-                                            size={32}
-                                            className='text-gray-300'
-                                          />
-                                        )}
-                                      </div>
-
                                       <div className='flex-1'>
                                         <h3 className='text-[16px] font-bold text-gray-900 mb-2'>
                                           {product.name}
                                         </h3>
                                         <div className='flex gap-2 mb-6'>
-                                          {product.hasRecipe && (
-                                            <span className='px-2 py-0.5 bg-gray-100 text-gray-600 rounded text-[12px] font-medium border border-gray-200'>
+                                          {product.hasRecipe && currentBusiness?.mainCategoryName === 'FNB' && (
+                                            <span className='px-2 py-0.5 bg-blue-100 text-blue-600 border border-blue-200 rounded text-[12px] font-medium'>
                                               Món chế biến
                                             </span>
                                           )}
@@ -951,7 +961,7 @@ export default function Product() {
                                         <div className='grid grid-cols-4 gap-y-6 gap-x-4'>
                                           <div>
                                             <div className='text-[13px] text-gray-500 mb-1'>
-                                              Mã món
+                                              Mã sản phẩm
                                             </div>
                                             <div className='font-semibold text-[14px] text-gray-900'>
                                               {product.productCode || 'N/A'}
@@ -960,7 +970,7 @@ export default function Product() {
 
                                           <div>
                                             <div className='text-[13px] text-gray-500 mb-1'>
-                                              Nhóm món
+                                              Danh mục
                                             </div>
                                             <div className='font-semibold text-[14px] text-gray-900'>
                                               {categories.find(
@@ -1260,6 +1270,31 @@ export default function Product() {
                 Xác nhận
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {previewImage && (
+        <div
+          className='fixed inset-0 z-999 bg-black/70 flex items-center justify-center p-6'
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            className='relative max-w-3xl max-h-[90vh]'
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type='button'
+              onClick={() => setPreviewImage(null)}
+              className='absolute -top-3 -right-3 size-9 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors'
+            >
+              <X size={20} />
+            </button>
+            <img
+              src={previewImage}
+              alt='Product preview'
+              className='max-w-full max-h-[85vh] rounded-xl object-contain shadow-2xl'
+            />
           </div>
         </div>
       )}
