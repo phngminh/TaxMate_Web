@@ -1496,7 +1496,7 @@ export default function POS() {
                     <Utensils className='text-[#b90a0a] size-7 stroke-[1.5]' />
                   )}
                 </div>
-                <div className='text-[12px] font-semibold text-slate-700 mb-1 line-clamp-2 min-h-[32px] text-center leading-snug flex items-center justify-center'>
+                <div className='text-[12px] font-semibold text-slate-700 mb-1 line-clamp-2 min-h-8 text-center leading-snug flex items-center justify-center'>
                   {product.name}
                 </div>
                 <div className='text-[12.5px] font-black text-slate-900 text-center mt-auto'>
@@ -1603,7 +1603,7 @@ export default function POS() {
               <ClipboardList size={13} className='shrink-0' />
               <span>Đơn chờ</span>
               {openDraftCount > 0 && (
-                <span className='absolute -top-1.5 -right-1.5 bg-[#b90a0a] text-white text-[9px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm animate-pulse'>
+                <span className='absolute -top-1.5 -right-1.5 bg-[#b90a0a] text-white text-[9px] font-black min-w-4 h-4 px-1 rounded-full flex items-center justify-center shadow-sm animate-pulse'>
                   {openDraftCount > 9 ? '9+' : openDraftCount}
                 </span>
               )}
@@ -1631,7 +1631,7 @@ export default function POS() {
 
             {/* Nút Home */}
             <button
-              onClick={() => navigate(path.BUSINESS_OWNER_HOME)}
+              onClick={() => navigate(-1)}
               className='p-1.5 rounded-md text-white/80 hover:text-white hover:bg-white/20 transition-all cursor-pointer'
               title='Về trang chủ quản lý'
             >
@@ -1706,7 +1706,7 @@ export default function POS() {
                     >
                       <Minus className='size-3 stroke-[2.5]' />
                     </button>
-                    <span className='min-w-[24px] px-1 text-center font-bold text-slate-800 text-xs tabular-nums'>
+                    <span className='min-w-6 px-1 text-center font-bold text-slate-800 text-xs tabular-nums'>
                       {item.quantity}
                     </span>
                     <button
@@ -2419,7 +2419,7 @@ export default function POS() {
           />
 
           {/* Drawer slide-in from right */}
-          <div className='fixed right-0 top-0 bottom-0 w-[360px] bg-white z-50 shadow-[-8px_0_32px_rgba(0,0,0,0.15)] flex flex-col animate-in slide-in-from-right duration-250'>
+          <div className='fixed right-0 top-0 bottom-0 w-90 bg-white z-50 shadow-[-8px_0_32px_rgba(0,0,0,0.15)] flex flex-col animate-in slide-in-from-right duration-250'>
             {/* Drawer Header */}
             <div className='bg-[#004795] px-5 py-4 flex items-center justify-between shrink-0 select-none'>
               <div className='flex items-center gap-2.5'>
