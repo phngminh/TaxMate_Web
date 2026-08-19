@@ -1,11 +1,17 @@
 export type TaxThresholdStatus =
   | 'NotRequired'
-  | 'Required'
+  | 'RequiredEInvoice'
 
 export type TaxQuarterApiStatus =
   | 'Completed'
   | 'Current'
   | 'Upcoming'
+
+export interface TaxDashboardBusinessRevenue {
+  businessId: string
+  businessName: string
+  revenue: number
+}
 
 export interface TaxDashboardApiResponse {
   year: number
@@ -29,6 +35,8 @@ export interface TaxDashboardApiResponse {
     revenue: number
     status: TaxQuarterApiStatus
   }[]
+
+  businesses: TaxDashboardBusinessRevenue[]
 }
 
 export type TaxQuarterUiStatus =
@@ -42,6 +50,12 @@ export interface TaxQuarter {
   revenueText: string
   statusText: string
   status: TaxQuarterUiStatus
+}
+
+export interface TaxDashboardBusinessUi {
+  businessId: string
+  businessName: string
+  revenue: number
 }
 
 export interface TaxDashboardUiData {
@@ -60,4 +74,6 @@ export interface TaxDashboardUiData {
   forecastBasedOn: string
 
   quarters: TaxQuarter[]
+
+  businesses: TaxDashboardBusinessUi[]
 }

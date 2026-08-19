@@ -10,7 +10,6 @@ import {
 } from 'lucide-react'
 import {
   useEffect,
-  useMemo,
   useState
 } from 'react'
 import {
@@ -92,6 +91,7 @@ export default function TaxDashboard() {
       if (!businessId) {
         setDashboard(null)
         setTaxPeriods([])
+        setIsLoading(false)
         return
       }
 
@@ -99,6 +99,17 @@ export default function TaxDashboard() {
         setIsLoading(true)
         setErrorMessage(null)
 
+        /*
+        * Dashboard API mới đã aggregate theo Owner.
+        *
+        * Chỉ cần gọi 1 lần với businessId hiện tại.
+        * Backend tự:
+        *
+        * businessId
+        *   -> BusinessProfile
+        *   -> OwnerId
+        *   -> aggregate toàn Owner
+        */
         const [
           dashboardResponse,
           taxPeriodResponse
@@ -108,6 +119,10 @@ export default function TaxDashboard() {
             year: currentYear
           }),
 
+          /*
+          * TaxPeriod vẫn đang thuộc BusinessProfile,
+          * nên phần này vẫn lấy theo business đang chọn.
+          */
           getBusinessTaxPeriods({
             businessId,
             year: currentYear,
@@ -115,7 +130,9 @@ export default function TaxDashboard() {
           })
         ])
 
-        if (!active) return
+        if (!active) {
+          return
+        }
 
         setDashboard(
           mapTaxDashboardApiToUi(
@@ -123,9 +140,13 @@ export default function TaxDashboard() {
           )
         )
 
-        setTaxPeriods(taxPeriodResponse)
+        setTaxPeriods(
+          taxPeriodResponse
+        )
       } catch (error) {
-        if (!active) return
+        if (!active) {
+          return
+        }
 
         if (axios.isAxiosError(error)) {
           console.error(
@@ -133,10 +154,13 @@ export default function TaxDashboard() {
             {
               status:
                 error.response?.status,
+
               data:
                 error.response?.data,
+
               url:
                 error.config?.url,
+
               params:
                 error.config?.params
             }
@@ -168,39 +192,44 @@ export default function TaxDashboard() {
     currentYear
   ])
 
-  const progressWidth = useMemo(() => {
-    if (!dashboard) {
-      return 0
+  function findQuarterTaxPeriod(
+      quarter: number
+    ) {
+      return taxPeriods.find(
+        (period) =>
+          period.periodType ===
+            'Quarterly' &&
+          period.year === currentYear &&
+          period.quarter === quarter
+      )
     }
 
-    return Math.min(
-      Math.max(
-        dashboard.progressPercentage,
-        0
-      ),
-      100
-    )
-  }, [dashboard])
-
-  function findQuarterTaxPeriodId(
-    quarter: number
-  ) {
-    return taxPeriods.find(
-      (period) =>
-        period.periodType ===
-          'Quarterly' &&
-        period.year === currentYear &&
-        period.quarter === quarter
-    )?.id
-  }
-
-  function handleOpenQuarter(
+    function handleOpenQuarter(
     taxPeriodId?: string
   ) {
+    if (!dashboard) {
+      return
+    }
+
+    /*
+    * BE là source of truth.
+    */
+    if (
+      dashboard.accumulatedRevenue <=
+      dashboard.thresholdAmount
+    ) {
+      toast.info(
+        'Tổng doanh thu của chủ hộ chưa vượt ngưỡng 1 tỷ đồng. Bạn hiện chỉ có thể theo dõi doanh thu theo quý.'
+      )
+
+      return
+    }
+
     if (!taxPeriodId) {
       toast.info(
         'Không tìm thấy kỳ thuế cho quý này.'
       )
+
       return
     }
 
@@ -286,9 +315,41 @@ export default function TaxDashboard() {
     )
   }
 
+  const thresholdAmount =
+    dashboard.thresholdAmount
+
+  /*
+  * Không tự suy luận nữa.
+  * BE đã quyết định Required / NotRequired.
+  */
   const isRequired =
-    dashboard.thresholdStatus ===
-    'Required'
+    dashboard.accumulatedRevenue >
+    dashboard.thresholdAmount
+
+  /*
+  * Có thể > 100%, nhưng thanh progress
+  * chỉ rộng tối đa 100%.
+  */
+  const progressWidth =
+    Math.min(
+      Math.max(
+        dashboard.progressPercentage,
+        0
+      ),
+      100
+    )
+
+  const exceededAmount =
+    Math.max(
+      dashboard.accumulatedRevenue -
+        dashboard.thresholdAmount,
+      0
+    )
+
+  const reachedButNotExceeded =
+    !isRequired &&
+    dashboard.accumulatedRevenue >=
+      dashboard.thresholdAmount
 
   return (
     <div className='min-h-[calc(100vh-56px)] bg-[#f4f5f7] px-6 py-7'>
@@ -306,7 +367,7 @@ export default function TaxDashboard() {
             </h1>
 
             <p className='mt-1 text-sm text-gray-500'>
-              {currentBusiness?.businessName}
+              Tổng hợp toàn bộ cơ sở kinh doanh
               {' • '}
               Năm {dashboard.year}
             </p>
@@ -358,11 +419,29 @@ export default function TaxDashboard() {
           </div>
 
           <div className='flex-1'>
-            <p className='text-sm leading-6 text-gray-700'>
-              {
-                dashboard.warningMessage
-              }
-            </p>
+            <div>
+              <p
+                className={`font-extrabold ${
+                  isRequired
+                    ? 'text-red-700'
+                    : 'text-sky-700'
+                }`}
+              >
+                {isRequired
+                  ? 'Đã thuộc diện kê khai thuế theo quý'
+                  : 'Chưa thuộc diện kê khai thuế theo quý'}
+              </p>
+
+              <p className='mt-1 text-sm leading-6 text-gray-700'>
+                {isRequired
+                  ? `Tổng doanh thu của chủ hộ trong năm ${dashboard.year} đã vượt ngưỡng ${formatVnd(
+                      thresholdAmount
+                    )}. Bạn có thể thực hiện quy trình kê khai cho từng quý.`
+                  : `Tổng doanh thu của chủ hộ trong năm ${dashboard.year} hiện chưa vượt ngưỡng ${formatVnd(
+                      thresholdAmount
+                    )}. Các kỳ quý chỉ được dùng để theo dõi doanh thu và chưa thể mở quy trình kê khai.`}
+              </p>
+            </div>
 
             <button
               type='button'
@@ -385,6 +464,12 @@ export default function TaxDashboard() {
                   {dashboard.year}
                 </p>
 
+                <p className='mt-2 text-xs font-medium text-gray-400'>
+                  Tổng hợp từ{' '}
+                  {dashboard.businesses.length}{' '}
+                  cơ sở kinh doanh
+                </p>
+
                 <div className='mt-3 text-4xl font-black text-gray-900'>
                   {formatVnd(
                     dashboard.accumulatedRevenue
@@ -399,24 +484,35 @@ export default function TaxDashboard() {
                     : 'bg-green-100 text-green-700'
                 }`}
               >
-                {dashboard.statusLabel}
+                {isRequired
+                  ? 'Đã vào diện kê khai'
+                  : 'Chưa vào diện kê khai'}
               </div>
             </div>
 
             <div className='mt-8'>
               <div className='mb-3 flex flex-wrap items-center justify-between gap-3'>
                 <span className='text-sm font-semibold text-gray-500'>
-                  {
-                    dashboard.progressPercentage
-                  }
+                  {dashboard.progressPercentage}
                   % ngưỡng
                 </span>
 
-                <span className='rounded-lg bg-blue-50 px-3 py-1.5 text-sm font-bold text-gray-600'>
-                  Còn{' '}
-                  {formatRemaining(
-                    dashboard.remainingAmount
-                  )}
+                <span
+                  className={`rounded-lg px-3 py-1.5 text-sm font-bold ${
+                    isRequired
+                      ? 'bg-red-50 text-red-700'
+                      : 'bg-blue-50 text-gray-600'
+                  }`}
+                >
+                  {isRequired
+                    ? `Đã vượt ${formatRemaining(
+                        exceededAmount
+                      )}`
+                    : reachedButNotExceeded
+                      ? 'Đã chạm ngưỡng, chưa vượt'
+                      : `Còn ${formatRemaining(
+                          dashboard.remainingAmount
+                        )}`}
                 </span>
               </div>
 
@@ -471,6 +567,60 @@ export default function TaxDashboard() {
           </div>
         </div>
 
+        {/* Business revenue breakdown */}
+        {dashboard.businesses.length > 0 && (
+          <div className='mt-6 rounded-2xl bg-white p-6 shadow-sm'>
+            <div className='flex flex-wrap items-end justify-between gap-3'>
+              <div>
+                <h2 className='text-xl font-extrabold text-gray-900'>
+                  Doanh thu theo cơ sở kinh doanh
+                </h2>
+
+                <p className='mt-1 text-sm text-gray-500'>
+                  Chi tiết doanh thu đóng góp
+                  vào tổng doanh thu của chủ hộ
+                  trong năm {dashboard.year}.
+                </p>
+              </div>
+
+              <div className='text-right'>
+                <p className='text-xs font-bold uppercase tracking-wide text-gray-400'>
+                  Tổng chủ hộ
+                </p>
+
+                <p className='mt-1 text-xl font-black text-red-600'>
+                  {formatVnd(
+                    dashboard.accumulatedRevenue
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className='mt-5 grid gap-4 md:grid-cols-2'>
+              {dashboard.businesses.map(
+                (business) => (
+                  <div
+                    key={business.businessId}
+                    className='rounded-xl border border-gray-200 bg-gray-50 p-4'
+                  >
+                    <div className='flex items-start justify-between gap-4'>
+                      <p className='text-sm font-bold text-gray-800'>
+                        {business.businessName}
+                      </p>
+
+                      <p className='text-lg font-black text-gray-900'>
+                        {formatVnd(
+                          business.revenue
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Quarter analysis */}
         <div className='mt-6 rounded-2xl bg-white p-6 shadow-sm'>
           <div className='mb-5 flex items-center gap-3'>
@@ -482,32 +632,77 @@ export default function TaxDashboard() {
 
             <div>
               <h2 className='text-xl font-extrabold text-gray-900'>
-                Phân tích doanh thu theo quý
+                {isRequired
+                  ? 'Kê khai thuế theo quý'
+                  : 'Theo dõi doanh thu theo quý'}
               </h2>
 
               <p className='text-sm text-gray-500'>
-                Theo dõi doanh thu và trạng
-                thái từng kỳ thuế.
+                {isRequired
+                  ? (
+                      <>
+                        Doanh thu hiển thị theo tổng
+                        chủ hộ. Trạng thái kê khai áp
+                        dụng cho cơ sở{' '}
+                        <span className='font-bold text-gray-700'>
+                          {currentBusiness?.businessName}
+                        </span>.
+                      </>
+                    )
+                  : 'Doanh thu từng quý vẫn được hiển thị theo tổng chủ hộ, nhưng quy trình kê khai đang được khóa do chủ hộ chưa vượt ngưỡng.'}
               </p>
             </div>
           </div>
+          {!isRequired && (
+            <div className='mb-5 flex items-start gap-3 rounded-xl border border-sky-200 bg-sky-50 p-4'>
+              <AlertTriangle
+                size={20}
+                className='mt-0.5 shrink-0 text-sky-600'
+              />
 
+              <div>
+                <p className='text-sm font-bold text-sky-800'>
+                  Quy trình kê khai theo quý đang được khóa
+                </p>
+
+                <p className='mt-1 text-sm leading-6 text-sky-700'>
+                  Chủ hộ chưa vượt ngưỡng doanh thu{' '}
+                  {formatVnd(
+                    thresholdAmount
+                  )}.
+                  Bạn vẫn có thể theo dõi doanh thu
+                  của từng quý, nhưng chưa thể mở
+                  chi tiết kỳ để chốt, tính thuế hoặc
+                  tạo tờ khai.
+                </p>
+              </div>
+            </div>
+          )}
           <div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-4'>
             {dashboard.quarters.map(
-              (quarter, index) => (
-                <TaxQuarterCard
-                  key={quarter.id}
-                  quarter={quarter}
-                  taxPeriodId={
-                    findQuarterTaxPeriodId(
-                      index + 1
-                    )
-                  }
-                  onOpen={
-                    handleOpenQuarter
-                  }
-                />
-              )
+              (quarter, index) => {
+                const taxPeriod =
+                  findQuarterTaxPeriod(
+                    index + 1
+                  )
+
+                return (
+                  <TaxQuarterCard
+                    key={quarter.id}
+                    quarter={quarter}
+                    taxPeriodId={
+                      taxPeriod?.id
+                    }
+                    taxPeriodStatus={
+                      taxPeriod?.status
+                    }
+                    disabled={!isRequired}
+                    onOpen={
+                      handleOpenQuarter
+                    }
+                  />
+                )
+              }
             )}
           </div>
         </div>

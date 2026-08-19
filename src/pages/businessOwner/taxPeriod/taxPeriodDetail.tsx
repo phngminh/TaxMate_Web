@@ -35,6 +35,18 @@ import {
   getTaxDeclarationByTaxPeriod
 } from '../../../apis/taxDeclaration.api'
 
+import {
+  getTaxDashboard
+} from '../../../apis/taxDashboard.api'
+
+import path from '../../../constants/path'
+
+import {
+  useBusiness
+} from '../../../contexts/BusinessContext'
+
+import { toast } from 'react-toastify'
+
 function formatMoney(value: number) {
   return `${value.toLocaleString(
     'vi-VN'
@@ -264,6 +276,10 @@ export default function TaxPeriodDetailPage() {
     'Draft' | 'Submitted' | null
   >(null)
 
+  const {
+    businesses
+  } = useBusiness()
+
   useEffect(() => {
     let active = true
 
@@ -280,29 +296,162 @@ export default function TaxPeriodDetailPage() {
         setIsLoading(true)
         setErrorMessage(null)
 
-        const [
-          periodResult,
-          declarationResult
-        ] = await Promise.all([
-          getTaxPeriodById(
-            taxPeriodId
-          ),
-
-          getTaxDeclarationByTaxPeriod(
+        /*
+        * STEP 1
+        * Lấy TaxPeriod trước.
+        *
+        * Chúng ta cần businessId + year
+        * của kỳ thuế để kiểm tra ngưỡng
+        * của toàn Owner.
+        */
+        const periodResult =
+          await getTaxPeriodById(
             taxPeriodId
           )
-        ])
 
         if (!active) {
           return
         }
 
-        setTaxPeriod(periodResult)
+        /*
+        * STEP 2
+        * Tập hợp tất cả BusinessProfile
+        * thuộc Owner.
+        *
+        * periodResult.businessId được
+        * thêm vào để tránh trường hợp
+        * BusinessContext chưa có profile
+        * hiện tại.
+        */
+        const ownerBusinessIds =
+          Array.from(
+            new Set([
+              periodResult.businessId,
+              ...businesses.map(
+                (business) =>
+                  business.id
+              )
+            ])
+          )
 
-        setDeclarationStatus(
-          declarationResult?.status ?? null
+        /*
+        * STEP 3
+        * Lấy Tax Dashboard của tất cả
+        * business trong cùng năm.
+        */
+        const ownerDashboards =
+          await Promise.all(
+            ownerBusinessIds.map(
+              (ownerBusinessId) =>
+                getTaxDashboard({
+                  businessId:
+                    ownerBusinessId,
+                  year:
+                    periodResult.year
+                })
+            )
+          )
+
+        if (!active) {
+          return
+        }
+
+        /*
+        * STEP 4
+        * Cộng doanh thu của toàn Owner.
+        */
+        const ownerAnnualRevenue =
+          ownerDashboards.reduce(
+            (total, item) =>
+              total +
+              item.threshold
+                .accumulatedRevenue,
+            0
+          )
+
+        /*
+        * Tất cả dashboard dùng cùng
+        * threshold nên lấy từ phần tử đầu.
+        */
+        const thresholdAmount =
+          ownerDashboards[0]
+            ?.threshold.amount ??
+          1_000_000_000
+
+        const isQuarterlyFilingRequired =
+          ownerAnnualRevenue >
+          thresholdAmount
+
+        /*
+        * STEP 5
+        * Owner chưa vượt 1 tỷ:
+        *
+        * KHÔNG cho mở TaxPeriod Detail.
+        *
+        * Bao gồm cả trường hợp user tự
+        * gõ URL.
+        */
+        if (
+          !isQuarterlyFilingRequired
+        ) {
+          toast.info(
+            `Tổng doanh thu của chủ hộ trong năm ${periodResult.year} chưa vượt ngưỡng ${thresholdAmount.toLocaleString(
+              'vi-VN'
+            )}đ. Bạn chưa thuộc diện thực hiện kê khai thuế theo quý.`
+          )
+
+          navigate(
+            path.BUSINESS_OWNER_TAX,
+            {
+              replace: true
+            }
+          )
+
+          return
+        }
+
+        /*
+        * STEP 6
+        * Đã vượt ngưỡng:
+        * cho phép hiển thị Detail.
+        */
+        setTaxPeriod(
+          periodResult
         )
 
+        /*
+        * STEP 7
+        * Chỉ kiểm tra Declaration từ
+        * Calculated trở đi.
+        *
+        * Open / Closed chắc chắn chưa cần
+        * declaration nên không GET để
+        * tránh 404 không cần thiết.
+        */
+        if (
+          periodResult.status ===
+            'Calculated' ||
+          periodResult.status ===
+            'Submitted' ||
+          periodResult.status ===
+            'Paid'
+        ) {
+          const declarationResult =
+            await getTaxDeclarationByTaxPeriod(
+              taxPeriodId
+            )
+
+          if (!active) {
+            return
+          }
+
+          setDeclarationStatus(
+            declarationResult?.status ??
+              null
+          )
+        } else {
+          setDeclarationStatus(null)
+        }
       } catch (error) {
         console.error(
           '[TaxPeriodDetail] Failed:',
@@ -328,7 +477,11 @@ export default function TaxPeriodDetailPage() {
     return () => {
       active = false
     }
-  }, [taxPeriodId])
+  }, [
+    taxPeriodId,
+    businesses,
+    navigate
+  ])
 
   const appliedTaxRate =
     useMemo(() => {
