@@ -669,60 +669,114 @@ export default function POS() {
   const hubConnectionRef = useRef<signalR.HubConnection | null>(null)
 
   useEffect(() => {
-    if (!showAwaitingOverlay || !awaitingOrderId) return
+  if (!showAwaitingOverlay || !awaitingOrderId) return
 
-    const apiBaseUrl = (http.defaults.baseURL || '').replace(/\/api$/, '')
-    const connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${apiBaseUrl}/paymentHub`)
-      .withAutomaticReconnect()
-      .build()
+  const apiBaseUrl = (http.defaults.baseURL || '').replace(/\/api$/, '')
+  const connection = new signalR.HubConnectionBuilder()
+    .withUrl(`${apiBaseUrl}/paymentHub`)
+    .withAutomaticReconnect()
+    .build()
 
-    hubConnectionRef.current = connection
+  hubConnectionRef.current = connection
 
-    connection
-      .start()
-      .then(() => {
-        console.log('[SignalR Web] Connected, joining order group:', awaitingOrderId)
-        connection.invoke('JoinOrderGroup', awaitingOrderId)
-      })
-      .catch((err) => console.warn('[SignalR Web] Connection failed:', err))
+  let disposed = false
+  let handled = false
+  let checking = false
+  let pollTimer: ReturnType<typeof window.setInterval> | undefined
 
-    connection.on('PaymentConfirmed', async (transactionId: string) => {
-      if (transactionId === awaitingOrderId) {
-        console.log('[SignalR Web] Payment confirmed event received for:', transactionId)
-        connection.stop()
-        setShowAwaitingOverlay(false)
-        toast.success('Hệ thống đã tự động ghi nhận thanh toán!')
+  const finishPayment = async () => {
+    if (disposed || handled || checking) return
 
-        // Đợi 500ms để backend tạo hóa đơn điện tử xong
-        await delay(600)
+    checking = true
+    try {
+      const detail = await getOrderById(awaitingOrderId)
 
-        // Gọi API lấy dữ liệu mới nhất
-        try {
-          const detail = await getOrderById(awaitingOrderId)
-          setSuccessOrderCode(awaitingOrderCode)
-          setSuccessAmount(awaitingAmount)
-          setSuccessInvoiceNumber(detail.data?.invoiceNumber || null)
-          setSuccessOfficialPdfUrl(detail.data?.officialPdfUrl || null)
-          setSuccessOfficialXmlUrl(detail.data?.officialXmlUrl || null)
-          setSuccessInvoiceStatus(detail.data?.invoiceStatus || null)
-          setSuccessTaxAuthorityCode(detail.data?.taxAuthorityCode || null)
-          setShowSuccessOverlay(true)
-
-          if (activeTab) {
-            await removeFinishedTab(activeTab.tabId)
-          }
-        } catch (err) {
-          console.error('[SignalR Web] Failed to fetch updated order:', err)
-        }
+      // Chưa thanh toán xong thì lần polling sau kiểm tra tiếp
+      if (
+        disposed ||
+        !detail.success ||
+        !detail.data ||
+        detail.data.status !== 'Completed'
+      ) {
+        return
       }
-    })
 
-    return () => {
-      console.log('[SignalR Web] Stopping connection for:', awaitingOrderId)
-      connection.stop()
+      handled = true
+
+      if (pollTimer) {
+        window.clearInterval(pollTimer)
+      }
+
+      void connection.stop().catch(() => undefined)
+
+      setShowAwaitingOverlay(false)
+      setSuccessOrderCode(detail.data.transactionCode || awaitingOrderCode)
+      setSuccessAmount(detail.data.totalAmount || awaitingAmount)
+      setSuccessInvoiceNumber(detail.data.invoiceNumber || null)
+      setSuccessOfficialPdfUrl(detail.data.officialPdfUrl || null)
+      setSuccessOfficialXmlUrl(detail.data.officialXmlUrl || null)
+      setSuccessInvoiceStatus(detail.data.invoiceStatus || null)
+      setSuccessTaxAuthorityCode(detail.data.taxAuthorityCode || null)
+      setShowSuccessOverlay(true)
+
+      const completedTab = tabs.find(t => t.orderId === awaitingOrderId)
+      if (completedTab) {
+        await removeFinishedTab(completedTab.tabId)
+      }
+    } catch (err) {
+      // Không đóng polling khi API lỗi tạm thời
+      console.warn('[Payment Polling] Failed to check order:', err)
+    } finally {
+      checking = false
     }
-  }, [showAwaitingOverlay, awaitingOrderId])
+  }
+
+  connection.on('PaymentConfirmed', (transactionId: string) => {
+    if (transactionId === awaitingOrderId) {
+      console.log('[SignalR Web] Payment confirmed:', transactionId)
+      void finishPayment()
+    }
+  })
+
+  const startConnection = async () => {
+    try {
+      await connection.start()
+
+      if (disposed) {
+        await connection.stop()
+        return
+      }
+
+      console.log(
+        '[SignalR Web] Connected, joining order group:',
+        awaitingOrderId
+      )
+
+      await connection.invoke('JoinOrderGroup', awaitingOrderId)
+    } catch (err) {
+      // Polling bên dưới vẫn tiếp tục hoạt động dù SignalR lỗi
+      console.warn('[SignalR Web] Connection failed:', err)
+    }
+  }
+
+  void startConnection()
+
+  // Kiểm tra ngay và tiếp tục mỗi 2 giây
+  void finishPayment()
+  pollTimer = window.setInterval(() => {
+    void finishPayment()
+  }, 2000)
+
+  return () => {
+    disposed = true
+
+    if (pollTimer) {
+      window.clearInterval(pollTimer)
+    }
+
+    void connection.stop().catch(() => undefined)
+  }
+}, [showAwaitingOverlay, awaitingOrderId])
 
   // Get active tab object
   const activeTab = useMemo(() => {
