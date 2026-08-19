@@ -48,7 +48,8 @@ export const getSePayConnectUrl = async (businessId: string) => {
   const response = await http.get<ApiResponse<string>>(
     `/PaymentAccount/sepay-connect-url`,
     {
-      params: { businessId }
+      params: { businessId, isMobileApp: false },
+      timeout: 120000
     }
   )
   return response.data

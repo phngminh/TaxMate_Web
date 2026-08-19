@@ -68,18 +68,21 @@ export default function BankConfig() {
   const handleLinkSePay = async () => {
     if (!businessId) return
 
-    // Pre-open a blank tab synchronously to prevent browser popup blocking
-    const newTab = window.open('about:blank', '_blank')
+    // Pre-open synchronously to prevent popup blocking while the backend creates the SePay link.
+    const newTab = window.open('', '_blank')
     if (!newTab) {
       toast.error('Trình duyệt đã chặn cửa sổ bật lên. Vui lòng cho phép mở popup cho trang web này.')
       return
     }
 
+    newTab.document.title = 'Đang kết nối SePay'
+    newTab.document.body.textContent = 'Đang tạo liên kết SePay Bank Hub, vui lòng chờ...'
+
     try {
       setSePayLoading(true)
       const res = await getSePayConnectUrl(businessId)
       if (res.success && res.data) {
-        newTab.location.href = res.data
+        newTab.location.replace(res.data)
         setShowSePayModal(true)
       } else {
         newTab.close()
