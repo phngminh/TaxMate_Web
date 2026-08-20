@@ -219,7 +219,9 @@ export default function TaxDashboard() {
       dashboard.thresholdAmount
     ) {
       toast.info(
-        'Tổng doanh thu của chủ hộ chưa vượt ngưỡng 1 tỷ đồng. Bạn hiện chỉ có thể theo dõi doanh thu theo quý.'
+        `Tổng doanh thu của chủ hộ chưa vượt ngưỡng ${formatVnd(
+          dashboard.thresholdAmount
+        )}. Bạn hiện chỉ có thể theo dõi doanh thu theo quý.`
       )
 
       return
@@ -320,11 +322,15 @@ export default function TaxDashboard() {
 
   /*
   * Không tự suy luận nữa.
-  * BE đã quyết định Required / NotRequired.
+  * BE đã quyết định Taxable / NotTaxable.
   */
   const isRequired =
-    dashboard.accumulatedRevenue >
-    dashboard.thresholdAmount
+    dashboard.thresholdStatus ===
+    'Taxable'
+
+  const isEInvoiceRequired =
+    dashboard.eInvoiceStatus ===
+    'RequiredEInvoice'
 
   /*
   * Có thể > 100%, nhưng thanh progress
@@ -450,6 +456,44 @@ export default function TaxDashboard() {
               Tìm hiểu thêm
               <ArrowRight size={15} />
             </button>
+          </div>
+        </div>
+
+        {/* E-invoice obligation */}
+        <div
+          className={`mb-6 flex items-start gap-4 rounded-2xl border p-5 ${
+            isEInvoiceRequired
+              ? 'border-amber-200 bg-amber-50'
+              : 'border-gray-200 bg-white'
+          }`}
+        >
+          <div
+            className={`flex size-12 shrink-0 items-center justify-center rounded-full bg-white ${
+              isEInvoiceRequired
+                ? 'text-amber-600'
+                : 'text-gray-400'
+            }`}
+          >
+            <ReceiptText size={25} />
+          </div>
+
+          <div className='flex-1'>
+            <p className={`font-extrabold ${
+              isEInvoiceRequired ? 'text-amber-800' : 'text-gray-700'
+            }`}>
+              {isEInvoiceRequired
+                ? 'Đã đạt ngưỡng bắt buộc sử dụng hóa đơn điện tử'
+                : 'Chưa đạt ngưỡng bắt buộc sử dụng hóa đơn điện tử'}
+            </p>
+            <p className='mt-1 text-sm leading-6 text-gray-600'>
+              Ngưỡng HĐĐT áp dụng năm {dashboard.year} là{' '}
+              <span className='font-bold'>
+                {formatVnd(dashboard.eInvoiceThresholdAmount)}
+              </span>
+              {isEInvoiceRequired
+                ? '. Doanh thu tích lũy đã đạt hoặc vượt ngưỡng này.'
+                : `. Còn ${formatVnd(dashboard.eInvoiceRemainingAmount)} để đạt ngưỡng.`}
+            </p>
           </div>
         </div>
 

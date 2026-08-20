@@ -1,4 +1,8 @@
 export type TaxThresholdStatus =
+  | 'NotTaxable'
+  | 'Taxable'
+
+export type EInvoiceThresholdStatus =
   | 'NotRequired'
   | 'RequiredEInvoice'
 
@@ -22,6 +26,14 @@ export interface TaxDashboardApiResponse {
     remainingAmount: number
     progressPercentage: number
     status: TaxThresholdStatus
+  }
+
+  eInvoiceThreshold: {
+    amount: number
+    accumulatedRevenue: number
+    remainingAmount: number
+    progressPercentage: number
+    status: EInvoiceThresholdStatus
   }
 
   forecast: {
@@ -69,6 +81,11 @@ export interface TaxDashboardUiData {
   progressPercentage: number
   thresholdStatus: TaxThresholdStatus
   statusLabel: string
+
+  eInvoiceThresholdAmount: number
+  eInvoiceRemainingAmount: number
+  eInvoiceProgressPercentage: number
+  eInvoiceStatus: EInvoiceThresholdStatus
 
   forecastRevenue: number
   forecastBasedOn: string

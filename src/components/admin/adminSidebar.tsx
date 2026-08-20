@@ -3,6 +3,7 @@ import {
   Users,
   ChevronRight,
   Brain,
+  ShieldCheck,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
@@ -55,6 +56,12 @@ export default function ComprehensiveSidebar() {
           path: path.ADMIN_USERS_SUBSCRIPTIONS,
         },
       ],
+    },
+    {
+      id: 'tax-policy',
+      label: 'Chính sách thuế',
+      icon: ShieldCheck,
+      path: path.ADMIN_TAX_POLICY,
     },
     {
       id: 'legal',
