@@ -85,7 +85,9 @@ export default function OwnerHeader() {
   const { user, logout } = useAuth()
 
   const [accumulatedRevenue, setAccumulatedRevenue] = useState(0)
-  const isOverOneBillion = accumulatedRevenue >= 1_000_000_000
+  const [taxThresholdAmount, setTaxThresholdAmount] = useState(0)
+  const isOverTaxThreshold =
+    taxThresholdAmount > 0 && accumulatedRevenue >= taxThresholdAmount
 
   const isServiceStore =
     currentBusiness?.mainCategoryId === 'd2222222-2222-2222-2222-222222222222' ||
@@ -156,6 +158,7 @@ export default function OwnerHeader() {
   useEffect(() => {
     if (!currentBusiness?.id) {
       setAccumulatedRevenue(0)
+      setTaxThresholdAmount(0)
       return
     }
 
@@ -168,9 +171,11 @@ export default function OwnerHeader() {
 
         const dashboard = mapTaxDashboardApiToUi(response)
         setAccumulatedRevenue(dashboard.accumulatedRevenue ?? 0)
+        setTaxThresholdAmount(dashboard.thresholdAmount ?? 0)
       } catch (error) {
         console.error('[OwnerHeader] Failed to get revenue:', error)
         setAccumulatedRevenue(0)
+        setTaxThresholdAmount(0)
       }
     }
 
@@ -652,7 +657,7 @@ export default function OwnerHeader() {
                   </button>
                 ))}
 
-                {!isOverOneBillion && (
+                {!isOverTaxThreshold && (
                   <button
                     className='w-full flex items-center gap-4 px-5 py-3.5 hover:bg-[#fef2f2] group transition-colors cursor-pointer'
                     onClick={openExportS1aModal}
@@ -669,7 +674,7 @@ export default function OwnerHeader() {
                   </button>
                 )}
 
-                {isOverOneBillion && (
+                {isOverTaxThreshold && (
                   <button
                     className='w-full flex items-center gap-4 px-5 py-3.5 hover:bg-[#fef2f2] group transition-colors cursor-pointer'
                     onClick={openExportS2aModal}

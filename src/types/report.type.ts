@@ -45,6 +45,7 @@ export interface CashFlowDashboardResponse {
 export interface TaxDashboardResponse {
   year: number
   threshold: TaxRevenueThresholdResponse
+  eInvoiceThreshold: TaxRevenueThresholdResponse
   forecast: TaxRevenueForecastResponse
   quarters: TaxQuarterRevenueResponse[]
 }
