@@ -559,9 +559,9 @@ export default function OwnerHeader() {
           + &nbsp;Bán hàng
         </NavLink>
 
-        <div className='bg-white h-7 w-7 rounded-[15px] border border-[#ff8e8e] flex items-center justify-center'>
+        {/* <div className='bg-white h-7 w-7 rounded-[15px] border border-[#ff8e8e] flex items-center justify-center'>
           <Bell size={18} strokeWidth={2.2} color='#e00000' />
-        </div>
+        </div> */}
 
         <div>
           <button
