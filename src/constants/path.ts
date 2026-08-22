@@ -38,6 +38,7 @@ const path = {
   ADMIN_BUSINESSES_LIST: '/admin/businesses/list',
   ADMIN_USERS_SUBSCRIPTIONS: '/admin/users/subscriptions',
   ADMIN_LEGAL_DOCUMENTS: '/admin/legal/documents',
+  ADMIN_TAX_POLICY: '/admin/tax-policy',
 
 }
 

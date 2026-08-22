@@ -384,7 +384,7 @@ export default function TaxPeriodDetailPage() {
 
         /*
         * STEP 5
-        * Owner chưa vượt 1 tỷ:
+        * Owner chưa vượt ngưỡng cấu hình:
         *
         * KHÔNG cho mở TaxPeriod Detail.
         *

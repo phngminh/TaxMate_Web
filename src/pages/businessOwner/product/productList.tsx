@@ -1020,7 +1020,7 @@ export default function Product() {
                                             false && (
                                             <div>
                                               <div className='text-[13px] text-gray-500 mb-1'>
-                                                Tồn kho
+                                                Có thể bán
                                               </div>
 
                                               <div className='font-semibold text-[14px] text-gray-900'>

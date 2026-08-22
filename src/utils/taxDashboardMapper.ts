@@ -9,7 +9,7 @@ function getThresholdStatusLabel(
   status: TaxThresholdStatus
 ) {
   if (
-    status === 'RequiredEInvoice'
+    status === 'Taxable'
   ) {
     return 'Đã vào diện kê khai'
   }
@@ -20,7 +20,7 @@ function getThresholdStatusLabel(
 function getThresholdMessage(
   status: TaxThresholdStatus
 ) {
-  if (status === 'RequiredEInvoice') {
+  if (status === 'Taxable') {
     return 'Tổng doanh thu của chủ hộ đã vượt ngưỡng áp dụng. Bạn có thể thực hiện quy trình kê khai thuế theo quý.'
   }
 
@@ -125,6 +125,18 @@ export function mapTaxDashboardApiToUi(
       getThresholdStatusLabel(
         data.threshold.status
       ),
+
+    eInvoiceThresholdAmount:
+      data.eInvoiceThreshold.amount,
+
+    eInvoiceRemainingAmount:
+      data.eInvoiceThreshold.remainingAmount,
+
+    eInvoiceProgressPercentage:
+      data.eInvoiceThreshold.progressPercentage,
+
+    eInvoiceStatus:
+      data.eInvoiceThreshold.status,
 
     forecastRevenue:
       data.forecast

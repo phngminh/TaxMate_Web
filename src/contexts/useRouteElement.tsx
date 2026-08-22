@@ -17,8 +17,8 @@ import UserList from '../pages/admin/user/user'
 import UserDetail from '../pages/admin/user/userDetail'
 import Subscription from '../pages/admin/user/subscription'
 import LegalDocuments from '../pages/admin/document/document'
+import TaxPolicyPage from '../pages/admin/taxPolicy/taxPolicy'
 import SubscriptionPage from '../pages/landingPage/subscription'
-import { BusinessProvider } from './BusinessContext'
 import BusinessList from '../pages/admin/user/business'
 import Expense from '../pages/businessOwner/expense/expense'
 import ExpenseCategoryPage from '../pages/businessOwner/expense/expenseCategory'
@@ -147,6 +147,7 @@ export default function useRouteElements() {
             { path: path.ADMIN_BUSINESSES_LIST, element: <BusinessList /> },
             { path: path.ADMIN_USERS_SUBSCRIPTIONS, element: <Subscription /> },
             { path: path.ADMIN_LEGAL_DOCUMENTS, element: <LegalDocuments /> },
+            { path: path.ADMIN_TAX_POLICY, element: <TaxPolicyPage /> },
           ]
         }
       ]
