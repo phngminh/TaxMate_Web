@@ -4,9 +4,11 @@ import { useBusiness } from '../../../contexts/BusinessContext'
 import { getAllExpenses, createExpense, getExpenseCategories, updateExpense, deleteExpense, createExpenseCategory } from '../../../apis/expense.api'
 import { getAllIncomes, createIncome, getIncomeCategories, updateIncome, deleteIncome, createIncomeCategory } from '../../../apis/income.api'
 import { uploadImage } from '../../../apis/image.api'
+import { getMoneyAccounts } from '../../../apis/paymentAccount.api'
 import { toast } from 'react-toastify'
 import type { ExpenseCategory } from '../../../types/expense.type'
-import type { IncomeCategory } from '../../../types/income.type'
+import type { IncomeAccountingType, IncomeCategory } from '../../../types/income.type'
+import type { PaymentAccount } from '../../../types/paymentAccount.type'
 
 interface ExpenseRecord {
   id: string
@@ -22,6 +24,8 @@ interface ExpenseRecord {
   rawAmount: number
   paymentMethod: string
   rawPaymentMethod: string
+  settledDate?: string
+  accountingType?: IncomeAccountingType
   imageUrl?: string
 }
 
@@ -87,6 +91,29 @@ function FilterGroup({
   )
 }
 
+function BankAccountSelect({
+  accounts,
+  accent
+}: {
+  accounts: PaymentAccount[]
+  accent: 'orange' | 'emerald'
+}) {
+  const banks = accounts.filter((account) => account.accountType === 'Bank' && account.isActive)
+  return (
+    <div className='flex flex-col gap-1.5'>
+      <label className='text-[13px] font-bold text-gray-600'>Tài khoản ngân hàng <span className='text-red-500'>*</span></label>
+      <select name='paymentAccountId' required defaultValue='' className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden font-medium text-gray-800 bg-white ${accent === 'orange' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`}>
+        <option value='' disabled>-- Chọn tài khoản --</option>
+        {banks.map((account) => (
+          <option key={account.paymentAccountId} value={account.paymentAccountId}>
+            {account.bankShortName || account.bankName} ••••{account.accountNumber?.slice(-4)}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 export default function Expense() {
   const { businessId } = useBusiness()
 
@@ -123,6 +150,13 @@ export default function Expense() {
   const [apiRecords, setApiRecords] = useState<ExpenseRecord[]>([])
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([])
   const [incomeCategories, setIncomeCategories] = useState<IncomeCategory[]>([])
+  const [moneyAccounts, setMoneyAccounts] = useState<PaymentAccount[]>([])
+  const [addExpenseSettled, setAddExpenseSettled] = useState(true)
+  const [addIncomeSettled, setAddIncomeSettled] = useState(true)
+  const [editSettled, setEditSettled] = useState(true)
+  const [addExpensePaymentMethod, setAddExpensePaymentMethod] = useState('Cash')
+  const [addIncomePaymentMethod, setAddIncomePaymentMethod] = useState('Cash')
+  const [editPaymentMethod, setEditPaymentMethod] = useState('Cash')
 
   const handleAddExpenseCategory = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -160,18 +194,20 @@ export default function Expense() {
       return
     }
     try {
-      const [exps, incs, expCats, incCats] = await Promise.all([
+      const [exps, incs, expCats, incCats, accounts] = await Promise.all([
         getAllExpenses(businessId),
         getAllIncomes(businessId),
         getExpenseCategories(businessId),
-        getIncomeCategories(businessId)
+        getIncomeCategories(businessId),
+        getMoneyAccounts(businessId)
       ])
 
       setExpenseCategories(expCats.data || [])
       setIncomeCategories(incCats.data || [])
+      setMoneyAccounts(accounts)
 
       const mapPaymentMethod = (pm?: string | null) => {
-        if (!pm) return 'Tiền mặt'
+        if (!pm) return 'Chưa thanh toán'
         const lower = pm.toLowerCase()
         if (lower === 'cash' || lower === 'tiền mặt') return 'Tiền mặt'
         if (lower === 'transfer' || lower === 'banktransfer' || lower === 'chuyển khoản') return 'Chuyển khoản'
@@ -180,7 +216,7 @@ export default function Expense() {
       }
 
       const mappedExps: ExpenseRecord[] = (exps.data?.items || []).map(e => {
-        const pm = mapPaymentMethod(e.paymentMethod)
+        const pm = e.paidDate ? mapPaymentMethod(e.paymentMethod) : 'Chưa trả'
         return {
           id: e.expenseId,
           content: e.expenseTitle,
@@ -194,13 +230,14 @@ export default function Expense() {
           originalDateStr: new Date(typeof e.expenseDate === 'string' && !e.expenseDate.endsWith('Z') ? e.expenseDate + 'Z' : e.expenseDate).toISOString().split('T')[0],
           rawAmount: e.amount,
           paymentMethod: pm,
-          rawPaymentMethod: e.paymentMethod || 'Cash',
+          rawPaymentMethod: e.paymentMethod || '',
+          settledDate: e.paidDate,
           imageUrl: e.receiptImageUrl
         }
       })
 
       const mappedIncs: ExpenseRecord[] = (incs.data?.items || []).map(e => {
-        const pm = mapPaymentMethod(e.paymentMethod)
+        const pm = e.receivedDate ? mapPaymentMethod(e.paymentMethod) : 'Chưa nhận'
         return {
           id: e.incomeId,
           content: e.incomeTitle,
@@ -214,7 +251,9 @@ export default function Expense() {
           originalDateStr: new Date(typeof e.incomeDate === 'string' && !e.incomeDate.endsWith('Z') ? e.incomeDate + 'Z' : e.incomeDate).toISOString().split('T')[0],
           rawAmount: e.amount,
           paymentMethod: pm,
-          rawPaymentMethod: e.paymentMethod || 'Cash',
+          rawPaymentMethod: e.paymentMethod || '',
+          settledDate: e.receivedDate,
+          accountingType: e.accountingType,
           imageUrl: e.receiptImageUrl
         }
       })
@@ -326,6 +365,8 @@ export default function Expense() {
     }
     const fd = new FormData(e.currentTarget)
     const selectedDateStr = (fd.get('date') as string) || new Date().toISOString().split('T')[0]
+    const paymentMethod = addExpenseSettled ? addExpensePaymentMethod : undefined
+    const paymentAccountId = paymentMethod === 'Transfer' ? fd.get('paymentAccountId') as string : undefined
 
     if (new Date(typeof selectedDateStr === 'string' && !selectedDateStr.endsWith('Z') ? selectedDateStr + 'Z' : selectedDateStr) > new Date()) {
       toast.error('Ngày tạo không được chọn quá hôm nay!')
@@ -342,8 +383,10 @@ export default function Expense() {
         expenseTitle: fd.get('title') as string,
         expenseCategoryId: fd.get('categoryId') as string,
         amount: Number(fd.get('amount')),
-        paymentMethod: fd.get('paymentMethod') as string,
+        paymentMethod,
+        paymentAccountId,
         expenseDate: selectedDateStr,
+        paidDate: addExpenseSettled ? selectedDateStr : undefined,
         receiptImageUrl
       })
       toast.success('Thêm khoản chi thành công!')
@@ -366,6 +409,8 @@ export default function Expense() {
     }
     const fd = new FormData(e.currentTarget)
     const selectedDateStr = (fd.get('date') as string) || new Date().toISOString().split('T')[0]
+    const paymentMethod = addIncomeSettled ? addIncomePaymentMethod : undefined
+    const paymentAccountId = paymentMethod === 'Transfer' ? fd.get('paymentAccountId') as string : undefined
 
     if (new Date(typeof selectedDateStr === 'string' && !selectedDateStr.endsWith('Z') ? selectedDateStr + 'Z' : selectedDateStr) > new Date()) {
       toast.error('Ngày tạo không được chọn quá hôm nay!')
@@ -382,8 +427,11 @@ export default function Expense() {
         incomeTitle: fd.get('title') as string,
         incomeCategoryId: fd.get('categoryId') as string,
         amount: Number(fd.get('amount')),
-        paymentMethod: fd.get('paymentMethod') as string,
+        accountingType: fd.get('accountingType') as IncomeAccountingType,
+        paymentMethod,
+        paymentAccountId,
         incomeDate: selectedDateStr,
+        receivedDate: addIncomeSettled ? selectedDateStr : undefined,
         receiptImageUrl
       })
       toast.success('Thêm khoản thu thành công!')
@@ -403,6 +451,8 @@ export default function Expense() {
     if (!businessId || !editingRecord) return
     const fd = new FormData(e.currentTarget)
     const selectedDateStr = (fd.get('date') as string) || new Date().toISOString().split('T')[0]
+    const paymentMethod = editSettled ? editPaymentMethod : undefined
+    const paymentAccountId = paymentMethod === 'Transfer' ? fd.get('paymentAccountId') as string : undefined
 
     if (new Date(typeof selectedDateStr === 'string' && !selectedDateStr.endsWith('Z') ? selectedDateStr + 'Z' : selectedDateStr) > new Date()) {
       toast.error('Ngày không được chọn quá hôm nay!')
@@ -420,8 +470,10 @@ export default function Expense() {
           expenseTitle: fd.get('title') as string,
           expenseCategoryId: fd.get('categoryId') as string,
           amount: Number(fd.get('amount')),
-          paymentMethod: fd.get('paymentMethod') as string,
+          paymentMethod,
+          paymentAccountId,
           expenseDate: selectedDateStr,
+          paidDate: editSettled ? selectedDateStr : undefined,
           receiptImageUrl
         })
       } else {
@@ -429,8 +481,11 @@ export default function Expense() {
           incomeTitle: fd.get('title') as string,
           incomeCategoryId: fd.get('categoryId') as string,
           amount: Number(fd.get('amount')),
-          paymentMethod: fd.get('paymentMethod') as string,
+          accountingType: fd.get('accountingType') as IncomeAccountingType,
+          paymentMethod,
+          paymentAccountId,
           incomeDate: selectedDateStr,
+          receivedDate: editSettled ? selectedDateStr : undefined,
           receiptImageUrl
         })
       }
@@ -623,7 +678,7 @@ export default function Expense() {
                           {r.amount.toLocaleString('vi-VN')}
                         </td>
                         <td className='py-3.5 px-3'>
-                          <button onClick={() => { setEditingRecord(r); setIsEditModalOpen(true); setEditImage(null); setEditImagePreview(r.imageUrl || null); }} className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
+                          <button onClick={() => { setEditingRecord(r); setEditSettled(Boolean(r.settledDate)); setEditPaymentMethod(r.rawPaymentMethod || 'Cash'); setIsEditModalOpen(true); setEditImage(null); setEditImagePreview(r.imageUrl || null); }} className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
                             <MoreVertical size={14} />
                           </button>
                         </td>
@@ -663,7 +718,7 @@ export default function Expense() {
 
               <div className='px-5 pb-5 pt-2 flex gap-3'>
                 <button
-                  onClick={() => setIsAddExpenseOpen(true)}
+                  onClick={() => { setAddExpenseSettled(true); setAddExpensePaymentMethod('Cash'); setIsAddExpenseOpen(true) }}
                   className='flex-1 flex items-center justify-center gap-2.5 py-3 rounded-[10px] text-[14px] font-bold text-white transition-all shadow-[0_4px_14px_rgba(249,115,22,0.35)] hover:shadow-[0_6px_18px_rgba(249,115,22,0.45)] active:scale-[0.98]'
                   style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}
                 >
@@ -719,7 +774,7 @@ export default function Expense() {
                           +{fmt(r.amount)}
                         </td>
                         <td className='py-3.5 px-3'>
-                          <button onClick={() => { setEditingRecord(r); setIsEditModalOpen(true); setEditImage(null); setEditImagePreview(r.imageUrl || null); }} className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
+                          <button onClick={() => { setEditingRecord(r); setEditSettled(Boolean(r.settledDate)); setEditPaymentMethod(r.rawPaymentMethod || 'Cash'); setIsEditModalOpen(true); setEditImage(null); setEditImagePreview(r.imageUrl || null); }} className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
                             <MoreVertical size={14} />
                           </button>
                         </td>
@@ -759,7 +814,7 @@ export default function Expense() {
 
               <div className='px-5 pb-5 pt-2 flex gap-3'>
                 <button
-                  onClick={() => setIsAddIncomeOpen(true)}
+                  onClick={() => { setAddIncomeSettled(true); setAddIncomePaymentMethod('Cash'); setIsAddIncomeOpen(true) }}
                   className='flex-1 flex items-center justify-center gap-2.5 py-3 rounded-[10px] text-[14px] font-bold text-white transition-all shadow-[0_4px_14px_rgba(16,185,129,0.35)] hover:shadow-[0_6px_18px_rgba(16,185,129,0.45)] active:scale-[0.98]'
                   style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
                 >
@@ -811,10 +866,10 @@ export default function Expense() {
               </div>
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
-                  <select name='paymentMethod' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 bg-white'>
-                    <option value='Cash'>Tiền mặt</option>
-                    <option value='Transfer'>Chuyển khoản</option>
+                  <label className='text-[13px] font-bold text-gray-600'>Trạng thái</label>
+                  <select value={addExpenseSettled ? 'paid' : 'unpaid'} onChange={(event) => setAddExpenseSettled(event.target.value === 'paid')} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 bg-white'>
+                    <option value='paid'>Đã trả</option>
+                    <option value='unpaid'>Chưa trả</option>
                   </select>
                 </div>
                 <div className='flex flex-col gap-1.5'>
@@ -822,6 +877,17 @@ export default function Expense() {
                   <input name='date' type='date' max={new Date().toISOString().split('T')[0]} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800' />
                 </div>
               </div>
+              {addExpenseSettled && (
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='flex flex-col gap-1.5'>
+                    <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
+                    <select value={addExpensePaymentMethod} onChange={(event) => setAddExpensePaymentMethod(event.target.value)} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 bg-white'>
+                      <option value='Cash'>Tiền mặt</option><option value='Transfer'>Chuyển khoản</option>
+                    </select>
+                  </div>
+                  {addExpensePaymentMethod === 'Transfer' && <BankAccountSelect accounts={moneyAccounts} accent='orange' />}
+                </div>
+              )}
               
               <div className='flex flex-col gap-2'>
                 <label className='text-[13px] font-bold text-gray-600'>Hình ảnh chứng từ</label>
@@ -876,6 +942,13 @@ export default function Expense() {
                 <label className='text-[13px] font-bold text-gray-600'>Nội dung <span className='text-red-500'>*</span></label>
                 <input name='title' type='text' required placeholder='Ví dụ: Bán hàng, Thu nợ...' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800' />
               </div>
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-[13px] font-bold text-gray-600'>Tính chất khoản thu <span className='text-red-500'>*</span></label>
+                <select name='accountingType' required defaultValue='BusinessRevenue' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 bg-white'>
+                  <option value='BusinessRevenue'>Doanh thu bán hàng/dịch vụ</option>
+                  <option value='NonRevenueCashIn'>Tiền vào khác, không phải doanh thu</option>
+                </select>
+              </div>
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Loại thu <span className='text-red-500'>*</span></label>
@@ -893,10 +966,10 @@ export default function Expense() {
               </div>
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
-                  <select name='paymentMethod' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 bg-white'>
-                    <option value='Cash'>Tiền mặt</option>
-                    <option value='Transfer'>Chuyển khoản</option>
+                  <label className='text-[13px] font-bold text-gray-600'>Trạng thái</label>
+                  <select value={addIncomeSettled ? 'received' : 'unreceived'} onChange={(event) => setAddIncomeSettled(event.target.value === 'received')} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 bg-white'>
+                    <option value='received'>Đã nhận</option>
+                    <option value='unreceived'>Chưa nhận</option>
                   </select>
                 </div>
                 <div className='flex flex-col gap-1.5'>
@@ -904,6 +977,17 @@ export default function Expense() {
                   <input name='date' type='date' max={new Date().toISOString().split('T')[0]} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800' />
                 </div>
               </div>
+              {addIncomeSettled && (
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='flex flex-col gap-1.5'>
+                    <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
+                    <select value={addIncomePaymentMethod} onChange={(event) => setAddIncomePaymentMethod(event.target.value)} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 bg-white'>
+                      <option value='Cash'>Tiền mặt</option><option value='Transfer'>Chuyển khoản</option>
+                    </select>
+                  </div>
+                  {addIncomePaymentMethod === 'Transfer' && <BankAccountSelect accounts={moneyAccounts} accent='emerald' />}
+                </div>
+              )}
 
               <div className='flex flex-col gap-2'>
                 <label className='text-[13px] font-bold text-gray-600'>Hình ảnh chứng từ</label>
@@ -957,6 +1041,15 @@ export default function Expense() {
                 <label className='text-[13px] font-bold text-gray-600'>Nội dung <span className='text-red-500'>*</span></label>
                 <input name='title' type='text' required defaultValue={editingRecord.content} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`} />
               </div>
+              {editingRecord.type === 'income' && (
+                <div className='flex flex-col gap-1.5'>
+                  <label className='text-[13px] font-bold text-gray-600'>Tính chất khoản thu <span className='text-red-500'>*</span></label>
+                  <select name='accountingType' required defaultValue={editingRecord.accountingType || 'BusinessRevenue'} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 bg-white'>
+                    <option value='BusinessRevenue'>Doanh thu bán hàng/dịch vụ</option>
+                    <option value='NonRevenueCashIn'>Tiền vào khác, không phải doanh thu</option>
+                  </select>
+                </div>
+              )}
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Loại <span className='text-red-500'>*</span></label>
@@ -976,10 +1069,10 @@ export default function Expense() {
               </div>
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
-                  <select name='paymentMethod' defaultValue={editingRecord.rawPaymentMethod} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 bg-white ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`}>
-                    <option value='Cash'>Tiền mặt</option>
-                    <option value='Transfer'>Chuyển khoản</option>
+                  <label className='text-[13px] font-bold text-gray-600'>Trạng thái</label>
+                  <select value={editSettled ? 'settled' : 'unsettled'} onChange={(event) => setEditSettled(event.target.value === 'settled')} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 bg-white ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`}>
+                    <option value='settled'>{editingRecord.type === 'expense' ? 'Đã trả' : 'Đã nhận'}</option>
+                    <option value='unsettled'>{editingRecord.type === 'expense' ? 'Chưa trả' : 'Chưa nhận'}</option>
                   </select>
                 </div>
                 <div className='flex flex-col gap-1.5'>
@@ -987,6 +1080,17 @@ export default function Expense() {
                   <input name='date' type='date' defaultValue={editingRecord.originalDateStr} max={new Date().toISOString().split('T')[0]} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`} />
                 </div>
               </div>
+              {editSettled && (
+                <div className='grid grid-cols-2 gap-4'>
+                  <div className='flex flex-col gap-1.5'>
+                    <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
+                    <select value={editPaymentMethod} onChange={(event) => setEditPaymentMethod(event.target.value)} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 bg-white ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`}>
+                      <option value='Cash'>Tiền mặt</option><option value='Transfer'>Chuyển khoản</option>
+                    </select>
+                  </div>
+                  {editPaymentMethod === 'Transfer' && <BankAccountSelect accounts={moneyAccounts} accent={editingRecord.type === 'expense' ? 'orange' : 'emerald'} />}
+                </div>
+              )}
 
               <div className='flex flex-col gap-2'>
                 <label className='text-[13px] font-bold text-gray-600'>Hình ảnh chứng từ</label>

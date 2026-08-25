@@ -9,6 +9,7 @@ import ProductCategoryPage from '../pages/businessOwner/product/categoryList'
 import OwnerLayout from '../components/owner/ownerLayout'
 import LandingPage from '../pages/landingPage/LandingPage'
 import Ingredient from '../pages/businessOwner/ingredient'
+import InventoryControlPage from '../pages/businessOwner/inventory/inventoryControl'
 import Order from '../pages/businessOwner/order'
 import POS from '../pages/businessOwner/pos'
 import AdminLayout from '../components/admin/AdminLayout'
@@ -31,6 +32,11 @@ import { useAuth } from './AuthContext'
 import TaxDashboard from '../pages/businessOwner/taxDashboard'
 import TaxPeriodDetailPage from '../pages/businessOwner/taxPeriod/taxPeriodDetail'
 import TaxPeriodPreviewPage from '../pages/businessOwner/taxPeriod/taxPeriodPreview'
+import S2bBookPage from '../pages/businessOwner/taxBook/s2bBook'
+import S2cBookPage from '../pages/businessOwner/taxBook/s2cBook'
+import S2dBookPage from '../pages/businessOwner/taxBook/s2dBook'
+import S2eBookPage from '../pages/businessOwner/taxBook/s2eBook'
+import QttPage from '../pages/businessOwner/taxBook/qtt'
 
 import TaxCalculationPage from '../pages/businessOwner/taxPeriod/taxCalculation'
 
@@ -88,6 +94,7 @@ export default function useRouteElements() {
             { path: path.BUSINESS_OWNER_PRODUCTS, element: <Product /> },
             { path: path.BUSINESS_OWNER_PRODUCT_CATEGORIES, element: <ProductCategoryPage /> },
             { path: path.BUSINESS_OWNER_INGREDIENTS, element: <Ingredient /> },
+            { path: path.BUSINESS_OWNER_INVENTORY, element: <InventoryControlPage /> },
             { path: path.BUSINESS_OWNER_ORDERS, element: <Order /> },
             { path: path.BUSINESS_OWNER_EXPENSES, element: <Expense /> },
             { path: path.BUSINESS_OWNER_EXPENSE_CATEGORIES, element: <ExpenseCategoryPage /> },
@@ -95,6 +102,11 @@ export default function useRouteElements() {
             { path: path.BUSINESS_OWNER_SUPPLIER, element: <Purchase /> },
             { path: path.BUSINESS_OWNER_REPORTS, element: <Report /> },
             { path: path.BUSINESS_OWNER_TAX, element: <TaxDashboard /> },
+            { path: path.BUSINESS_OWNER_S2B_BOOK, element: <S2bBookPage /> },
+            { path: path.BUSINESS_OWNER_S2C_BOOK, element: <S2cBookPage /> },
+            { path: path.BUSINESS_OWNER_S2D_BOOK, element: <S2dBookPage /> },
+            { path: path.BUSINESS_OWNER_S2E_BOOK, element: <S2eBookPage /> },
+            { path: path.BUSINESS_OWNER_QTT, element: <QttPage /> },
             { path: path.BUSINESS_OWNER_TAX_PERIOD, element: <TaxPeriodDetailPage /> },
             {
               path:

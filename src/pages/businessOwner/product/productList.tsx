@@ -362,14 +362,6 @@ export default function Product() {
       return
     }
 
-    const costPriceNum = productForm.costPrice?.trim()
-      ? Number(productForm.costPrice.replace(/\./g, ''))
-      : undefined
-
-    const stockQtyNum = productForm.stockQuantity?.trim()
-      ? Number(productForm.stockQuantity.replace(',', '.'))
-      : undefined
-
     try {
       let imageUrl = selectedProduct.imageUrl
 
@@ -383,8 +375,6 @@ export default function Product() {
         productCategoryId: productForm.productCategoryId || undefined,
         description: productForm.description || undefined,
         unit: productForm.unit || undefined,
-        costPrice: costPriceNum,
-        stockQuantity: selectedProduct.hasRecipe ? undefined : stockQtyNum,
         imageUrl
       })
 

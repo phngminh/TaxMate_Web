@@ -325,7 +325,7 @@ export default function IngredientPage() {
     setIsEditIngredientOpen(true)
   }
 
-  const getValidatedIngredientBody = () => {
+  const getValidatedIngredientBody = (includeOpeningValues = true) => {
     const name = formName.trim()
     if (!name) {
       toast.error('Vui lòng nhập tên nguyên liệu.')
@@ -334,8 +334,10 @@ export default function IngredientPage() {
     return {
       name,
       unit: formUnit.trim() || undefined,
-      estimatedPrice: parsePrice(formPrice),
-      stockQuantity: formStock ? Number(formStock.replace(',', '.')) : 0,
+      ...(includeOpeningValues ? {
+        estimatedPrice: parsePrice(formPrice),
+        stockQuantity: 0,
+      } : {}),
     }
   }
 
@@ -376,7 +378,7 @@ export default function IngredientPage() {
 
   const handleEditIngredient = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!editingIngredient || !getValidatedIngredientBody()) return
+    if (!editingIngredient || !getValidatedIngredientBody(false)) return
     setConfirmAction({ type: 'edit-ingredient', id: editingIngredient.id })
   }
 
@@ -427,7 +429,7 @@ export default function IngredientPage() {
       switch (confirmAction.type) {
         case 'add-ingredient': {
           if (!businessId) throw new Error('Missing businessId')
-          const body = getValidatedIngredientBody()
+          const body = getValidatedIngredientBody(false)
           if (!body) break
           await createIngredient(businessId, body)
           toast.success('Thêm nguyên liệu thành công.')
@@ -979,7 +981,7 @@ export default function IngredientPage() {
                 />
               </div>
 
-              <div className={`grid ${currentBusiness?.isStockTrackingEnabled === false ? 'grid-cols-2 gap-4' : 'grid-cols-3 gap-3'}`}>
+              <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Đơn vị tính</label>
                   <input
@@ -990,23 +992,7 @@ export default function IngredientPage() {
                     className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800'
                   />
                 </div>
-                {currentBusiness?.isStockTrackingEnabled !== false && (
-                  <div className='flex flex-col gap-1.5'>
-                    <label className='text-[13px] font-bold text-gray-600'>
-                      {isIngredientEditing ? 'Số lượng tồn' : 'Tồn ban đầu'}
-                    </label>
-                    <input
-                      type='number'
-                      step='any'
-                      min='0'
-                      placeholder='0'
-                      value={formStock}
-                      onChange={(e) => setFormStock(e.target.value)}
-                      className='w-full border border-gray-200 rounded-[8px] px-3 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 text-right'
-                    />
-                  </div>
-                )}
-                <div className='flex flex-col gap-1.5'>
+                {!isIngredientEditing && <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Giá ước tính (đ)</label>
                   <input
                     type='text'
@@ -1018,7 +1004,7 @@ export default function IngredientPage() {
                     }}
                     className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F] transition-all font-medium text-gray-800 text-right'
                   />
-                </div>
+                </div>}
               </div>
 
               <div className='flex items-center justify-end gap-3 mt-2 pt-4 border-t border-gray-100'>

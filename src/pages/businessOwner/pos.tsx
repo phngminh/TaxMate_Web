@@ -132,7 +132,7 @@ export default function POS() {
   const creatingDraftTabIdsRef = useRef<Set<string>>(new Set())
 
   // Payment states
-  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'EWallet' | 'Transfer'>('Cash')
+  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Transfer'>('Cash')
   const [checkingOut, setCheckingOut] = useState(false)
   const [showAccountModal, setShowAccountModal] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<PaymentAccount | null>(null)
@@ -1158,12 +1158,12 @@ export default function POS() {
       }
       setShowAccountModal(true)
     } else {
-      // Cash or EWallet (Card) checkouts directly
+      // Cash checkout completes directly.
       await executeCheckout(paymentMethod, null)
     }
   }
 
-  const executeCheckout = async (method: 'Cash' | 'EWallet' | 'Transfer', bankAccountId: string | null) => {
+  const executeCheckout = async (method: 'Cash' | 'Transfer', bankAccountId: string | null) => {
     if (!activeTab || !businessId || !activeTab.orderId) return
     const orderId = activeTab.orderId
     const tabId = activeTab.tabId

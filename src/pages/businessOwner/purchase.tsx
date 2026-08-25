@@ -30,22 +30,19 @@ import {
 import { toast } from 'react-toastify'
 import { useBusiness } from '../../contexts/BusinessContext'
 import {
-  getAllExpenses,
-  createExpense,
-  deleteExpense,
   getExpenseCategories,
   createExpenseCategory
 } from '../../apis/expense.api'
 import { getSuppliers, createSupplier, updateSupplier, deleteSupplier } from '../../apis/supplier.api'
-import { getIngredientPurchases, createIngredientPurchase, deleteIngredientPurchase, getIngredientPurchaseById } from '../../apis/ingredientPurchase.api'
 import { getAllIngredients } from '../../apis/ingredient.api'
-import { getAllProducts, updateProductCostPrice } from '../../apis/product.api'
+import { getAllProducts } from '../../apis/product.api'
+import { createInventoryPurchase, deleteInventoryPurchase, getInventoryPurchases } from '../../apis/inventoryPurchase.api'
 import { uploadImage } from '../../apis/image.api'
 import type { Supplier } from '../../types/supplier.type'
 import type { ExpenseDTO, ExpenseCategory } from '../../types/expense.type'
 import type { Ingredient } from '../../types/ingredient.type'
 import type { Product } from '../../types/product.type'
-import type { IngredientPurchaseResponse } from '../../types/ingredientPurchase.type'
+import type { InventoryPurchaseResponse } from '../../types/inventoryPurchase.type'
 
 interface PurchaseLineItem {
   itemId: string // Product or Ingredient ID
@@ -96,9 +93,8 @@ export default function PurchasePage() {
   }
 
   // Data lists
-  const [expenses, setExpenses] = useState<ExpenseDTO[]>([])
+  const [inventoryPurchases, setInventoryPurchases] = useState<InventoryPurchaseResponse[]>([])
   const [suppliers, setSuppliers] = useState<Supplier[]>([])
-  const [materialPurchases, setMaterialPurchases] = useState<IngredientPurchaseResponse[]>([])
   
   // Lookups for Form dropdowns
   const [dbIngredients, setDbIngredients] = useState<Ingredient[]>([])
@@ -134,6 +130,7 @@ export default function PurchasePage() {
   // D. Selected items for details modal
   const [selectedExpenseDetail, setSelectedExpenseDetail] = useState<ExpenseDTO | null>(null)
   const [selectedMaterialDetail, setSelectedMaterialDetail] = useState<MaterialPurchaseGroupDetail | null>(null)
+  const [selectedPurchaseType, setSelectedPurchaseType] = useState<'Product' | 'Material'>('Product')
 
   // E. Quick inline Add Supplier
   const [quickSupName, setQuickSupName] = useState('')
@@ -149,15 +146,13 @@ export default function PurchasePage() {
     try {
       setLoading(true)
       if (activeTab === 'purchases') {
-        const [matRes, expRes, supRes, ingRes, prodRes] = await Promise.all([
-          getIngredientPurchases(businessId),
-          getAllExpenses(businessId, 1, 100),
+        const [purchaseRes, supRes, ingRes, prodRes] = await Promise.all([
+          getInventoryPurchases(businessId),
           getSuppliers(businessId),
           getAllIngredients(businessId),
           getAllProducts(businessId, 1, 100)
         ])
-        if (matRes.success) setMaterialPurchases(matRes.data.items || [])
-        if (expRes.success) setExpenses(expRes.data.items || [])
+        if (purchaseRes.success) setInventoryPurchases(purchaseRes.data.items || [])
         if (supRes.success) setSuppliers(supRes.data || [])
         if (ingRes.success) setDbIngredients(ingRes.data?.items || ingRes.data || [])
         if (prodRes.success) setDbProducts(prodRes.data.items || [])
@@ -335,9 +330,10 @@ export default function PurchasePage() {
       return
     }
 
-    const supplierObj = suppliers.find(s => s.id === purchaseSupplierId)
-    const supplierName = supplierObj?.name || 'Unknown'
-    const autoInvoiceCode = `PNK-${new Date().toISOString().slice(2, 10).replace(/-/g, '')}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+    if (purchaseItems.some(item => item.quantity <= 0 || item.costPrice <= 0)) {
+      toast.error('Số lượng và giá nhập phải lớn hơn 0.')
+      return
+    }
 
     try {
       setActionLoading(true)
@@ -353,57 +349,23 @@ export default function PurchasePage() {
         }
       }
 
-      if (purchaseType === 'Material') {
-        // Save raw materials to IngredientPurchase
-        for (const item of purchaseItems) {
-          const lineTotal = item.quantity * item.costPrice
-
-          await createIngredientPurchase(businessId, {
-            ingredientId: item.itemId,
-            quantity: item.quantity,
-            totalCost: lineTotal,
-            purchaseDate: new Date(typeof purchaseDate === 'string' && !purchaseDate.endsWith('Z') ? purchaseDate + 'Z' : purchaseDate).toISOString(),
-            invoiceNumber: autoInvoiceCode,
-            supplierId: purchaseSupplierId,
-            supplierName,
-            receiptImageUrl: uploadedImageUrl
-          })
-        }
-      } else {
-        // Save products as aggregated General Expense under "Chi phí nhập hàng"
-        let totalProductCost = 0
-        const detailsLines = purchaseItems.map(p => {
-          const lineTotal = p.quantity * p.costPrice
-          totalProductCost += lineTotal
-
-          return `- ${p.name}: ${p.quantity} x ${formatPrice(p.costPrice)} đ`
-        })
-
-        const noteContent = `Nhà cung cấp: ${supplierName}\nMã phiếu nhập: ${autoInvoiceCode}\nGhi chú: ${purchaseNote}\n\nSản phẩm nhập kho:\n${detailsLines.join('\n')}`
-
-        // Find or create category
-        const catsRes = await getExpenseCategories(businessId)
-        const categoryId = await getOrCreateImportCategory(catsRes.data || [])
-
-        await createExpense(businessId, {
-          expenseCategoryId: categoryId,
-          expenseTitle: `Nhập hàng ngày ${purchaseDate} (${autoInvoiceCode})`,
-          amount: totalProductCost,
-          expenseDate: new Date(typeof purchaseDate === 'string' && !purchaseDate.endsWith('Z') ? purchaseDate + 'Z' : purchaseDate).toISOString(),
-          paymentMethod: 'Cash',
-          note: noteContent,
-          supplierId: purchaseSupplierId,
-          receiptImageUrl: uploadedImageUrl
-        })
-
-        // Automatically update Product CostPrice & StockQuantity via Moving Weighted Average
-        for (const item of purchaseItems) {
-          await updateProductCostPrice(item.itemId, {
-            incomingQuantity: item.quantity,
-            incomingCostPrice: item.costPrice
-          })
-        }
-      }
+      const catsRes = await getExpenseCategories(businessId)
+      const categoryId = await getOrCreateImportCategory(catsRes.data || [])
+      await createInventoryPurchase(businessId, {
+        expenseCategoryId: categoryId,
+        expenseTitle: `Nhập ${purchaseType === 'Product' ? 'sản phẩm' : 'nguyên liệu'} ngày ${purchaseDate}`,
+        purchaseDate: new Date(`${purchaseDate}T00:00:00`).toISOString(),
+        supplierId: purchaseSupplierId,
+        receiptImageUrl: uploadedImageUrl,
+        note: purchaseNote.trim() || undefined,
+        lines: purchaseItems.map(item => ({
+          ...(purchaseType === 'Product'
+            ? { productId: item.itemId }
+            : { ingredientId: item.itemId }),
+          quantity: item.quantity,
+          totalValue: item.quantity * item.costPrice
+        }))
+      })
 
       toast.success('Nhập kho hàng hóa thành công!')
       setShowAddPurchaseModal(false)
@@ -416,21 +378,14 @@ export default function PurchasePage() {
     }
   }
 
-  const handleDeletePurchase = async (type: 'Product' | 'Material', id: string, ids?: string[]) => {
+  const handleDeletePurchase = async (_type: 'Product' | 'Material', id: string, _ids?: string[]) => {
     if (!confirm('Bạn có chắc chắn muốn xóa phiếu nhập kho này không?')) return
 
     try {
-      if (type === 'Material') {
-        const idsToDelete = ids && ids.length > 0 ? ids : [id]
-        await Promise.all(idsToDelete.map(delId => deleteIngredientPurchase(delId)))
-        toast.success('Xóa phiếu nhập nguyên liệu thành công!')
+      const res = await deleteInventoryPurchase(id)
+      if (res.success) {
+        toast.success('Xóa phiếu nhập thành công!')
         loadData()
-      } else {
-        const res = await deleteExpense(id)
-        if (res.success) {
-          toast.success('Xóa phiếu nhập sản phẩm thành công!')
-          loadData()
-        }
       }
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Không thể xóa phiếu chi.')
@@ -504,136 +459,28 @@ export default function PurchasePage() {
 
   // Combined purchase records to display in history list
   const combinedPurchases = useMemo(() => {
-    const list: {
-      id: string
-      ids?: string[]
-      invoiceNumber: string
-      date: string
-      supplierName: string
-      amount: number
-      type: 'Product' | 'Material'
-      summary: string
-      receiptImageUrl?: string
-      materialItems?: { id: string; name: string; quantity: number; unit: string; totalCost: number }[]
-    }[] = []
-
-    // 1. Ingredients purchase grouped by invoiceNumber or id
-    const materialMap = new Map<
-      string,
-      {
-        id: string
-        ids: string[]
-        invoiceNumber: string
-        date: string
-        supplierName: string
-        amount: number
-        receiptImageUrl?: string
-        items: { id: string; name: string; quantity: number; unit: string; totalCost: number }[]
+    return inventoryPurchases.map(purchase => {
+      const isProduct = purchase.lines.some(line => !!line.productId)
+      const materialItems = purchase.lines.map((line, index) => ({
+        id: line.productId ?? line.ingredientId ?? `${purchase.expenseId}-${index}`,
+        name: line.itemName,
+        quantity: line.quantity,
+        unit: line.unit || 'đơn vị',
+        totalCost: line.totalValue
+      }))
+      return {
+        id: purchase.expenseId,
+        invoiceNumber: purchase.voucherNumber,
+        date: purchase.purchaseDate,
+        supplierName: purchase.supplierName || 'Vãng lai',
+        amount: purchase.amount,
+        type: (isProduct ? 'Product' : 'Material') as 'Product' | 'Material',
+        summary: materialItems.map(item => `${item.name} (${item.quantity} ${item.unit})`).join(', '),
+        receiptImageUrl: purchase.receiptImageUrl || undefined,
+        materialItems
       }
-    >()
-
-    materialPurchases.forEach(m => {
-      const key = m.invoiceNumber ? m.invoiceNumber.trim() : m.id
-      if (!materialMap.has(key)) {
-        materialMap.set(key, {
-          id: m.id,
-          ids: [],
-          invoiceNumber: m.invoiceNumber || 'N/A',
-          date: m.purchaseDate,
-          supplierName: m.supplierName || 'Vãng lai',
-          amount: 0,
-          receiptImageUrl: m.receiptImageUrl,
-          items: []
-        })
-      }
-      const group = materialMap.get(key)!
-      group.ids.push(m.id)
-      group.amount += m.totalCost
-      if (!group.receiptImageUrl && m.receiptImageUrl) {
-        group.receiptImageUrl = m.receiptImageUrl
-      }
-      group.items.push({
-        id: m.id,
-        name: m.ingredientName,
-        quantity: m.quantity,
-        unit: m.ingredientUnit || 'đơn vị',
-        totalCost: m.totalCost
-      })
-    })
-
-    materialMap.forEach(group => {
-      const itemSummaries = group.items
-        .map(i => `${i.name} (${i.quantity} ${i.unit})`)
-        .join(', ')
-      list.push({
-        id: group.id,
-        ids: group.ids,
-        invoiceNumber: group.invoiceNumber,
-        date: group.date,
-        supplierName: group.supplierName,
-        amount: group.amount,
-        type: 'Material',
-        summary: `Nguyên liệu: ${itemSummaries}`,
-        receiptImageUrl: group.receiptImageUrl,
-        materialItems: group.items
-      })
-    })
-
-    // 2. Product purchase expenses (grouped by invoiceNumber)
-    const productMap = new Map<
-      string,
-      {
-        id: string
-        ids: string[]
-        invoiceNumber: string
-        date: string
-        supplierName: string
-        amount: number
-        summary: string
-        receiptImageUrl?: string
-      }
-    >()
-
-    expenses
-      .filter(
-        e =>
-          (e.categoryName || '').toLowerCase().includes('nhập hàng') ||
-          (e.expenseTitle || '').toLowerCase().includes('nhập hàng')
-      )
-      .forEach(e => {
-        const rawInvNum = e.expenseTitle ? e.expenseTitle.replace('Nhập hàng hóa đơn ', '').trim() : ''
-        const key = rawInvNum || e.expenseId
-        if (!productMap.has(key)) {
-          productMap.set(key, {
-            id: e.expenseId,
-            ids: [e.expenseId],
-            invoiceNumber: rawInvNum || 'N/A',
-            date: e.expenseDate,
-            supplierName: e.supplierName || 'Vãng lai',
-            amount: e.amount,
-            summary: e.note || e.expenseTitle,
-            receiptImageUrl: e.receiptImageUrl
-          })
-        }
-      })
-
-    productMap.forEach(group => {
-      list.push({
-        id: group.id,
-        ids: group.ids,
-        invoiceNumber: group.invoiceNumber,
-        date: group.date,
-        supplierName: group.supplierName,
-        amount: group.amount,
-        type: 'Product',
-        summary: group.summary,
-        receiptImageUrl: group.receiptImageUrl
-      })
-    })
-
-    // Sort newest first
-    return list.sort((a, b) => new Date(typeof b.date === 'string' && !b.date.endsWith('Z') ? b.date + 'Z' : b.date).getTime() - new Date(typeof a.date === 'string' && !a.date.endsWith('Z') ? a.date + 'Z' : a.date).getTime())
-  }, [materialPurchases, expenses])
+    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  }, [inventoryPurchases])
 
   const paginatedPurchases = useMemo(() => {
     const start = (page - 1) * pageSize
@@ -748,37 +595,17 @@ export default function PurchasePage() {
                             <td className='py-4 px-5 text-center'>
                               <button
                                 onClick={() => {
-                                  if (p.type === 'Product') {
-                                    const expObj = expenses.find(e => e.expenseId === p.id)
-                                    if (expObj) {
-                                      setSelectedExpenseDetail(expObj)
-                                      setSelectedMaterialDetail(null)
-                                      setShowPurchaseDetailModal(true)
-                                    }
-                                  } else {
-                                    const matched = materialPurchases.filter(m =>
-                                      (p.invoiceNumber && p.invoiceNumber !== 'N/A' && m.invoiceNumber?.trim() === p.invoiceNumber.trim()) ||
-                                      (p.ids && p.ids.includes(m.id)) ||
-                                      m.id === p.id
-                                    )
-                                    const firstWithImage = matched.find(m => m.receiptImageUrl)
-                                    setSelectedMaterialDetail({
-                                      invoiceNumber: p.invoiceNumber,
-                                      date: p.date,
-                                      supplierName: p.supplierName,
-                                      totalAmount: p.amount,
-                                      receiptImageUrl: p.receiptImageUrl || firstWithImage?.receiptImageUrl,
-                                      items: p.materialItems && p.materialItems.length > 0 ? p.materialItems : matched.map(m => ({
-                                        id: m.id,
-                                        name: m.ingredientName,
-                                        quantity: m.quantity,
-                                        unit: m.ingredientUnit || 'đơn vị',
-                                        totalCost: m.totalCost
-                                      }))
-                                    })
-                                    setSelectedExpenseDetail(null)
-                                    setShowPurchaseDetailModal(true)
-                                  }
+                                  setSelectedPurchaseType(p.type)
+                                  setSelectedMaterialDetail({
+                                    invoiceNumber: p.invoiceNumber,
+                                    date: p.date,
+                                    supplierName: p.supplierName,
+                                    totalAmount: p.amount,
+                                    receiptImageUrl: p.receiptImageUrl,
+                                    items: p.materialItems || []
+                                  })
+                                  setSelectedExpenseDetail(null)
+                                  setShowPurchaseDetailModal(true)
                                 }}
                                 className='text-slate-400 hover:text-blue-600 p-1 hover:bg-blue-50 rounded-md transition-colors mr-2 cursor-pointer'
                                 title='Xem chi tiết hóa đơn'
@@ -786,7 +613,7 @@ export default function PurchasePage() {
                                 <ClipboardList size={15} />
                               </button>
                               <button
-                                onClick={() => handleDeletePurchase(p.type, p.id, p.ids)}
+                                onClick={() => handleDeletePurchase(p.type, p.id)}
                                 className='text-slate-400 hover:text-[#b90a0a] p-1 hover:bg-red-50 rounded-md transition-colors cursor-pointer'
                                 title='Xóa hóa đơn nhập'
                               >
@@ -1349,14 +1176,14 @@ export default function PurchasePage() {
                 <div>
                   <div className='flex items-center gap-2'>
                     <h3 className='text-[16px] font-bold text-gray-900'>
-                      {selectedExpenseDetail ? 'Chi tiết phiếu chi phí nhập hàng' : 'Chi tiết hóa đơn nhập kho'}
+                      Chi tiết hóa đơn nhập kho
                     </h3>
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                       selectedExpenseDetail
                         ? 'bg-purple-50 text-purple-700 border-purple-200/70'
                         : 'bg-teal-50 text-teal-700 border-teal-200/70'
                     }`}>
-                      {selectedExpenseDetail ? 'Sản phẩm' : 'Nguyên vật liệu'}
+                      {selectedPurchaseType === 'Product' ? 'Sản phẩm' : 'Nguyên vật liệu'}
                     </span>
                   </div>
                   <p className='text-gray-400 text-xs mt-0.5 font-medium'>
@@ -1447,7 +1274,7 @@ export default function PurchasePage() {
                       <Package size={14} className='text-[#D32F2F]' /> Danh sách nguyên vật liệu nhập
                     </span>
                     <span className='text-xs font-bold text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded-full'>
-                      {selectedMaterialDetail.items?.length || 0} nguyên liệu
+                      {selectedMaterialDetail.items?.length || 0} mặt hàng
                     </span>
                   </div>
 
@@ -1456,7 +1283,7 @@ export default function PurchasePage() {
                       <thead>
                         <tr className='bg-slate-50/90 text-slate-700 text-[11.5px] font-bold border-b border-gray-200 select-none'>
                           <th className='py-2.5 px-4 w-12 text-center'>STT</th>
-                          <th className='py-2.5 px-4'>Tên nguyên liệu</th>
+                          <th className='py-2.5 px-4'>Tên mặt hàng</th>
                           <th className='py-2.5 px-4 text-center'>Số lượng</th>
                           <th className='py-2.5 px-4 text-right'>Đơn giá ước tính</th>
                           <th className='py-2.5 px-4 text-right'>Thành tiền</th>

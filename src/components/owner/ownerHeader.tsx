@@ -51,6 +51,7 @@ const menuItems = [
 export default function OwnerHeader() {
   const [productOpen, setProductOpen] = useState(false)
   const [expenseOpen, setExpenseOpen] = useState(false)
+  const [bookOpen, setBookOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [showBusinessModal, setShowBusinessModal] = useState(false)
   const [showAddBusinessModal, setShowAddBusinessModal] = useState(false)
@@ -102,7 +103,14 @@ export default function OwnerHeader() {
     if (!currentBusiness) return
     try {
       setIsTogglingStock(true)
-      await toggleStockTracking(currentBusiness.id, pendingStockTrackingState)
+      if (pendingStockTrackingState) {
+        setShowToggleStockModal(false)
+        navigate(path.BUSINESS_OWNER_INVENTORY)
+        return
+      }
+      await toggleStockTracking(currentBusiness.id, {
+        isStockTrackingEnabled: false
+      })
       const updatedBusiness = {
         ...currentBusiness,
         isStockTrackingEnabled: pendingStockTrackingState
@@ -462,6 +470,12 @@ export default function OwnerHeader() {
               >
                 Danh mục sản phẩm
               </DropdownMenuItem>
+              <DropdownMenuItem
+                className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
+                onClick={() => navigate(path.BUSINESS_OWNER_INVENTORY)}
+              >
+                Khởi tạo / kiểm kê tồn kho
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -539,6 +553,36 @@ export default function OwnerHeader() {
                   </DropdownMenuItem>
                 </>
               )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <DropdownMenu open={bookOpen} onOpenChange={setBookOpen}>
+            <DropdownMenuTrigger>
+              <div className='cursor-pointer'>
+                <NavItem
+                  isActive={bookOpen || location.pathname.includes('/tax-books/')}
+                  label={<div className='flex items-center gap-1'><span>Sổ sách</span><ChevronDown size={14} className={`transition-transform duration-200 ${bookOpen ? 'rotate-180' : ''}`} /></div>}
+                />
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='start' sideOffset={8} className='w-64 rounded-md border border-gray-200 bg-white p-1 shadow-xl z-9999 animate-in fade-in-0 zoom-in-95'>
+              <DropdownMenuItem className='cursor-pointer rounded px-4 py-2.5 text-[15px]' onClick={() => navigate(path.BUSINESS_OWNER_S2B_BOOK)}>
+                S2b — Sổ doanh thu
+              </DropdownMenuItem>
+              <DropdownMenuItem className='cursor-pointer rounded px-4 py-2.5 text-[15px]' onClick={() => navigate(path.BUSINESS_OWNER_S2C_BOOK)}>
+                S2c — Sổ chi phí
+              </DropdownMenuItem>
+              {!isServiceStore && (
+                <DropdownMenuItem className='cursor-pointer rounded px-4 py-2.5 text-[15px]' onClick={() => navigate(path.BUSINESS_OWNER_S2D_BOOK)}>
+                  S2d — Sổ kho
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem className='cursor-pointer rounded px-4 py-2.5 text-[15px]' onClick={() => navigate(path.BUSINESS_OWNER_S2E_BOOK)}>
+                S2e — Sổ tiền
+              </DropdownMenuItem>
+              <DropdownMenuItem className='cursor-pointer rounded px-4 py-2.5 text-[15px]' onClick={() => navigate(path.BUSINESS_OWNER_QTT)}>
+                QTT — Quyết toán TNCN
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 

@@ -83,7 +83,7 @@ export interface UpdateOrderItemRequest {
 }
 
 export interface PaymentEntry {
-  paymentMethod: 'Cash' | 'Transfer' | 'EWallet'
+  paymentMethod: 'Cash' | 'Transfer'
   amount: number
   paymentAccountId?: string | null
 }
