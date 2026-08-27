@@ -9,6 +9,12 @@ export type TaxPeriodType =
   | 'Monthly'
   | 'Quarterly'
   | 'Yearly'
+  | 'Tkn'
+
+export type TaxPeriodFilingWindow =
+  | 'FirstHalf'
+  | 'SecondHalf'
+  | 'Annual'
 
 export type DataCheckStatus =
   | 'Good'
@@ -20,6 +26,7 @@ export interface TaxPeriodSummary {
   businessId: string
 
   periodType: TaxPeriodType
+  filingWindow: TaxPeriodFilingWindow | null
 
   year: number
   month: number | null

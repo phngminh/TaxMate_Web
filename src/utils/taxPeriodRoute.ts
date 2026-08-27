@@ -21,3 +21,15 @@ export function taxPeriodDeclarationPath(
 ) {
   return `/business-owner/tax-period/${taxPeriodId}/declaration`
 }
+
+export function tknTaxPeriodDetailPath(
+  taxPeriodId: string
+) {
+  return `/business-owner/tkn-tax-period/${taxPeriodId}`
+}
+
+export function tknTaxPeriodPreviewPath(
+  taxPeriodId: string
+) {
+  return `/business-owner/tkn-tax-period/${taxPeriodId}/preview`
+}

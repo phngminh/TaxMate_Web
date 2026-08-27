@@ -1,14 +1,18 @@
+export type S2cGroupCode = 'Labor' | 'PurchasedServices' | 'OtherDirect'
+
 export interface ExpenseCategory {
   expenseCategoryId: string
   businessId: string
   categoryName: string
   description?: string
+  s2cGroupCode?: S2cGroupCode | null
   createdAt?: string
 }
 
 export interface CreateExpenseCategoryRequest {
   categoryName: string
   description?: string
+  s2cGroupCode?: S2cGroupCode | null
 }
 
 export interface ExpenseDTO {
@@ -18,7 +22,7 @@ export interface ExpenseDTO {
   expenseTitle: string
   amount: number
   expenseDate: string
-  paymentMethod: string
+  paymentMethod?: string
   receiptImageUrl?: string
   note?: string
   fileUrl?: string
@@ -36,6 +40,7 @@ export interface CreateExpenseRequest {
   amount: number
   expenseDate: string
   paymentMethod?: string | null
+  paymentAccountId?: string | null
   receiptImageUrl?: string | null
   note?: string | null
   fileUrl?: string | null
@@ -50,6 +55,7 @@ export interface UpdateExpenseRequest {
   amount: number
   expenseDate: string
   paymentMethod?: string | null
+  paymentAccountId?: string | null
   receiptImageUrl?: string | null
   note?: string | null
   fileUrl?: string | null

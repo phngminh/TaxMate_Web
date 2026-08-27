@@ -18,8 +18,19 @@ import {
 import { toast } from 'react-toastify'
 
 import { getTaxDashboard } from '../../apis/taxDashboard.api'
+import {
+  confirmAnnualRevenueConclusion,
+  getAnnualRevenueConclusion,
+  getOwnerTaxProfile
+} from '../../apis/taxProfile.api'
+import {
+  getTaxFilingTasks,
+  openTaxFilingTask
+} from '../../apis/taxFilingTask.api'
 import { getBusinessTaxPeriods } from '../../apis/taxPeriod.api'
+import TaxFilingTaskCard from '../../components/owner/tax/TaxFilingTaskCard'
 import TaxQuarterCard from '../../components/owner/tax/TaxQuarterCard'
+import TaxProfileCard from '../../components/owner/tax/TaxProfileCard'
 import path from '../../constants/path'
 import { useBusiness } from '../../contexts/BusinessContext'
 
@@ -28,15 +39,28 @@ import type {
 } from '../../types/taxDashboard.type'
 
 import type {
+  AnnualRevenueConclusionPreview
+} from '../../types/annualRevenueConclusion.type'
+
+import type {
   TaxPeriodSummary
 } from '../../types/taxPeriod.type'
+
+import type {
+  TaxFilingTask
+} from '../../types/taxFilingTask.type'
+import type {
+  OwnerTaxProfile,
+  TaxMethod
+} from '../../types/taxProfile.type'
 
 import {
   mapTaxDashboardApiToUi
 } from '../../utils/taxDashboardMapper'
 
 import {
-  taxPeriodDetailPath
+  taxPeriodDetailPath,
+  tknTaxPeriodDetailPath
 } from '../../utils/taxPeriodRoute'
 
 function formatVnd(value: number) {
@@ -70,6 +94,8 @@ export default function TaxDashboard() {
   const currentYear =
     new Date().getFullYear()
 
+  const conclusionYear = currentYear - 1
+
   const [dashboard, setDashboard] =
     useState<TaxDashboardUiData | null>(
       null
@@ -77,6 +103,22 @@ export default function TaxDashboard() {
 
   const [taxPeriods, setTaxPeriods] =
     useState<TaxPeriodSummary[]>([])
+
+  const [filingTasks, setFilingTasks] =
+    useState<TaxFilingTask[]>([])
+
+  const [openingTaskId, setOpeningTaskId] =
+    useState<string | null>(null)
+
+  const [annualConclusion, setAnnualConclusion] =
+    useState<AnnualRevenueConclusionPreview | null>(null)
+  const [taxProfile, setTaxProfile] =
+    useState<OwnerTaxProfile | null>(null)
+  const [annualMethod, setAnnualMethod] =
+    useState<TaxMethod>('RevenueBased')
+
+  const [isConfirmingConclusion, setIsConfirmingConclusion] =
+    useState(false)
 
   const [isLoading, setIsLoading] =
     useState(false)
@@ -91,6 +133,9 @@ export default function TaxDashboard() {
       if (!businessId) {
         setDashboard(null)
         setTaxPeriods([])
+        setFilingTasks([])
+        setAnnualConclusion(null)
+        setTaxProfile(null)
         setIsLoading(false)
         return
       }
@@ -112,7 +157,10 @@ export default function TaxDashboard() {
         */
         const [
           dashboardResponse,
-          taxPeriodResponse
+          taxPeriodResponse,
+          filingTaskResponse,
+          annualConclusionResponse,
+          taxProfileResponse
         ] = await Promise.all([
           getTaxDashboard({
             businessId,
@@ -127,7 +175,19 @@ export default function TaxDashboard() {
             businessId,
             year: currentYear,
             periodType: 'Quarterly'
-          })
+          }),
+
+          getTaxFilingTasks(
+            businessId,
+            currentYear
+          ),
+
+          getAnnualRevenueConclusion(
+            businessId,
+            conclusionYear
+          ).catch(() => null),
+
+          getOwnerTaxProfile(businessId)
         ])
 
         if (!active) {
@@ -143,6 +203,22 @@ export default function TaxDashboard() {
         setTaxPeriods(
           taxPeriodResponse
         )
+
+        let resolvedTasks = filingTaskResponse
+        if (annualConclusionResponse?.alreadyConfirmed) {
+          const conclusionTasks = await getTaxFilingTasks(
+            businessId,
+            conclusionYear
+          )
+          resolvedTasks = [
+            ...conclusionTasks,
+            ...filingTaskResponse
+          ]
+        }
+
+        setFilingTasks(resolvedTasks)
+        setAnnualConclusion(annualConclusionResponse)
+        setTaxProfile(taxProfileResponse)
       } catch (error) {
         if (!active) {
           return
@@ -189,6 +265,7 @@ export default function TaxDashboard() {
     }
   }, [
     businessId,
+    conclusionYear,
     currentYear
   ])
 
@@ -248,6 +325,129 @@ export default function TaxDashboard() {
         'taxmate:open-ai-assistant'
       )
     )
+  }
+
+  async function handleOpenFilingTask(
+    task: TaxFilingTask
+  ) {
+    if (!businessId) return
+
+    if (
+      task.status === 'NotApplicable' ||
+      !task.primaryAction.enabled ||
+      task.primaryAction.code === 'None'
+    ) {
+      toast.info(
+        'Hồ sơ này không cần thực hiện trong tình trạng hiện tại.'
+      )
+      return
+    }
+
+    if (
+      task.primaryAction.code !== 'Open'
+    ) {
+      if (!task.taxPeriodId) {
+        toast.error(
+          'Không tìm thấy kỳ thông báo doanh thu tương ứng.'
+        )
+        return
+      }
+
+      navigate(
+        tknTaxPeriodDetailPath(
+          task.taxPeriodId
+        )
+      )
+      return
+    }
+
+    try {
+      setOpeningTaskId(task.taskId)
+      const opened =
+        await openTaxFilingTask(
+          businessId,
+          task.taskId
+        )
+
+      setFilingTasks((current) =>
+        current.map((item) =>
+          item.taskId === opened.taskId
+            ? opened
+            : item
+        )
+      )
+
+      if (!opened.taxPeriodId) {
+        throw new Error(
+          'Open task did not return a tax period.'
+        )
+      }
+
+      navigate(
+        tknTaxPeriodDetailPath(
+          opened.taxPeriodId
+        )
+      )
+    } catch (error) {
+      const responseData =
+        axios.isAxiosError(error)
+          ? (error.response?.data as {
+              message?: string
+            } | undefined)
+          : undefined
+
+      toast.error(
+        responseData?.message ||
+          'Không thể mở hồ sơ thông báo doanh thu.'
+      )
+    } finally {
+      setOpeningTaskId(null)
+    }
+  }
+
+  async function handleConfirmAnnualConclusion() {
+    if (!businessId || !annualConclusion?.canConfirm) return
+
+    try {
+      setIsConfirmingConclusion(true)
+      const confirmed = await confirmAnnualRevenueConclusion(
+        businessId,
+        annualConclusion.taxYear,
+        annualConclusion.requiredTaxMethod ??
+          (annualConclusion.allowedTaxMethods.length > 0
+            ? annualMethod
+            : undefined)
+      )
+      const conclusionTasks = await getTaxFilingTasks(
+        businessId,
+        confirmed.taxYear
+      )
+      setAnnualConclusion(confirmed)
+      setFilingTasks((current) => [
+        ...conclusionTasks,
+        ...current.filter(
+          (task) => task.taxYear !== confirmed.taxYear
+        )
+      ])
+      toast.success(
+        `Đã xác nhận kết luận doanh thu năm ${confirmed.taxYear}.`
+      )
+    } catch (error) {
+      const responseData = axios.isAxiosError(error)
+        ? (error.response?.data as { message?: string } | undefined)
+        : undefined
+      toast.error(
+        responseData?.message ||
+          'Chưa thể xác nhận kết luận doanh thu năm.'
+      )
+    } finally {
+      setIsConfirmingConclusion(false)
+    }
+  }
+
+  async function reloadTaxProfile() {
+    if (!businessId) return
+    setTaxProfile(await getOwnerTaxProfile(businessId))
   }
 
   if (!businessId) {
@@ -663,6 +863,116 @@ export default function TaxDashboard() {
               )}
             </div>
           </div>
+        )}
+
+        {taxProfile && (
+          <TaxProfileCard
+            businessId={businessId}
+            profile={taxProfile}
+            onChanged={setTaxProfile}
+            onReload={reloadTaxProfile}
+          />
+        )}
+
+        {/* Owner-wide filing tasks */}
+        {annualConclusion?.shouldShow && (
+          <section className='mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 shadow-sm'>
+            <div className='flex flex-wrap items-start justify-between gap-4'>
+              <div className='max-w-3xl'>
+                <p className='text-xs font-bold uppercase tracking-wide text-emerald-700'>
+                  Kết luận doanh thu năm {annualConclusion.taxYear}
+                </p>
+                <h2 className='mt-1 text-xl font-extrabold text-emerald-950'>
+                  Nhóm năm sau: {
+                    annualConclusion.targetRevenueBracket === 'AtOrBelow1B'
+                      ? 'Không quá 1 tỷ'
+                      : annualConclusion.targetRevenueBracket === 'Over1BTo3B'
+                        ? 'Trên 1 đến 3 tỷ'
+                        : 'Trên 3 đến 50 tỷ'
+                  }
+                </h2>
+                <p className='mt-2 text-sm leading-6 text-emerald-900'>
+                  TaxMate đã tổng hợp {formatVnd(annualConclusion.annualRevenue)}. Thay đổi áp dụng từ năm {annualConclusion.appliesFromYear}; các tờ khai và khoản đã nộp trước đó vẫn được giữ nguyên.
+                </p>
+                {annualConclusion.allowedTaxMethods.length > 1 && (
+                  <select
+                    className='mt-3 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm'
+                    value={annualMethod}
+                    onChange={(event) => setAnnualMethod(event.target.value as TaxMethod)}
+                  >
+                    <option value='RevenueBased'>TNCN theo doanh thu</option>
+                    <option value='IncomeBased'>TNCN theo thu nhập tính thuế</option>
+                  </select>
+                )}
+              </div>
+              <button
+                type='button'
+                disabled={
+                  !annualConclusion.canConfirm ||
+                  isConfirmingConclusion
+                }
+                onClick={() => {
+                  void handleConfirmAnnualConclusion()
+                }}
+                className='h-11 rounded-xl bg-emerald-700 px-5 text-sm font-bold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-gray-300'
+              >
+                {isConfirmingConclusion
+                  ? 'Đang xác nhận...'
+                  : 'Xác nhận kết luận năm'}
+              </button>
+            </div>
+
+            {annualConclusion.blockingIssues.length > 0 && (
+              <div className='mt-4 rounded-xl border border-amber-200 bg-white p-4'>
+                <p className='text-sm font-bold text-amber-800'>
+                  Cần hoàn tất trước khi xác nhận
+                </p>
+                <ul className='mt-2 space-y-1 text-sm text-amber-700'>
+                  {annualConclusion.blockingIssues.map((issue) => (
+                    <li key={issue.code}>• {issue.message}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </section>
+        )}
+
+        {filingTasks.length > 0 && (
+          <section className='mt-6 rounded-2xl bg-white p-6 shadow-sm'>
+            <div className='flex flex-wrap items-start justify-between gap-4'>
+              <div>
+                <p className='text-xs font-bold uppercase tracking-wide text-red-500'>
+                  Việc cần làm về thuế
+                </p>
+                <h2 className='mt-1 text-xl font-extrabold text-gray-900'>
+                  Thông báo doanh thu 01/TKN-CNKD
+                </h2>
+                <p className='mt-1 max-w-3xl text-sm leading-6 text-gray-500'>
+                  Lịch áp dụng chung cho chủ hộ. TaxMate tự chọn đúng kỳ sáu tháng hoặc cả năm từ hồ sơ thuế đã xác nhận.
+                </p>
+              </div>
+              <span className='rounded-full bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600'>
+                Năm {currentYear}
+              </span>
+            </div>
+
+            <div className='mt-5 grid gap-4 xl:grid-cols-2'>
+              {filingTasks.map((task) => (
+                <TaxFilingTaskCard
+                  key={task.taskId}
+                  task={task}
+                  isOpening={
+                    openingTaskId === task.taskId
+                  }
+                  onOpen={(selectedTask) => {
+                    void handleOpenFilingTask(
+                      selectedTask
+                    )
+                  }}
+                />
+              ))}
+            </div>
+          </section>
         )}
 
         {/* Quarter analysis */}

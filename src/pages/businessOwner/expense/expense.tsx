@@ -1,12 +1,15 @@
 import { useState, useMemo, useEffect } from 'react'
 import { ArrowUpCircle, ArrowDownCircle, MoreVertical, RotateCcw, Plus, ChevronRight, ImagePlus, Loader2 } from 'lucide-react'
+import { NumericFormat } from 'react-number-format'
 import { useBusiness } from '../../../contexts/BusinessContext'
 import { getAllExpenses, createExpense, getExpenseCategories, updateExpense, deleteExpense, createExpenseCategory } from '../../../apis/expense.api'
 import { getAllIncomes, createIncome, getIncomeCategories, updateIncome, deleteIncome, createIncomeCategory } from '../../../apis/income.api'
 import { uploadImage } from '../../../apis/image.api'
+import { getMoneyAccounts } from '../../../apis/paymentAccount.api'
 import { toast } from 'react-toastify'
 import type { ExpenseCategory } from '../../../types/expense.type'
-import type { IncomeCategory } from '../../../types/income.type'
+import type { IncomeAccountingType, IncomeCategory } from '../../../types/income.type'
+import type { PaymentAccount } from '../../../types/paymentAccount.type'
 
 interface ExpenseRecord {
   id: string
@@ -22,7 +25,31 @@ interface ExpenseRecord {
   rawAmount: number
   paymentMethod: string
   rawPaymentMethod: string
+  settledDate?: string
+  accountingType?: IncomeAccountingType
   imageUrl?: string
+}
+
+const supportedExpenseCategories = (categories: ExpenseCategory[]) =>
+  categories.filter((category) => category.s2cGroupCode !== 'Labor')
+
+const expenseCategoryOptionLabel = (category: ExpenseCategory) => {
+  if (category.s2cGroupCode === 'PurchasedServices') return `${category.categoryName} — Dự kiến vào S2c: Dịch vụ mua ngoài`
+  if (category.s2cGroupCode === 'OtherDirect') return `${category.categoryName} — Dự kiến vào S2c: Chi phí khác`
+  if (category.s2cGroupCode === 'Labor') return `${category.categoryName} — Nhân công chưa được TaxMate hỗ trợ`
+  return `${category.categoryName} — Không tự đưa vào S2c`
+}
+
+function ExpenseCategoryImpact({ category }: { category?: ExpenseCategory }) {
+  if (!category) return null
+  const included = category.s2cGroupCode === 'PurchasedServices' || category.s2cGroupCode === 'OtherDirect'
+  return (
+    <p className={`mt-1 text-xs ${included ? 'text-emerald-700' : 'text-gray-500'}`}>
+      {included
+        ? `${expenseCategoryOptionLabel(category).split(' — ')[1]}. Đây chỉ là phân nhóm; vẫn cần rà soát chứng từ trước khi quyết toán.`
+        : 'Khoản chi thuộc danh mục này không được TaxMate tự đưa vào chi phí dự kiến được trừ.'}
+    </p>
+  )
 }
 
 
@@ -87,6 +114,61 @@ function FilterGroup({
   )
 }
 
+function MoneyInput({
+  defaultValue = '',
+  focusClass
+}: {
+  defaultValue?: number | string
+  focusClass: string
+}) {
+  const [value, setValue] = useState(String(defaultValue))
+
+  return (
+    <div className='relative'>
+      <NumericFormat
+        inputMode='numeric'
+        value={value}
+        valueIsNumericString
+        required
+        placeholder='0'
+        thousandSeparator='.'
+        decimalSeparator=','
+        decimalScale={0}
+        allowNegative={false}
+        allowLeadingZeros={false}
+        onFocus={(event) => event.currentTarget.select()}
+        onValueChange={({ value: nextValue }) => setValue(nextValue)}
+        className={`w-full rounded-[8px] border border-gray-200 px-3.5 py-2 pr-10 text-right text-[13.5px] font-medium text-gray-800 outline-hidden transition-all ${focusClass}`}
+      />
+      <span className='absolute right-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400'>đ</span>
+      <input type='hidden' name='amount' value={value} />
+    </div>
+  )
+}
+
+function BankAccountSelect({
+  accounts,
+  accent
+}: {
+  accounts: PaymentAccount[]
+  accent: 'orange' | 'emerald'
+}) {
+  const banks = accounts.filter((account) => account.accountType === 'Bank' && account.isActive)
+  return (
+    <div className='flex flex-col gap-1.5'>
+      <label className='text-[13px] font-bold text-gray-600'>Tài khoản ngân hàng <span className='text-red-500'>*</span></label>
+      <select name='paymentAccountId' required defaultValue='' className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden font-medium text-gray-800 bg-white ${accent === 'orange' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`}>
+        <option value='' disabled>-- Chọn tài khoản --</option>
+        {banks.map((account) => (
+          <option key={account.paymentAccountId} value={account.paymentAccountId}>
+            {account.bankShortName || account.bankName} ••••{account.accountNumber?.slice(-4)}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 export default function Expense() {
   const { businessId } = useBusiness()
 
@@ -123,6 +205,12 @@ export default function Expense() {
   const [apiRecords, setApiRecords] = useState<ExpenseRecord[]>([])
   const [expenseCategories, setExpenseCategories] = useState<ExpenseCategory[]>([])
   const [incomeCategories, setIncomeCategories] = useState<IncomeCategory[]>([])
+  const [moneyAccounts, setMoneyAccounts] = useState<PaymentAccount[]>([])
+  const [addExpensePaymentMethod, setAddExpensePaymentMethod] = useState('Cash')
+  const [addIncomePaymentMethod, setAddIncomePaymentMethod] = useState('Cash')
+  const [editPaymentMethod, setEditPaymentMethod] = useState('Cash')
+  const [addExpenseCategoryId, setAddExpenseCategoryId] = useState('')
+  const [editExpenseCategoryId, setEditExpenseCategoryId] = useState('')
 
   const handleAddExpenseCategory = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -160,15 +248,17 @@ export default function Expense() {
       return
     }
     try {
-      const [exps, incs, expCats, incCats] = await Promise.all([
+      const [exps, incs, expCats, incCats, accounts] = await Promise.all([
         getAllExpenses(businessId),
         getAllIncomes(businessId),
         getExpenseCategories(businessId),
-        getIncomeCategories(businessId)
+        getIncomeCategories(businessId),
+        getMoneyAccounts(businessId)
       ])
 
       setExpenseCategories(expCats.data || [])
       setIncomeCategories(incCats.data || [])
+      setMoneyAccounts(accounts)
 
       const mapPaymentMethod = (pm?: string | null) => {
         if (!pm) return 'Tiền mặt'
@@ -194,7 +284,8 @@ export default function Expense() {
           originalDateStr: new Date(typeof e.expenseDate === 'string' && !e.expenseDate.endsWith('Z') ? e.expenseDate + 'Z' : e.expenseDate).toISOString().split('T')[0],
           rawAmount: e.amount,
           paymentMethod: pm,
-          rawPaymentMethod: e.paymentMethod || 'Cash',
+          rawPaymentMethod: e.paymentMethod || '',
+          settledDate: e.paidDate,
           imageUrl: e.receiptImageUrl
         }
       })
@@ -214,7 +305,9 @@ export default function Expense() {
           originalDateStr: new Date(typeof e.incomeDate === 'string' && !e.incomeDate.endsWith('Z') ? e.incomeDate + 'Z' : e.incomeDate).toISOString().split('T')[0],
           rawAmount: e.amount,
           paymentMethod: pm,
-          rawPaymentMethod: e.paymentMethod || 'Cash',
+          rawPaymentMethod: e.paymentMethod || '',
+          settledDate: e.receivedDate,
+          accountingType: e.accountingType,
           imageUrl: e.receiptImageUrl
         }
       })
@@ -326,6 +419,8 @@ export default function Expense() {
     }
     const fd = new FormData(e.currentTarget)
     const selectedDateStr = (fd.get('date') as string) || new Date().toISOString().split('T')[0]
+    const paymentMethod = addExpensePaymentMethod
+    const paymentAccountId = paymentMethod === 'Transfer' ? fd.get('paymentAccountId') as string : undefined
 
     if (new Date(typeof selectedDateStr === 'string' && !selectedDateStr.endsWith('Z') ? selectedDateStr + 'Z' : selectedDateStr) > new Date()) {
       toast.error('Ngày tạo không được chọn quá hôm nay!')
@@ -342,12 +437,15 @@ export default function Expense() {
         expenseTitle: fd.get('title') as string,
         expenseCategoryId: fd.get('categoryId') as string,
         amount: Number(fd.get('amount')),
-        paymentMethod: fd.get('paymentMethod') as string,
+        paymentMethod,
+        paymentAccountId,
         expenseDate: selectedDateStr,
+        paidDate: selectedDateStr,
         receiptImageUrl
       })
       toast.success('Thêm khoản chi thành công!')
       setIsAddExpenseOpen(false)
+      setAddExpenseCategoryId('')
       setAddExpenseImage(null)
       setAddExpenseImagePreview(null)
       fetchData()
@@ -366,6 +464,8 @@ export default function Expense() {
     }
     const fd = new FormData(e.currentTarget)
     const selectedDateStr = (fd.get('date') as string) || new Date().toISOString().split('T')[0]
+    const paymentMethod = addIncomePaymentMethod
+    const paymentAccountId = paymentMethod === 'Transfer' ? fd.get('paymentAccountId') as string : undefined
 
     if (new Date(typeof selectedDateStr === 'string' && !selectedDateStr.endsWith('Z') ? selectedDateStr + 'Z' : selectedDateStr) > new Date()) {
       toast.error('Ngày tạo không được chọn quá hôm nay!')
@@ -382,8 +482,11 @@ export default function Expense() {
         incomeTitle: fd.get('title') as string,
         incomeCategoryId: fd.get('categoryId') as string,
         amount: Number(fd.get('amount')),
-        paymentMethod: fd.get('paymentMethod') as string,
+        accountingType: fd.get('accountingType') as IncomeAccountingType,
+        paymentMethod,
+        paymentAccountId,
         incomeDate: selectedDateStr,
+        receivedDate: selectedDateStr,
         receiptImageUrl
       })
       toast.success('Thêm khoản thu thành công!')
@@ -403,6 +506,8 @@ export default function Expense() {
     if (!businessId || !editingRecord) return
     const fd = new FormData(e.currentTarget)
     const selectedDateStr = (fd.get('date') as string) || new Date().toISOString().split('T')[0]
+    const paymentMethod = editPaymentMethod
+    const paymentAccountId = paymentMethod === 'Transfer' ? fd.get('paymentAccountId') as string : undefined
 
     if (new Date(typeof selectedDateStr === 'string' && !selectedDateStr.endsWith('Z') ? selectedDateStr + 'Z' : selectedDateStr) > new Date()) {
       toast.error('Ngày không được chọn quá hôm nay!')
@@ -420,8 +525,10 @@ export default function Expense() {
           expenseTitle: fd.get('title') as string,
           expenseCategoryId: fd.get('categoryId') as string,
           amount: Number(fd.get('amount')),
-          paymentMethod: fd.get('paymentMethod') as string,
+          paymentMethod,
+          paymentAccountId,
           expenseDate: selectedDateStr,
+          paidDate: selectedDateStr,
           receiptImageUrl
         })
       } else {
@@ -429,8 +536,11 @@ export default function Expense() {
           incomeTitle: fd.get('title') as string,
           incomeCategoryId: fd.get('categoryId') as string,
           amount: Number(fd.get('amount')),
-          paymentMethod: fd.get('paymentMethod') as string,
+          accountingType: fd.get('accountingType') as IncomeAccountingType,
+          paymentMethod,
+          paymentAccountId,
           incomeDate: selectedDateStr,
+          receivedDate: selectedDateStr,
           receiptImageUrl
         })
       }
@@ -623,7 +733,7 @@ export default function Expense() {
                           {r.amount.toLocaleString('vi-VN')}
                         </td>
                         <td className='py-3.5 px-3'>
-                          <button onClick={() => { setEditingRecord(r); setIsEditModalOpen(true); setEditImage(null); setEditImagePreview(r.imageUrl || null); }} className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
+                          <button onClick={() => { setEditingRecord(r); setEditExpenseCategoryId(r.categoryId); setEditPaymentMethod(r.rawPaymentMethod || 'Cash'); setIsEditModalOpen(true); setEditImage(null); setEditImagePreview(r.imageUrl || null); }} className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
                             <MoreVertical size={14} />
                           </button>
                         </td>
@@ -663,7 +773,7 @@ export default function Expense() {
 
               <div className='px-5 pb-5 pt-2 flex gap-3'>
                 <button
-                  onClick={() => setIsAddExpenseOpen(true)}
+                  onClick={() => { setAddExpenseCategoryId(''); setAddExpensePaymentMethod('Cash'); setIsAddExpenseOpen(true) }}
                   className='flex-1 flex items-center justify-center gap-2.5 py-3 rounded-[10px] text-[14px] font-bold text-white transition-all shadow-[0_4px_14px_rgba(249,115,22,0.35)] hover:shadow-[0_6px_18px_rgba(249,115,22,0.45)] active:scale-[0.98]'
                   style={{ background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' }}
                 >
@@ -719,7 +829,7 @@ export default function Expense() {
                           +{fmt(r.amount)}
                         </td>
                         <td className='py-3.5 px-3'>
-                          <button onClick={() => { setEditingRecord(r); setIsEditModalOpen(true); setEditImage(null); setEditImagePreview(r.imageUrl || null); }} className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
+                          <button onClick={() => { setEditingRecord(r); setEditExpenseCategoryId(''); setEditPaymentMethod(r.rawPaymentMethod || 'Cash'); setIsEditModalOpen(true); setEditImage(null); setEditImagePreview(r.imageUrl || null); }} className='p-1 text-gray-300 hover:text-gray-500 opacity-0 group-hover:opacity-100 transition-all'>
                             <MoreVertical size={14} />
                           </button>
                         </td>
@@ -759,7 +869,7 @@ export default function Expense() {
 
               <div className='px-5 pb-5 pt-2 flex gap-3'>
                 <button
-                  onClick={() => setIsAddIncomeOpen(true)}
+                  onClick={() => { setAddIncomePaymentMethod('Cash'); setIsAddIncomeOpen(true) }}
                   className='flex-1 flex items-center justify-center gap-2.5 py-3 rounded-[10px] text-[14px] font-bold text-white transition-all shadow-[0_4px_14px_rgba(16,185,129,0.35)] hover:shadow-[0_6px_18px_rgba(16,185,129,0.45)] active:scale-[0.98]'
                   style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
                 >
@@ -797,30 +907,31 @@ export default function Expense() {
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Loại chi <span className='text-red-500'>*</span></label>
-                  <select name='categoryId' required defaultValue='' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 bg-white'>
+                  <select name='categoryId' required value={addExpenseCategoryId} onChange={(event) => setAddExpenseCategoryId(event.target.value)} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 bg-white'>
                     <option value='' disabled>-- Chọn loại chi --</option>
-                    {expenseCategories.map(c => (
-                      <option key={c.expenseCategoryId} value={c.expenseCategoryId}>{c.categoryName}</option>
+                    {supportedExpenseCategories(expenseCategories).map(c => (
+                      <option key={c.expenseCategoryId} value={c.expenseCategoryId}>{expenseCategoryOptionLabel(c)}</option>
                     ))}
                   </select>
+                  <ExpenseCategoryImpact category={expenseCategories.find((category) => category.expenseCategoryId === addExpenseCategoryId)} />
                 </div>
                 <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Số tiền (đ) <span className='text-red-500'>*</span></label>
-                  <input name='amount' type='number' required min='0' placeholder='0' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 text-right' />
+                  <label className='text-[13px] font-bold text-gray-600'>Số tiền <span className='text-red-500'>*</span></label>
+                  <MoneyInput focusClass='focus:border-orange-400' />
                 </div>
+              </div>
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-[13px] font-bold text-gray-600'>Ngày</label>
+                <input name='date' type='date' max={new Date().toISOString().split('T')[0]} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800' />
               </div>
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
-                  <select name='paymentMethod' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 bg-white'>
-                    <option value='Cash'>Tiền mặt</option>
-                    <option value='Transfer'>Chuyển khoản</option>
+                  <select value={addExpensePaymentMethod} onChange={(event) => setAddExpensePaymentMethod(event.target.value)} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800 bg-white'>
+                    <option value='Cash'>Tiền mặt</option><option value='Transfer'>Chuyển khoản</option>
                   </select>
                 </div>
-                <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Ngày</label>
-                  <input name='date' type='date' max={new Date().toISOString().split('T')[0]} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-orange-400 transition-all font-medium text-gray-800' />
-                </div>
+                {addExpensePaymentMethod === 'Transfer' && <BankAccountSelect accounts={moneyAccounts} accent='orange' />}
               </div>
               
               <div className='flex flex-col gap-2'>
@@ -876,6 +987,13 @@ export default function Expense() {
                 <label className='text-[13px] font-bold text-gray-600'>Nội dung <span className='text-red-500'>*</span></label>
                 <input name='title' type='text' required placeholder='Ví dụ: Bán hàng, Thu nợ...' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800' />
               </div>
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-[13px] font-bold text-gray-600'>Tính chất khoản thu <span className='text-red-500'>*</span></label>
+                <select name='accountingType' required defaultValue='BusinessRevenue' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 bg-white'>
+                  <option value='BusinessRevenue'>Doanh thu bán hàng/dịch vụ</option>
+                  <option value='NonRevenueCashIn'>Tiền vào khác, không phải doanh thu</option>
+                </select>
+              </div>
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Loại thu <span className='text-red-500'>*</span></label>
@@ -887,22 +1005,22 @@ export default function Expense() {
                   </select>
                 </div>
                 <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Số tiền (đ) <span className='text-red-500'>*</span></label>
-                  <input name='amount' type='number' required min='0' placeholder='0' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 text-right' />
+                  <label className='text-[13px] font-bold text-gray-600'>Số tiền <span className='text-red-500'>*</span></label>
+                  <MoneyInput focusClass='focus:border-emerald-400' />
                 </div>
+              </div>
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-[13px] font-bold text-gray-600'>Ngày</label>
+                <input name='date' type='date' max={new Date().toISOString().split('T')[0]} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800' />
               </div>
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
-                  <select name='paymentMethod' className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 bg-white'>
-                    <option value='Cash'>Tiền mặt</option>
-                    <option value='Transfer'>Chuyển khoản</option>
+                  <select value={addIncomePaymentMethod} onChange={(event) => setAddIncomePaymentMethod(event.target.value)} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 bg-white'>
+                    <option value='Cash'>Tiền mặt</option><option value='Transfer'>Chuyển khoản</option>
                   </select>
                 </div>
-                <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Ngày</label>
-                  <input name='date' type='date' max={new Date().toISOString().split('T')[0]} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800' />
-                </div>
+                {addIncomePaymentMethod === 'Transfer' && <BankAccountSelect accounts={moneyAccounts} accent='emerald' />}
               </div>
 
               <div className='flex flex-col gap-2'>
@@ -957,35 +1075,61 @@ export default function Expense() {
                 <label className='text-[13px] font-bold text-gray-600'>Nội dung <span className='text-red-500'>*</span></label>
                 <input name='title' type='text' required defaultValue={editingRecord.content} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`} />
               </div>
+              {editingRecord.type === 'income' && (
+                <div className='flex flex-col gap-1.5'>
+                  <label className='text-[13px] font-bold text-gray-600'>Tính chất khoản thu <span className='text-red-500'>*</span></label>
+                  <select name='accountingType' required defaultValue={editingRecord.accountingType || 'BusinessRevenue'} className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-emerald-400 transition-all font-medium text-gray-800 bg-white'>
+                    <option value='BusinessRevenue'>Doanh thu bán hàng/dịch vụ</option>
+                    <option value='NonRevenueCashIn'>Tiền vào khác, không phải doanh thu</option>
+                  </select>
+                </div>
+              )}
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Loại <span className='text-red-500'>*</span></label>
-                  <select name='categoryId' required defaultValue={editingRecord.categoryId} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 bg-white ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`}>
+                  <select
+                    key={`${editingRecord.type}-${editingRecord.id}`}
+                    name='categoryId'
+                    required
+                    defaultValue={editingRecord.categoryId}
+                    onChange={(event) => {
+                      if (editingRecord.type === 'expense') setEditExpenseCategoryId(event.target.value)
+                    }}
+                    className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 bg-white ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`}
+                  >
                     <option value='' disabled>-- Chọn loại --</option>
-                    {(editingRecord.type === 'expense' ? expenseCategories : incomeCategories).map(c => (
+                    {(editingRecord.type === 'expense'
+                      ? expenseCategories.filter((category) => category.s2cGroupCode !== 'Labor' || category.expenseCategoryId === editingRecord.categoryId)
+                      : incomeCategories).map(c => (
                       <option key={editingRecord.type === 'expense' ? (c as ExpenseCategory).expenseCategoryId : (c as IncomeCategory).incomeCategoryId} value={editingRecord.type === 'expense' ? (c as ExpenseCategory).expenseCategoryId : (c as IncomeCategory).incomeCategoryId}>
-                        {c.categoryName}
+                        {editingRecord.type === 'expense' ? expenseCategoryOptionLabel(c as ExpenseCategory) : c.categoryName}
                       </option>
                     ))}
                   </select>
+                  {editingRecord.type === 'expense' ? (
+                    <ExpenseCategoryImpact category={expenseCategories.find((category) => category.expenseCategoryId === editExpenseCategoryId)} />
+                  ) : null}
                 </div>
                 <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Số tiền (đ) <span className='text-red-500'>*</span></label>
-                  <input name='amount' type='number' required min='0' defaultValue={editingRecord.rawAmount} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 text-right ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`} />
+                  <label className='text-[13px] font-bold text-gray-600'>Số tiền <span className='text-red-500'>*</span></label>
+                  <MoneyInput
+                    defaultValue={editingRecord.rawAmount}
+                    focusClass={editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}
+                  />
                 </div>
+              </div>
+              <div className='flex flex-col gap-1.5'>
+                <label className='text-[13px] font-bold text-gray-600'>Ngày</label>
+                <input name='date' type='date' defaultValue={editingRecord.originalDateStr} max={new Date().toISOString().split('T')[0]} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`} />
               </div>
               <div className='grid grid-cols-2 gap-4'>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[13px] font-bold text-gray-600'>Phương thức</label>
-                  <select name='paymentMethod' defaultValue={editingRecord.rawPaymentMethod} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 bg-white ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`}>
-                    <option value='Cash'>Tiền mặt</option>
-                    <option value='Transfer'>Chuyển khoản</option>
+                  <select value={editPaymentMethod} onChange={(event) => setEditPaymentMethod(event.target.value)} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 bg-white ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`}>
+                    <option value='Cash'>Tiền mặt</option><option value='Transfer'>Chuyển khoản</option>
                   </select>
                 </div>
-                <div className='flex flex-col gap-1.5'>
-                  <label className='text-[13px] font-bold text-gray-600'>Ngày</label>
-                  <input name='date' type='date' defaultValue={editingRecord.originalDateStr} max={new Date().toISOString().split('T')[0]} className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 ${editingRecord.type === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`} />
-                </div>
+                {editPaymentMethod === 'Transfer' && <BankAccountSelect accounts={moneyAccounts} accent={editingRecord.type === 'expense' ? 'orange' : 'emerald'} />}
               </div>
 
               <div className='flex flex-col gap-2'>

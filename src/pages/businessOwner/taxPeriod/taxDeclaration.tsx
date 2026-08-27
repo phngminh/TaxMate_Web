@@ -23,10 +23,17 @@ import {
   getTaxDeclarationByTaxPeriod,
   submitTaxDeclaration
 } from '../../../apis/taxDeclaration.api'
+import { getPaymentAccounts } from '../../../apis/paymentAccount.api'
 
 import {
   getTaxPeriodById
 } from '../../../apis/taxPeriod.api'
+import {
+  applyTknQttNextStep,
+  getTknQttNextStep
+} from '../../../apis/tknTaxPeriod.api'
+
+import path from '../../../constants/path'
 
 import type {
   TaxDeclaration
@@ -35,6 +42,8 @@ import type {
 import type {
   TaxPeriodDetail
 } from '../../../types/taxPeriod.type'
+import type { PaymentAccount } from '../../../types/paymentAccount.type'
+import type { TknQttNextStep } from '../../../types/tknTaxPeriod.type'
 
 function formatMoney(value: number) {
   return `${value.toLocaleString('vi-VN')}đ`
@@ -212,6 +221,66 @@ export default function TaxDeclarationPage() {
     setErrorMessage
   ] = useState<string | null>(null)
 
+  const [qttNextStep, setQttNextStep] =
+    useState<TknQttNextStep | null>(null)
+  const [refundAccounts, setRefundAccounts] =
+    useState<PaymentAccount[]>([])
+  const [refundAccountId, setRefundAccountId] =
+    useState('')
+  const [isApplyingNextStep, setIsApplyingNextStep] =
+    useState(false)
+  const [nextStepError, setNextStepError] =
+    useState<string | null>(null)
+
+  async function loadTknNextStep(
+    period: TaxPeriodDetail
+  ) {
+    if (
+      period.periodType !== 'Tkn' ||
+      period.filingWindow === 'FirstHalf' ||
+      !['Submitted', 'Paid'].includes(
+        period.status
+      )
+    ) {
+      setQttNextStep(null)
+      return
+    }
+
+    try {
+      setNextStepError(null)
+      const [nextStep, accountResponse] =
+        await Promise.all([
+          getTknQttNextStep(period.id),
+          getPaymentAccounts(
+            period.businessId
+          )
+        ])
+      const accounts =
+        (accountResponse.data ?? []).filter(
+          (account) =>
+            account.accountType === 'Bank' &&
+            account.isActive
+        )
+      setQttNextStep(nextStep)
+      setRefundAccounts(accounts)
+      setRefundAccountId(
+        accounts.find(
+          (account) => account.isDefault
+        )?.paymentAccountId ??
+          accounts[0]?.paymentAccountId ??
+          ''
+      )
+    } catch (error) {
+      console.error(
+        '[TaxDeclaration] TKN next step failed:',
+        error
+      )
+      setNextStepError(
+        'Không thể tải bước xử lý thuế TNCN đã tạm nộp.'
+      )
+    }
+  }
+
   useEffect(() => {
     let active = true
 
@@ -245,6 +314,9 @@ export default function TaxDeclarationPage() {
         setTaxPeriod(periodResult)
         setDeclaration(
           declarationResult
+        )
+        await loadTknNextStep(
+          periodResult
         )
       } catch (error) {
         console.error(
@@ -409,6 +481,18 @@ export default function TaxDeclarationPage() {
         )
 
       setDeclaration(result)
+      if (
+        taxPeriod?.periodType === 'Tkn'
+      ) {
+        const submittedPeriod = {
+          ...taxPeriod,
+          status: 'Submitted' as const
+        }
+        setTaxPeriod(submittedPeriod)
+        await loadTknNextStep(
+          submittedPeriod
+        )
+      }
       setIsSubmitConfirmOpen(false)
 
       toast.success(
@@ -458,6 +542,59 @@ export default function TaxDeclarationPage() {
     )
   }
 
+  async function applyNextStep(
+    choice: 'Later' | 'Refund'
+  ) {
+    if (!taxPeriodId) return
+    if (
+      choice === 'Refund' &&
+      !refundAccountId
+    ) {
+      toast.warning(
+        'Hãy chọn tài khoản ngân hàng nhận hoàn.'
+      )
+      return
+    }
+
+    try {
+      setIsApplyingNextStep(true)
+      const result =
+        await applyTknQttNextStep(
+          taxPeriodId,
+          {
+            choice,
+            refundPaymentAccountId:
+              choice === 'Refund'
+                ? refundAccountId
+                : null,
+            offsetItems: []
+          }
+        )
+      setQttNextStep(result)
+      toast.success(
+        choice === 'Later'
+          ? 'Chưa tạo QTT. Bạn có thể quay lại xử lý khoản này sau.'
+          : 'Đã tạo hồ sơ QTT nháp để đề nghị hoàn.'
+      )
+    } catch (error) {
+      console.error(
+        '[TaxDeclaration] Apply TKN next step failed:',
+        error
+      )
+      toast.error(
+        'Không thể lưu lựa chọn xử lý khoản TNCN đã tạm nộp.'
+      )
+    } finally {
+      setIsApplyingNextStep(false)
+    }
+  }
+
+  const isTkn =
+    taxPeriod.periodType === 'Tkn'
+  const isTknYearEnd =
+    isTkn &&
+    taxPeriod.filingWindow !== 'FirstHalf'
+
   return (
     <div className='min-h-[calc(100vh-56px)] bg-[#f5f6f8] px-6 py-7'>
       <div className='mx-auto max-w-6xl'>
@@ -481,12 +618,15 @@ export default function TaxDeclarationPage() {
 
               <div>
                 <h1 className='text-2xl font-black'>
-                  Tờ khai thuế
+                  {isTkn
+                    ? 'Thông báo doanh thu'
+                    : 'Tờ khai thuế'}
                 </h1>
 
                 <p className='mt-1 text-sm text-gray-500'>
-                  Kiểm tra thông tin
-                  trước khi xuất hồ sơ.
+                  {isTkn
+                    ? 'Kiểm tra mẫu 01/TKN-CNKD trước khi tải hoặc gửi hồ sơ.'
+                    : 'Kiểm tra thông tin trước khi xuất hồ sơ.'}
                 </p>
               </div>
             </div>
@@ -527,14 +667,15 @@ export default function TaxDeclarationPage() {
             />
 
             <h2 className='mt-4 text-xl font-black'>
-              Chưa có tờ khai
+              {isTkn
+                ? 'Chưa có thông báo doanh thu'
+                : 'Chưa có tờ khai'}
             </h2>
 
             <p className='mx-auto mt-2 max-w-lg text-sm leading-6 text-gray-500'>
-              Kỳ thuế đã được tính.
-              Bạn có thể tạo tờ khai
-              01/CNKD từ dữ liệu hiện
-              tại.
+              {isTkn
+                ? 'Doanh thu kỳ này đã được tổng hợp. Bạn có thể tạo mẫu 01/TKN-CNKD từ dữ liệu đã chốt.'
+                : 'Kỳ thuế đã được tính. Bạn có thể tạo tờ khai 01/CNKD từ dữ liệu hiện tại.'}
             </p>
 
             <button
@@ -545,7 +686,9 @@ export default function TaxDeclarationPage() {
             >
               {isCreating
                 ? 'Đang tạo...'
-                : 'Tạo tờ khai'}
+                : isTkn
+                  ? 'Tạo mẫu 01/TKN-CNKD'
+                  : 'Tạo tờ khai'}
             </button>
           </div>
         ) : (
@@ -767,7 +910,9 @@ export default function TaxDeclarationPage() {
 
                 {isExporting
                   ? 'Đang xuất...'
-                  : 'Xuất tờ khai DOCX'}
+                  : isTkn
+                    ? 'Tải mẫu 01/TKN-CNKD'
+                    : 'Xuất tờ khai DOCX'}
               </button>
 
               {declaration.status ===
@@ -775,7 +920,9 @@ export default function TaxDeclarationPage() {
                 <div className='flex h-12 items-center gap-2 rounded-xl bg-green-100 px-7 text-sm font-bold text-green-700'>
                   <CheckCircle2 size={18} />
 
-                  Tờ khai đã được gửi
+                  {isTkn
+                    ? 'TKN đã được gửi'
+                    : 'Tờ khai đã được gửi'}
                 </div>
               ) : (
                 <button
@@ -790,19 +937,230 @@ export default function TaxDeclarationPage() {
 
                   {isSubmitting
                     ? 'Đang gửi...'
-                    : 'Gửi tờ khai'}
+                    : isTkn
+                      ? 'Đánh dấu đã gửi TKN'
+                      : 'Gửi tờ khai'}
                 </button>
               )}
             </div>
+
+            {isTknYearEnd &&
+              ['Submitted', 'Paid'].includes(
+                taxPeriod.status
+              ) && (
+              <section className='mt-6 rounded-2xl border border-violet-200 bg-violet-50 p-6'>
+                <h2 className='text-lg font-black text-violet-900'>
+                  Bước tiếp theo sau TKN
+                </h2>
+
+                {nextStepError ? (
+                  <p className='mt-3 text-sm font-semibold text-red-600'>
+                    {nextStepError}
+                  </p>
+                ) : !qttNextStep ? (
+                  <p className='mt-3 text-sm text-violet-700'>
+                    Đang kiểm tra khoản thuế TNCN đã tạm nộp...
+                  </p>
+                ) : qttNextStep.qttDeclarationStatus &&
+                  qttNextStep.qttDeclarationStatus !== 'Draft' ? (
+                  <div className='mt-3 rounded-xl border border-violet-200 bg-white p-4'>
+                    <p className='text-sm font-bold text-violet-900'>
+                      Hồ sơ QTT đã được chốt
+                    </p>
+                    <p className='mt-1 text-sm leading-6 text-gray-600'>
+                      Hồ sơ QTT hiện tại không còn ở trạng thái nháp nên không thể thay đổi lựa chọn hoàn hoặc bù trừ từ TKN.
+                    </p>
+                    <button
+                      type='button'
+                      onClick={() =>
+                        navigate(
+                          `${path.BUSINESS_OWNER_QTT}?year=${qttNextStep.taxYear}`
+                        )
+                      }
+                      className='mt-4 h-10 rounded-lg bg-violet-600 px-5 text-sm font-bold text-white hover:bg-violet-700'
+                    >
+                      Xem hồ sơ QTT
+                    </button>
+                  </div>
+                ) : qttNextStep.choices.length === 0 ? (
+                  <div className='mt-3 flex gap-3 rounded-xl bg-white p-4 text-green-700'>
+                    <CheckCircle2
+                      size={20}
+                      className='shrink-0'
+                    />
+                    <div>
+                      <p className='text-sm font-bold'>
+                        Hồ sơ TKN đã hoàn tất
+                      </p>
+                      <p className='mt-1 text-sm leading-6 text-gray-600'>
+                        Không có khoản PIT theo phương pháp thu nhập cần tạo thêm hồ sơ QTT.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className='mt-2 text-sm leading-6 text-violet-800'>
+                      Bạn đã tạm nộp{' '}
+                      <strong>
+                        {formatMoney(
+                          qttNextStep.incomeBasedPitPaid
+                        )}
+                      </strong>{' '}
+                      thuế TNCN theo phương pháp thu nhập. Khoản này có thể được xử lý là thuế nộp thừa; cơ quan thuế sẽ tiếp nhận và quyết định số được hoàn hoặc bù trừ.
+                    </p>
+
+                    {qttNextStep.blockingIssues.length > 0 && (
+                      <div className='mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4'>
+                        <p className='text-sm font-bold text-amber-800'>
+                          Cần rà soát trước khi tạo QTT
+                        </p>
+                        <ul className='mt-2 space-y-1 text-sm text-amber-700'>
+                          {qttNextStep.blockingIssues.map(
+                            (issue) => (
+                              <li key={`${issue.code}-${issue.sourceId ?? ''}`}>
+                                {issue.message}
+                              </li>
+                            )
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className='mt-5 grid gap-4 lg:grid-cols-3'>
+                      <div className='rounded-xl border border-violet-200 bg-white p-4'>
+                        <h3 className='font-black text-gray-900'>
+                          Để lại xử lý sau
+                        </h3>
+                        <p className='mt-1 text-sm leading-6 text-gray-500'>
+                          Hoàn tất TKN và chưa tạo hồ sơ QTT lúc này.
+                        </p>
+                        <button
+                          type='button'
+                          disabled={
+                            isApplyingNextStep ||
+                            !qttNextStep.choices.includes('Later')
+                          }
+                          onClick={() =>
+                            void applyNextStep('Later')
+                          }
+                          className='mt-4 h-10 w-full rounded-lg border border-violet-300 text-sm font-bold text-violet-700 hover:bg-violet-50 disabled:opacity-50'
+                        >
+                          Để xử lý sau
+                        </button>
+                      </div>
+
+                      <div className='rounded-xl border border-violet-200 bg-white p-4'>
+                        <h3 className='font-black text-gray-900'>
+                          Đề nghị hoàn thuế
+                        </h3>
+                        <label className='mt-3 block text-sm font-semibold text-gray-600'>
+                          Tài khoản ngân hàng nhận hoàn
+                          <select
+                            value={refundAccountId}
+                            onChange={(event) =>
+                              setRefundAccountId(
+                                event.target.value
+                              )
+                            }
+                            className='mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm'
+                          >
+                            <option value=''>Chọn tài khoản</option>
+                            {refundAccounts.map(
+                              (account) => (
+                                <option
+                                  key={account.paymentAccountId}
+                                  value={account.paymentAccountId}
+                                >
+                                  {account.bankShortName || account.bankName} · {account.accountNumber}
+                                </option>
+                              )
+                            )}
+                          </select>
+                        </label>
+                        {refundAccounts.length === 0 && (
+                          <button
+                            type='button'
+                            onClick={() =>
+                              navigate(
+                                path.BUSINESS_OWNER_BANK_CONFIG
+                              )
+                            }
+                            className='mt-2 text-sm font-bold text-red-600 hover:underline'
+                          >
+                            Thêm tài khoản nhận tiền
+                          </button>
+                        )}
+                        <button
+                          type='button'
+                          disabled={
+                            isApplyingNextStep ||
+                            !qttNextStep.choices.includes('Refund') ||
+                            !qttNextStep.canCreateQttDraft ||
+                            !refundAccountId
+                          }
+                          onClick={() =>
+                            void applyNextStep('Refund')
+                          }
+                          className='mt-4 h-10 w-full rounded-lg bg-violet-600 text-sm font-bold text-white hover:bg-violet-700 disabled:bg-gray-300'
+                        >
+                          Tạo QTT đề nghị hoàn
+                        </button>
+                      </div>
+
+                      <div className='rounded-xl border border-violet-200 bg-white p-4'>
+                        <h3 className='font-black text-gray-900'>
+                          Bù trừ nghĩa vụ thuế
+                        </h3>
+                        <p className='mt-1 text-sm leading-6 text-gray-500'>
+                          Mở màn QTT để chọn nghĩa vụ và phân bổ đủ số tiền bù trừ.
+                        </p>
+                        <button
+                          type='button'
+                          disabled={
+                            !qttNextStep.choices.includes('Offset') ||
+                            !qttNextStep.canCreateQttDraft
+                          }
+                          onClick={() =>
+                            navigate(
+                              `${path.BUSINESS_OWNER_QTT}?year=${qttNextStep.taxYear}&fromTkn=${taxPeriod.id}`
+                            )
+                          }
+                          className='mt-4 h-10 w-full rounded-lg bg-violet-600 text-sm font-bold text-white hover:bg-violet-700 disabled:bg-gray-300'
+                        >
+                          Mở QTT để bù trừ
+                        </button>
+                      </div>
+                    </div>
+
+                    {qttNextStep.selectedChoice && (
+                      <p className='mt-4 text-sm font-bold text-green-700'>
+                        Lựa chọn đã lưu:{' '}
+                        {qttNextStep.selectedChoice === 'Later'
+                          ? 'Xử lý sau'
+                          : qttNextStep.selectedChoice === 'Refund'
+                            ? 'Đề nghị hoàn'
+                            : 'Bù trừ'}.
+                      </p>
+                    )}
+                  </>
+                )}
+              </section>
+            )}
           </>
         )}
       </div>
 
       <ConfirmDialog
         open={isSubmitConfirmOpen}
-        title='Xác nhận gửi tờ khai'
-        description='Sau khi gửi, tờ khai sẽ chuyển sang trạng thái Đã gửi. Vui lòng kiểm tra kỹ thông tin trước khi tiếp tục.'
-        confirmLabel='Gửi tờ khai'
+        title={isTkn
+          ? 'Xác nhận đã gửi thông báo doanh thu'
+          : 'Xác nhận gửi tờ khai'}
+        description={isTkn
+          ? 'Sau khi xác nhận, hồ sơ 01/TKN-CNKD sẽ chuyển sang trạng thái Đã gửi. Vui lòng kiểm tra kỹ bản tải về trước khi tiếp tục.'
+          : 'Sau khi gửi, tờ khai sẽ chuyển sang trạng thái Đã gửi. Vui lòng kiểm tra kỹ thông tin trước khi tiếp tục.'}
+        confirmLabel={isTkn
+          ? 'Xác nhận đã gửi'
+          : 'Gửi tờ khai'}
         isProcessing={isSubmitting}
         onCancel={() =>
           setIsSubmitConfirmOpen(false)
