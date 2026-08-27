@@ -41,6 +41,8 @@ import QttPage from '../pages/businessOwner/taxBook/qtt'
 import TaxCalculationPage from '../pages/businessOwner/taxPeriod/taxCalculation'
 
 import TaxDeclarationPage from '../pages/businessOwner/taxPeriod/taxDeclaration'
+import TknTaxPeriodDetailPage from '../pages/businessOwner/taxPeriod/tknTaxPeriodDetail'
+import TknTaxPeriodPreviewPage from '../pages/businessOwner/taxPeriod/tknTaxPeriodPreview'
 
 export default function useRouteElements() {
   const { isAuthenticated, isLoading, user } = useAuth()
@@ -127,6 +129,14 @@ export default function useRouteElements() {
                 path.BUSINESS_OWNER_TAX_PERIOD_DECLARATION,
               element:
                 <TaxDeclarationPage />
+            },
+            {
+              path: path.BUSINESS_OWNER_TKN_TAX_PERIOD,
+              element: <TknTaxPeriodDetailPage />
+            },
+            {
+              path: path.BUSINESS_OWNER_TKN_TAX_PERIOD_PREVIEW,
+              element: <TknTaxPeriodPreviewPage />
             },
             { path: path.BUSINESS_OWNER_BANK_CONFIG, element: <BankConfig /> },
             { path: path.BUSINESS_OWNER_EINVOICE_CONFIG, element: <EInvoiceConfig /> },

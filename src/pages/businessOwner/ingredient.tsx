@@ -683,8 +683,8 @@ export default function IngredientPage() {
           {currentBusiness?.isStockTrackingEnabled === false && (
             <div className='mb-6 p-4 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-[13.5px] flex items-center justify-between shadow-xs'>
               <div className='flex items-center gap-2.5'>
-                <span className='font-bold text-sm bg-blue-600 text-white px-2 py-0.5 rounded-md text-xs'>CHẾ ĐỘ GIÁ VỐN</span>
-                <span>Quán đang tắt trừ tồn kho: Công thức nguyên liệu được dùng để tính giá vốn (Cost Price) của món. Số lượng tồn sẽ không bị trừ khi bán hàng.</span>
+                <span className='font-bold text-sm bg-blue-600 text-white px-2 py-0.5 rounded-md text-xs'>ĐANG ẨN TỒN KHO</span>
+                <span>TaxMate vẫn ghi nhận nhập, bán, xuất nguyên liệu theo công thức và tính giá vốn; số lượng cùng cảnh báo kho đang được ẩn trên giao diện.</span>
               </div>
             </div>
           )}
@@ -719,7 +719,7 @@ export default function IngredientPage() {
                           </td>
                           <td className='py-4 px-6 text-center whitespace-nowrap'>
                             {currentBusiness?.isStockTrackingEnabled === false ? (
-                              <span className='text-gray-400 font-medium text-[13px]'>Không theo dõi tồn</span>
+                              <span className='text-gray-400 font-medium text-[13px]'>Đang ẩn</span>
                             ) : item.stockQuantity === null || item.stockQuantity === undefined ? (
                               <span className='text-gray-400 font-medium text-[13px]'>N/A</span>
                             ) : item.stockQuantity === 0 ? (

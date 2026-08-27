@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Download, RefreshCw } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { exportS2d, getS2dPreview } from '../../../apis/taxBook.api'
@@ -17,7 +17,7 @@ export default function S2dBookPage() {
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!currentBusiness) return
     try {
       setLoading(true)
@@ -27,11 +27,12 @@ export default function S2dBookPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentBusiness, year, quarter])
 
   useEffect(() => {
     setBook(null)
-  }, [currentBusiness?.id, year, quarter])
+    void load()
+  }, [load])
 
   const download = async () => {
     if (!currentBusiness) return
@@ -76,7 +77,7 @@ export default function S2dBookPage() {
           <button onClick={load} disabled={!currentBusiness || loading}
             className='flex items-center gap-2 rounded-lg bg-[#9b0000] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50'>
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            Xem sổ
+            {loading ? 'Đang tải...' : 'Tải lại'}
           </button>
           <button onClick={download} disabled={!currentBusiness || exporting}
             className='flex items-center gap-2 rounded-lg border border-[#9b0000] px-4 py-2.5 text-sm font-semibold text-[#9b0000] disabled:opacity-50'>
@@ -97,7 +98,7 @@ export default function S2dBookPage() {
 
       {!book ? (
         <div className='rounded-xl border border-dashed bg-white p-12 text-center text-gray-500'>
-          Chọn năm, quý rồi bấm “Xem sổ”.
+          {loading ? 'Đang tải sổ...' : 'Không có dữ liệu để hiển thị.'}
         </div>
       ) : book.items.length === 0 ? (
         <div className='rounded-xl border bg-white p-12 text-center text-gray-500'>Không có phát sinh kho trong kỳ.</div>
@@ -108,6 +109,9 @@ export default function S2dBookPage() {
               <summary className='cursor-pointer px-5 py-4 font-semibold text-gray-900'>
                 {item.itemName} {item.unit ? `(${item.unit})` : ''}
                 <span className='ml-3 text-sm font-normal text-gray-500'>Tồn cuối: {number.format(item.endingQuantity)} · {money.format(item.endingValue)} đ</span>
+                <span className='mt-1 block text-xs font-normal text-gray-500 tabular-nums'>
+                  Tồn tiền: {money.format(item.openingValue)} đ đầu kỳ + {money.format(item.totalInboundValue)} đ nhập − {money.format(item.totalOutboundValue)} đ xuất = {money.format(item.endingValue)} đ cuối kỳ
+                </span>
               </summary>
               <div className='overflow-x-auto border-t'>
                 <table className='min-w-full text-sm'>

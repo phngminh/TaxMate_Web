@@ -7,8 +7,12 @@ export interface InventoryPurchaseLineRequest {
 
 export interface CreateInventoryPurchaseRequest {
   expenseCategoryId: string
+  voucherNumber?: string
   expenseTitle: string
   purchaseDate: string
+  paidDate: string
+  paymentMethod: 'Cash'
+  paymentAccountId: string
   supplierId?: string
   receiptImageUrl?: string
   note?: string

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
+import { NumericFormat } from 'react-number-format'
 import {
   Plus,
   X,
@@ -37,6 +38,7 @@ import { getSuppliers, createSupplier, updateSupplier, deleteSupplier } from '..
 import { getAllIngredients } from '../../apis/ingredient.api'
 import { getAllProducts } from '../../apis/product.api'
 import { createInventoryPurchase, deleteInventoryPurchase, getInventoryPurchases } from '../../apis/inventoryPurchase.api'
+import { getMoneyAccounts } from '../../apis/paymentAccount.api'
 import { uploadImage } from '../../apis/image.api'
 import type { Supplier } from '../../types/supplier.type'
 import type { ExpenseDTO, ExpenseCategory } from '../../types/expense.type'
@@ -122,6 +124,7 @@ export default function PurchasePage() {
   const [purchaseType, setPurchaseType] = useState<'Product' | 'Material'>('Product')
   const [purchaseSupplierId, setPurchaseSupplierId] = useState('')
   const [purchaseDate, setPurchaseDate] = useState(new Date().toISOString().slice(0, 10))
+  const [purchaseVoucherNumber, setPurchaseVoucherNumber] = useState('')
   const [purchaseNote, setPurchaseNote] = useState('')
   const [purchaseItems, setPurchaseItems] = useState<PurchaseLineItem[]>([])
   const [invoiceImageFile, setInvoiceImageFile] = useState<File | null>(null)
@@ -351,13 +354,22 @@ export default function PurchasePage() {
 
       const catsRes = await getExpenseCategories(businessId)
       const categoryId = await getOrCreateImportCategory(catsRes.data || [])
+      const cashAccount = (await getMoneyAccounts(businessId)).find(account => account.accountType === 'Cash' && account.isActive)
+      if (!cashAccount) {
+        toast.error('Không tìm thấy tài khoản tiền mặt của cửa hàng.')
+        return
+      }
+      const purchaseDateIso = `${purchaseDate}T00:00:00`
       await createInventoryPurchase(businessId, {
         expenseCategoryId: categoryId,
-        expenseTitle: `Nhập ${purchaseType === 'Product' ? 'sản phẩm' : 'nguyên liệu'} ngày ${purchaseDate}`,
-        purchaseDate: new Date(`${purchaseDate}T00:00:00`).toISOString(),
+        voucherNumber: purchaseVoucherNumber.trim() || undefined,
+        expenseTitle: purchaseNote.trim() || `Nhập ${purchaseType === 'Product' ? 'sản phẩm' : 'nguyên liệu'}`,
+        purchaseDate: purchaseDateIso,
+        paidDate: purchaseDateIso,
+        paymentMethod: 'Cash',
+        paymentAccountId: cashAccount.paymentAccountId,
         supplierId: purchaseSupplierId,
         receiptImageUrl: uploadedImageUrl,
-        note: purchaseNote.trim() || undefined,
         lines: purchaseItems.map(item => ({
           ...(purchaseType === 'Product'
             ? { productId: item.itemId }
@@ -407,6 +419,7 @@ export default function PurchasePage() {
     setPurchaseType('Product')
     setPurchaseSupplierId('')
     setPurchaseDate(new Date().toISOString().slice(0, 10))
+    setPurchaseVoucherNumber('')
     setPurchaseNote('')
     setPurchaseItems([])
     setInvoiceImageFile(null)
@@ -996,18 +1009,28 @@ export default function PurchasePage() {
                                   type='number'
                                   min='1'
                                   value={item.quantity}
+                                  onFocus={e => e.currentTarget.select()}
                                   onChange={e => updateLineItem(idx, { quantity: parseInt(e.target.value) || 1 })}
                                   className='w-16 border border-slate-200 rounded px-1.5 py-1 text-center font-bold text-slate-800'
                                 />
                               </td>
                               <td className='p-3 text-right'>
-                                <input
-                                  type='number'
-                                  min='0'
-                                  value={item.costPrice}
-                                  onChange={e => updateLineItem(idx, { costPrice: parseFloat(e.target.value) || 0 })}
-                                  className='w-28 border border-slate-200 rounded px-1.5 py-1 text-right font-bold text-slate-800 font-mono'
-                                />
+                                <div className='relative ml-auto w-32'>
+                                  <NumericFormat
+                                    inputMode='numeric'
+                                    value={String(item.costPrice)}
+                                    valueIsNumericString
+                                    thousandSeparator='.'
+                                    decimalSeparator=','
+                                    decimalScale={0}
+                                    allowNegative={false}
+                                    allowLeadingZeros={false}
+                                    onFocus={e => e.currentTarget.select()}
+                                    onValueChange={({ floatValue }) => updateLineItem(idx, { costPrice: floatValue ?? 0 })}
+                                    className='w-full rounded border border-slate-200 px-1.5 py-1 pr-7 text-right font-mono font-bold text-slate-800'
+                                  />
+                                  <span className='absolute right-2 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400'>đ</span>
+                                </div>
                               </td>
                               <td className='p-3 text-right font-black text-slate-800 font-mono'>
                                 {formatPrice(itemTotal)} đ
@@ -1035,7 +1058,7 @@ export default function PurchasePage() {
               </div>
 
               {/* Form Footer inputs */}
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-100 pt-5'>
+              <div className='grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-gray-100 pt-5'>
                 <div className='flex flex-col gap-1.5'>
                   <label className='text-[12.5px] font-bold text-gray-600'>Ngày lập phiếu</label>
                   <input
@@ -1046,14 +1069,27 @@ export default function PurchasePage() {
                   />
                 </div>
                 <div className='flex flex-col gap-1.5'>
-                  <label className='text-[12.5px] font-bold text-gray-600'>Ghi chú / Diễn giải hóa đơn</label>
+                  <label className='text-[12.5px] font-bold text-gray-600'>Số chứng từ <span className='font-normal text-gray-400'>(tùy chọn)</span></label>
                   <input
                     type='text'
-                    placeholder='Nhập lý do chi nhập hàng...'
+                    maxLength={96}
+                    placeholder='Ví dụ: A1-001'
+                    value={purchaseVoucherNumber}
+                    onChange={e => setPurchaseVoucherNumber(e.target.value)}
+                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F]'
+                  />
+                  <span className='text-[11px] text-gray-400'>Để trống, TaxMate tự tạo số PNK ngắn.</span>
+                </div>
+                <div className='flex flex-col gap-1.5'>
+                  <label className='text-[12.5px] font-bold text-gray-600'>Diễn giải <span className='font-normal text-gray-400'>(tùy chọn)</span></label>
+                  <input
+                    type='text'
+                    placeholder={purchaseType === 'Product' ? 'Nhập sản phẩm' : 'Nhập nguyên liệu'}
                     value={purchaseNote}
                     onChange={e => setPurchaseNote(e.target.value)}
                     className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden focus:border-[#D32F2F]'
                   />
+                  <span className='text-[11px] text-gray-400'>Để trống, TaxMate dùng nội dung gợi ý phía trên.</span>
                 </div>
               </div>
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Check, Download, Plus, RefreshCw, Save, Trash2 } from 'lucide-react'
 import { toast } from 'react-toastify'
+import { useSearchParams } from 'react-router-dom'
 import {
   calculateQtt,
   confirmQttDeclaration,
@@ -11,6 +12,10 @@ import {
   getQttPreview,
   updateQttAllocation
 } from '../../../apis/taxBook.api'
+import {
+  applyTknQttNextStep,
+  getTknQttNextStep
+} from '../../../apis/tknTaxPeriod.api'
 import { getPaymentAccounts } from '../../../apis/paymentAccount.api'
 import { useBusiness } from '../../../contexts/BusinessContext'
 import type { PaymentAccount } from '../../../types/paymentAccount.type'
@@ -22,6 +27,7 @@ import type {
   QttOffsetObligationOption,
   QttPreview
 } from '../../../types/taxBook.type'
+import type { TknQttNextStep } from '../../../types/tknTaxPeriod.type'
 
 const money = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
 
@@ -77,12 +83,25 @@ const indicatorRows: Array<[keyof QttIndicators, string]> = [
 
 export default function QttPage() {
   const { currentBusiness } = useBusiness()
-  const [year, setYear] = useState(new Date().getFullYear())
+  const [searchParams] = useSearchParams()
+  const requestedYear = Number(
+    searchParams.get('year')
+  )
+  const fromTkn =
+    searchParams.get('fromTkn')
+  const [year, setYear] = useState(
+    Number.isInteger(requestedYear) &&
+      requestedYear >= 2000 &&
+      requestedYear <= 2100
+      ? requestedYear
+      : new Date().getFullYear()
+  )
   const [preview, setPreview] = useState<QttPreview | null>(null)
   const [calculation, setCalculation] = useState<QttCalculationPreview | null>(null)
   const [declaration, setDeclaration] = useState<QttDeclaration | null>(null)
   const [accounts, setAccounts] = useState<PaymentAccount[]>([])
   const [obligations, setObligations] = useState<QttOffsetObligationOption[]>([])
+  const [tknBridge, setTknBridge] = useState<TknQttNextStep | null>(null)
   const [refundAmount, setRefundAmount] = useState(0)
   const [refundAccountId, setRefundAccountId] = useState('')
   const [offsets, setOffsets] = useState<OffsetDraft[]>([])
@@ -97,18 +116,24 @@ export default function QttPage() {
     setRefundAmount(0)
     setRefundAccountId('')
     setOffsets([])
-  }, [currentBusiness?.id, year])
+    setTknBridge(null)
+  }, [currentBusiness?.id, year, fromTkn])
 
   const load = async () => {
     if (!currentBusiness) return
     try {
       setLoading(true)
-      const [nextPreview, accountResponse, nextObligations] = await Promise.all([
+      const [nextPreview, accountResponse, nextObligations, nextTknBridge] = await Promise.all([
         getQttPreview(currentBusiness.id, year),
         getPaymentAccounts(currentBusiness.id),
-        getQttOffsetObligations(currentBusiness.id)
+        getQttOffsetObligations(currentBusiness.id),
+        fromTkn ? getTknQttNextStep(fromTkn) : Promise.resolve(null)
       ])
+      if (nextTknBridge && nextTknBridge.taxYear !== year) {
+        throw new Error('TKN_YEAR_MISMATCH')
+      }
       setPreview(nextPreview)
+      setTknBridge(nextTknBridge)
       setAccounts((accountResponse.data ?? []).filter((x) => x.accountType === 'Bank' && x.isActive))
       setObligations(nextObligations)
       if (nextPreview.canClose) {
@@ -187,6 +212,29 @@ export default function QttPage() {
       return
     }
 
+    if (fromTkn) {
+      if (!tknBridge || tknBridge.taxYear !== year) {
+        toast.error('Hãy tải lại dữ liệu TKN trước khi bù trừ')
+        return
+      }
+      if (!tknBridge.choices.includes('Offset') || !tknBridge.canCreateQttDraft) {
+        toast.error('TKN này hiện không đủ điều kiện thực hiện bù trừ')
+        return
+      }
+      if (refundAmount !== 0) {
+        toast.error('Luồng bù trừ từ TKN không đồng thời đề nghị hoàn')
+        return
+      }
+      if (
+        overpaid <= 0 ||
+        offsetAmount !== overpaid ||
+        offsetAmount !== tknBridge.incomeBasedPitPaid
+      ) {
+        toast.error('Hãy phân bổ đủ toàn bộ số PIT nộp thừa từ TKN')
+        return
+      }
+    }
+
     const items: QttOffsetAllocationItemRequest[] = offsets.map((item) => item.mode === 'internal'
       ? {
           taxDeclarationObligationId: item.obligationId,
@@ -209,15 +257,27 @@ export default function QttPage() {
 
     try {
       setWorking(true)
-      const next = await updateQttAllocation(currentBusiness.id, declaration.declarationId, {
-        refundAmount: Number(refundAmount) || 0,
-        offsetAmount,
-        refundPaymentAccountId: refundAccountId || undefined,
-        offsetItems: items,
-        expectedRevision: declaration.draftRevision
-      })
+      const next = fromTkn
+        ? await (async () => {
+            const bridge = await applyTknQttNextStep(fromTkn, {
+              choice: 'Offset',
+              refundPaymentAccountId: null,
+              offsetItems: items
+            })
+            setTknBridge(bridge)
+            return createQttDeclaration(currentBusiness.id, year)
+          })()
+        : await updateQttAllocation(currentBusiness.id, declaration.declarationId, {
+            refundAmount: Number(refundAmount) || 0,
+            offsetAmount,
+            refundPaymentAccountId: refundAccountId || undefined,
+            offsetItems: items,
+            expectedRevision: declaration.draftRevision
+          })
       setDeclaration(next)
-      toast.success('Đã lưu cách xử lý tiền nộp thừa')
+      toast.success(fromTkn
+        ? 'Đã lưu bù trừ toàn bộ số PIT nộp thừa từ TKN'
+        : 'Đã lưu cách xử lý tiền nộp thừa')
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Không thể lưu cách xử lý tiền nộp thừa')
     } finally {
@@ -281,6 +341,15 @@ export default function QttPage() {
           </button>
         </div>
       </div>
+
+      {fromTkn && (
+        <div className='rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm leading-6 text-violet-800'>
+          Bạn đang tiếp tục từ hồ sơ 01/TKN-CNKD. Hãy bấm <strong>Xem dữ liệu</strong>, tạo hồ sơ QTT rồi phân bổ toàn bộ số PIT nộp thừa vào các nghĩa vụ cần bù trừ.
+          {tknBridge?.selectedChoice === 'Offset' && (
+            <p className='mt-2 font-semibold text-emerald-700'>Lựa chọn bù trừ từ TKN đã được lưu.</p>
+          )}
+        </div>
+      )}
 
       {!preview ? (
         <div className='rounded-xl border border-dashed bg-white p-12 text-center text-gray-500'>Chọn năm rồi bấm “Xem dữ liệu”.</div>
@@ -369,7 +438,7 @@ export default function QttPage() {
                   ))}
                   {declaration.status === 'Draft' && (
                     <button onClick={saveAllocation} disabled={working}
-                      className='inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'><Save size={16} /> Lưu phân bổ</button>
+                      className='inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'><Save size={16} /> {fromTkn ? 'Hoàn tất bù trừ từ TKN' : 'Lưu phân bổ'}</button>
                   )}
                 </div>
               )}

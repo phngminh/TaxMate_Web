@@ -37,7 +37,7 @@ import { useBusiness } from '../../../contexts/BusinessContext'
 type Tab = 'expense' | 'income'
 
 const s2cGroupLabels: Record<S2cGroupCode, string> = {
-  Labor: 'Chi phí nhân công',
+  Labor: 'Không vào S2c — nhân công chưa được hỗ trợ',
   PurchasedServices: 'Chi phí dịch vụ mua ngoài',
   OtherDirect: 'Chi phí khác',
 }
@@ -179,7 +179,7 @@ export default function ExpenseCategoryPage() {
     setEditingCategory(category)
     setFormName(category.categoryName)
     setFormDescription(category.description || '')
-    setFormS2cGroupCode(type === 'expense' ? category.s2cGroupCode || '' : '')
+    setFormS2cGroupCode(type === 'expense' && category.s2cGroupCode !== 'Labor' ? category.s2cGroupCode || '' : '')
     setIsEditModalOpen(true)
   }
 
@@ -611,11 +611,15 @@ export default function ExpenseCategoryPage() {
                     className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden font-medium text-gray-800 focus:border-orange-400'
                   >
                     <option value=''>Không đưa vào S2c</option>
-                    {Object.entries(s2cGroupLabels).map(([code, label]) => (
-                      <option key={code} value={code}>{label}</option>
-                    ))}
+                    <option value='PurchasedServices'>Dự kiến vào S2c: Chi phí dịch vụ mua ngoài</option>
+                    <option value='OtherDirect'>Dự kiến vào S2c: Chi phí khác</option>
                   </select>
-                  <span className='text-xs text-gray-500'>Chi phí nguyên vật liệu lấy tự động từ sổ kho S2d.</span>
+                  <span className='text-xs text-gray-500'>
+                    {formS2cGroupCode
+                      ? 'Danh mục chỉ giúp phân nhóm; người dùng vẫn cần rà soát chứng từ trước khi quyết toán.'
+                      : 'Các khoản thuộc danh mục này không được TaxMate tự đưa vào chi phí dự kiến được trừ.'}
+                    {' '}Chi phí nguyên vật liệu lấy tự động từ sổ kho S2d; chi phí nhân công chưa được hỗ trợ.
+                  </span>
                 </div>
               )}
               <div className='flex items-center justify-end gap-3 mt-2 pt-4 border-t border-gray-100'>

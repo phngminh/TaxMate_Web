@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Check, Download, RefreshCw } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { confirmS2cEvidenceReview, exportS2c, getS2cPreview } from '../../../apis/taxBook.api'
@@ -7,7 +7,7 @@ import type { S2cBook, S2cExpenseGroupCode } from '../../../types/taxBook.type'
 
 const money = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
 const groupLabels: Record<S2cExpenseGroupCode, string> = {
-  Labor: 'Chi phí nhân công',
+  Labor: 'Chi phí nhân công (chưa được TaxMate hỗ trợ)',
   PurchasedServices: 'Dịch vụ mua ngoài',
   OtherDirect: 'Chi phí khác',
 }
@@ -22,7 +22,7 @@ export default function S2cBookPage() {
   const [exporting, setExporting] = useState(false)
   const [confirmingReview, setConfirmingReview] = useState(false)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!currentBusiness) return
     try {
       setLoading(true)
@@ -32,11 +32,12 @@ export default function S2cBookPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentBusiness, year, quarter])
 
   useEffect(() => {
     setBook(null)
-  }, [currentBusiness?.id, year, quarter])
+    void load()
+  }, [load])
 
   const download = async () => {
     if (!currentBusiness || !book) return
@@ -98,7 +99,7 @@ export default function S2cBookPage() {
           <button onClick={load} disabled={!currentBusiness || loading}
             className='flex items-center gap-2 rounded-lg bg-[#9b0000] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50'>
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            Xem sổ
+            {loading ? 'Đang tải...' : 'Tải lại'}
           </button>
           <button onClick={confirmReview}
             disabled={!book || hasHardBlocker || confirmingReview}
@@ -146,17 +147,34 @@ export default function S2cBookPage() {
 
       {!book ? (
         <div className='rounded-xl border border-dashed bg-white p-12 text-center text-gray-500'>
-          Chọn năm, quý rồi bấm “Xem sổ”.
+          {loading ? 'Đang tải sổ...' : 'Không có dữ liệu để hiển thị.'}
         </div>
       ) : (
         <div className='space-y-5'>
           <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-3'>
             <Summary label='Doanh thu từ S2b' value={book.totalRevenue} />
             <Summary label='Nguyên vật liệu xuất dùng từ S2d' value={book.materialCost} />
-            <Summary label='Chi phí nhân công' value={book.laborCost} />
             <Summary label='Dịch vụ mua ngoài' value={book.purchasedServicesCost} />
             <Summary label='Chi phí khác' value={book.otherDirectCost} />
             <Summary label='Kết quả sau chi phí' value={book.netIncome} accent />
+          </div>
+
+          <div className='rounded-xl border border-sky-200 bg-sky-50 px-5 py-4 text-sm text-sky-950'>
+            <div className='font-semibold'>Tiền vào trừ các khoản chi dự kiến được trừ</div>
+            <div className='mt-2 flex flex-wrap items-center gap-2 tabular-nums'>
+              <span className='font-semibold text-emerald-700'>+ {money.format(book.totalRevenue)} đ doanh thu</span>
+              <strong>−</strong>
+              <span className='text-orange-700'>{money.format(book.materialCost)} đ nguyên vật liệu</span>
+              <strong>−</strong>
+              <span className='text-orange-700'>{money.format(book.purchasedServicesCost)} đ dịch vụ mua ngoài</span>
+              <strong>−</strong>
+              <span className='text-orange-700'>{money.format(book.otherDirectCost)} đ chi phí khác</span>
+              <strong>=</strong>
+              <span className={`font-bold ${book.netIncome >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                {money.format(book.netIncome)} đ
+              </span>
+            </div>
+            <div className='mt-2 text-xs text-sky-800'>Chi phí nhân công chưa được TaxMate hỗ trợ nên không được tự động cộng vào sổ.</div>
           </div>
 
           <div className='overflow-x-auto rounded-xl border bg-white'>

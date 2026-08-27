@@ -31,6 +31,8 @@ const path = {
   BUSINESS_OWNER_TAX_PERIOD_PREVIEW: '/business-owner/tax-period/:taxPeriodId/preview',
   BUSINESS_OWNER_TAX_PERIOD_CALCULATION: '/business-owner/tax-period/:taxPeriodId/calculation',
   BUSINESS_OWNER_TAX_PERIOD_DECLARATION: '/business-owner/tax-period/:taxPeriodId/declaration',
+  BUSINESS_OWNER_TKN_TAX_PERIOD: '/business-owner/tkn-tax-period/:taxPeriodId',
+  BUSINESS_OWNER_TKN_TAX_PERIOD_PREVIEW: '/business-owner/tkn-tax-period/:taxPeriodId/preview',
   BUSINESS_OWNER_SUBSCRIPTION: '/business-owner/subscription',
   BUSINESS_OWNER_BANK_CONFIG: '/business-owner/bank-config',
   BUSINESS_OWNER_INCOME: '/business-owner/expenses/income',

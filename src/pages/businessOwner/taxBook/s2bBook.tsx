@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Download, RefreshCw } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { exportS2b, getS2bPreview } from '../../../apis/taxBook.api'
@@ -16,7 +16,7 @@ export default function S2bBookPage() {
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!currentBusiness) return
     try {
       setLoading(true)
@@ -26,11 +26,12 @@ export default function S2bBookPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentBusiness, year, quarter])
 
   useEffect(() => {
     setBook(null)
-  }, [currentBusiness?.id, year, quarter])
+    void load()
+  }, [load])
 
   const download = async () => {
     if (!currentBusiness || !book?.isValid) return
@@ -75,7 +76,7 @@ export default function S2bBookPage() {
           <button onClick={load} disabled={!currentBusiness || loading}
             className='flex items-center gap-2 rounded-lg bg-[#9b0000] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50'>
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            Xem sổ
+            {loading ? 'Đang tải...' : 'Tải lại'}
           </button>
           <button onClick={download} disabled={!book?.isValid || exporting}
             className='flex items-center gap-2 rounded-lg border border-[#9b0000] px-4 py-2.5 text-sm font-semibold text-[#9b0000] disabled:opacity-50'>
@@ -96,7 +97,7 @@ export default function S2bBookPage() {
 
       {!book ? (
         <div className='rounded-xl border border-dashed bg-white p-12 text-center text-gray-500'>
-          Chọn năm, quý rồi bấm “Xem sổ”.
+          {loading ? 'Đang tải sổ...' : 'Không có dữ liệu để hiển thị.'}
         </div>
       ) : (
         <div className='space-y-5'>
@@ -105,6 +106,17 @@ export default function S2bBookPage() {
             <Summary label='Doanh thu nhập thêm' value={book.manualBusinessRevenue} />
             <Summary label='Tổng doanh thu' value={book.totalRevenue} />
             <Summary label='Tổng thuế GTGT' value={totalVat} />
+          </div>
+
+          <div className='rounded-xl border border-emerald-200 bg-emerald-50 px-5 py-4 text-sm text-emerald-950'>
+            <div className='font-semibold'>Cách tính tổng doanh thu</div>
+            <div className='mt-1 flex flex-wrap items-center gap-2 tabular-nums'>
+              <span>{money.format(book.completedTransactionRevenue)} đ từ POS</span>
+              <strong>+</strong>
+              <span>{money.format(book.manualBusinessRevenue)} đ nhập thêm</span>
+              <strong>=</strong>
+              <span className='font-bold'>{money.format(book.totalRevenue)} đ</span>
+            </div>
           </div>
 
           {book.groups.length === 0 ? (
