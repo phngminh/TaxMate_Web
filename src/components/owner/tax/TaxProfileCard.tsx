@@ -49,6 +49,7 @@ export default function TaxProfileCard({
     {}
   )
   const [busy, setBusy] = useState(false)
+  const [isDismissed, setIsDismissed] = useState(false)
 
   async function saveInitialProfile() {
     try {
@@ -102,10 +103,40 @@ export default function TaxProfileCard({
   }
 
   if (!profile.isConfigured) {
+    if (isDismissed) {
+      return (
+        <section className='mt-6 rounded-2xl border border-sky-200 bg-sky-50/70 px-5 py-3.5 flex flex-wrap items-center justify-between gap-3'>
+          <div className='flex items-center gap-2.5 text-sm text-sky-900'>
+            <span className='font-semibold'>Chưa hoàn tất thiết lập hồ sơ thuế:</span>
+            <span className='text-sky-700'>Bạn có thể tiếp tục bán hàng và quay lại thiết lập bất kỳ lúc nào.</span>
+          </div>
+          <button
+            type='button'
+            onClick={() => setIsDismissed(false)}
+            className='shrink-0 rounded-lg bg-sky-700 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-sky-800 transition-colors'
+          >
+            Thiết lập ngay
+          </button>
+        </section>
+      )
+    }
+
     return (
       <section className='mt-6 rounded-2xl border border-sky-200 bg-sky-50 p-6'>
-        <h2 className='text-xl font-extrabold text-sky-950'>Thiết lập hồ sơ thuế</h2>
-        <p className='mt-1 text-sm text-sky-800'>Chọn tình trạng hiện tại của cả chủ hộ. Bạn vẫn có thể bán hàng trước khi hoàn tất bước này.</p>
+        <div className='flex items-start justify-between gap-4'>
+          <div>
+            <h2 className='text-xl font-extrabold text-sky-950'>Thiết lập hồ sơ thuế</h2>
+            <p className='mt-1 text-sm text-sky-800'>Chọn tình trạng hiện tại của cả chủ hộ. Bạn vẫn có thể bán hàng trước khi hoàn tất bước này.</p>
+          </div>
+          <button
+            type='button'
+            onClick={() => setIsDismissed(true)}
+            className='rounded-lg px-3 py-1.5 text-xs font-semibold text-sky-700 hover:bg-sky-100 transition-colors'
+            title='Bỏ qua thiết lập lúc này'
+          >
+            Để sau ✕
+          </button>
+        </div>
         <div className='mt-5 grid gap-4 md:grid-cols-2'>
           <label className='text-sm font-bold text-gray-700'>Nhóm doanh thu
             <select className='mt-2 w-full rounded-xl border bg-white p-3' value={bracket} onChange={(event) => setBracket(event.target.value as RevenueBracket)}>
@@ -135,7 +166,16 @@ export default function TaxProfileCard({
             </>
           )}
         </div>
-        <button className='mt-5 rounded-xl bg-sky-700 px-5 py-3 text-sm font-bold text-white disabled:bg-gray-300' disabled={busy} onClick={() => void saveInitialProfile()}>{busy ? 'Đang lưu...' : 'Xác nhận hồ sơ'}</button>
+        <div className='mt-5 flex flex-wrap items-center gap-3'>
+          <button className='rounded-xl bg-sky-700 px-5 py-3 text-sm font-bold text-white disabled:bg-gray-300' disabled={busy} onClick={() => void saveInitialProfile()}>{busy ? 'Đang lưu...' : 'Xác nhận hồ sơ'}</button>
+          <button
+            type='button'
+            onClick={() => setIsDismissed(true)}
+            className='rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors'
+          >
+            Để sau
+          </button>
+        </div>
       </section>
     )
   }

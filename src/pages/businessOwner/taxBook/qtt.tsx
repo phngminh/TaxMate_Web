@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Check, Download, Plus, RefreshCw, Save, Trash2 } from 'lucide-react'
+import { Check, Download, Plus, RefreshCw, Save, Send, Trash2 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useSearchParams } from 'react-router-dom'
 import {
@@ -12,6 +12,7 @@ import {
   getQttPreview,
   updateQttAllocation
 } from '../../../apis/taxBook.api'
+import { submitTaxDeclaration } from '../../../apis/taxDeclaration.api'
 import {
   applyTknQttNextStep,
   getTknQttNextStep
@@ -323,6 +324,21 @@ export default function QttPage() {
     }
   }
 
+  const submitDeclaration = async () => {
+    if (!currentBusiness || !declaration || declaration.status !== 'Generated') return
+    if (!window.confirm('Bạn có chắc chắn muốn đánh dấu tờ khai QTT đã nộp bên ngoài không?')) return
+    try {
+      setWorking(true)
+      await submitTaxDeclaration(declaration.declarationId)
+      setDeclaration((prev) => (prev ? { ...prev, status: 'Submitted' } : prev))
+      toast.success('Đã đánh dấu tờ khai QTT nộp thành công!')
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Không thể đánh dấu nộp tờ khai')
+    } finally {
+      setWorking(false)
+    }
+  }
+
   return (
     <div className='mx-auto max-w-7xl space-y-5 p-6'>
       <div className='flex flex-wrap items-end justify-between gap-4'>
@@ -364,11 +380,82 @@ export default function QttPage() {
           )}
 
           {calculation && (
-            <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
-              <Summary label='Tổng doanh thu [09]' value={calculation.indicators.indicator09} />
-              <Summary label='Chi phí dự kiến được trừ [10]' value={calculation.indicators.indicator10} />
-              <Summary label='Còn phải nộp [19]' value={calculation.indicators.indicator19} accent='red' />
-              <Summary label='Nộp thừa [20]' value={calculation.indicators.indicator20} accent='green' />
+            <div className='space-y-4'>
+              {/* QTT-FE-01: 4 Thẻ kiểm tra dữ liệu nguồn */}
+              <div className='rounded-xl border border-gray-200 bg-white p-4'>
+                <h3 className='text-xs font-bold uppercase tracking-wider text-gray-500 mb-3'>
+                  Kiểm tra số liệu nguồn (Cross-Book Verification)
+                </h3>
+                <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
+                  <div className='rounded-lg bg-gray-50 p-3 border border-gray-100'>
+                    <span className='text-xs text-gray-500'>Doanh thu kinh doanh [09a] (S2b)</span>
+                    <p className='text-base font-bold text-gray-900 mt-1'>{money.format(calculation.indicators.indicator09a)} đ</p>
+                  </div>
+                  <div className='rounded-lg bg-gray-50 p-3 border border-gray-100'>
+                    <span className='text-xs text-gray-500'>Chi phí NVL xuất dùng [10a] (S2d)</span>
+                    <p className='text-base font-bold text-gray-900 mt-1'>{money.format(calculation.indicators.indicator10a)} đ</p>
+                  </div>
+                  <div className='rounded-lg bg-gray-50 p-3 border border-gray-100'>
+                    <span className='text-xs text-gray-500'>Thuế TNCN đã tạm nộp [15]</span>
+                    <p className='text-base font-bold text-gray-900 mt-1'>{money.format(calculation.indicators.indicator15)} đ</p>
+                  </div>
+                  <div className='rounded-lg bg-gray-50 p-3 border border-gray-100'>
+                    <span className='text-xs text-gray-500'>Tồn kho cuối năm [34] (S2d)</span>
+                    <p className='text-base font-bold text-gray-900 mt-1'>{money.format(calculation.inventoryTotals.indicator34)} đ</p>
+                    <span className='text-[11px] text-gray-400 block mt-0.5'>Đầu: {money.format(calculation.inventoryTotals.indicator31)} | Nhập: {money.format(calculation.inventoryTotals.indicator32)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary kết quả */}
+              <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
+                <Summary label='Tổng doanh thu [09]' value={calculation.indicators.indicator09} />
+                <Summary label='Chi phí dự kiến được trừ [10]' value={calculation.indicators.indicator10} />
+                <Summary label='Còn phải nộp [19]' value={calculation.indicators.indicator19} accent='red' />
+                <Summary label='Nộp thừa [20]' value={calculation.indicators.indicator20} accent='green' />
+              </div>
+
+              {/* QTT-FE-02: Panel diễn giải công thức tính */}
+              <div className='rounded-xl border border-blue-200 bg-blue-50/70 p-4 text-sm text-blue-950'>
+                <div className='flex flex-wrap items-center justify-between gap-2 font-semibold text-blue-900'>
+                  <span>Diễn giải công thức tính thuế TNCN năm {year}</span>
+                  <span className='rounded-md bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-800 border border-blue-200'>
+                    Thuế suất áp dụng: {calculation.indicators.indicator12Rate}%
+                  </span>
+                </div>
+                <div className='mt-3 grid gap-2.5 sm:grid-cols-2 md:grid-cols-4 text-xs'>
+                  <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
+                    <span className='text-gray-500'>1. Thu nhập tính thuế [11]</span>
+                    <p className='font-bold text-gray-900 mt-1'>[09] - [10] = {money.format(calculation.indicators.indicator11)} đ</p>
+                  </div>
+                  <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
+                    <span className='text-gray-500'>2. Thuế phát sinh [13]</span>
+                    <p className='font-bold text-gray-900 mt-1'>max([11], 0) × {calculation.indicators.indicator12Rate}% = {money.format(calculation.indicators.indicator13)} đ</p>
+                  </div>
+                  <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
+                    <span className='text-gray-500'>3. Đã tạm nộp [15]</span>
+                    <p className='font-bold text-gray-900 mt-1'>{money.format(calculation.indicators.indicator15)} đ</p>
+                  </div>
+                  <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
+                    <span className='text-gray-500'>4. Miễn giảm nhỏ [18]</span>
+                    <p className='font-bold text-gray-900 mt-1'>{money.format(calculation.indicators.indicator18)} đ {calculation.indicators.indicator18 > 0 ? '(≤ 50.000đ)' : ''}</p>
+                  </div>
+                </div>
+                {calculation.applicableRateReason && (
+                  <p className='mt-2.5 text-xs text-blue-700 italic'>* {calculation.applicableRateReason}</p>
+                )}
+              </div>
+
+              {/* QTT-FE-05: Banner kết quả = 0 */}
+              {(calculation.outcome === 'Zero' || (calculation.indicators.indicator19 === 0 && calculation.indicators.indicator20 === 0)) && (
+                <div className='rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 flex items-center gap-3'>
+                  <div className='h-3 w-3 rounded-full bg-emerald-500 shrink-0' />
+                  <div>
+                    <span className='font-bold'>Không phát sinh nghĩa vụ thuế: </span>
+                    <span>Hộ kinh doanh không phải nộp thêm thuế TNCN ([19] = 0 đ) và không có số thuế nộp thừa trong năm ([20] = 0 đ).</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -387,6 +474,12 @@ export default function QttPage() {
               <button onClick={download} disabled={exporting}
                 className='inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'>
                 <Download size={16} /> Tải Word
+              </button>
+            )}
+            {declaration?.status === 'Generated' && (
+              <button onClick={submitDeclaration} disabled={working}
+                className='inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 hover:bg-blue-700 transition-colors'>
+                <Send size={16} /> Đánh dấu đã nộp bên ngoài
               </button>
             )}
           </div>

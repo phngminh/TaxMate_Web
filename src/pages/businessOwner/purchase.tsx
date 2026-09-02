@@ -51,6 +51,7 @@ interface PurchaseLineItem {
   name: string
   quantity: number
   costPrice: number
+  itemType: 'Product' | 'Material'
 }
 
 interface MaterialPurchaseGroupDetail {
@@ -363,7 +364,7 @@ export default function PurchasePage() {
       await createInventoryPurchase(businessId, {
         expenseCategoryId: categoryId,
         voucherNumber: purchaseVoucherNumber.trim() || undefined,
-        expenseTitle: purchaseNote.trim() || `Nhập ${purchaseType === 'Product' ? 'sản phẩm' : 'nguyên liệu'}`,
+        expenseTitle: purchaseNote.trim() || `Nhập hàng hóa (${purchaseItems.filter(i => i.itemType === 'Product').length} SP, ${purchaseItems.filter(i => i.itemType === 'Material').length} NL)`,
         purchaseDate: purchaseDateIso,
         paidDate: purchaseDateIso,
         paymentMethod: 'Cash',
@@ -371,7 +372,7 @@ export default function PurchasePage() {
         supplierId: purchaseSupplierId,
         receiptImageUrl: uploadedImageUrl,
         lines: purchaseItems.map(item => ({
-          ...(purchaseType === 'Product'
+          ...(item.itemType === 'Product'
             ? { productId: item.itemId }
             : { ingredientId: item.itemId }),
           quantity: item.quantity,
@@ -426,31 +427,34 @@ export default function PurchasePage() {
     setInvoiceImagePreview(null)
   }
 
-  const addLineItem = (itemId: string) => {
-    if (purchaseType === 'Material') {
+  const addLineItem = (itemId: string, typeOverride?: 'Product' | 'Material') => {
+    const type = typeOverride || purchaseType
+    if (type === 'Material') {
       const itemObj = dbIngredients.find(x => x.id === itemId)
       if (!itemObj) return
-      if (purchaseItems.some(x => x.itemId === itemId)) return
+      if (purchaseItems.some(x => x.itemId === itemId && x.itemType === 'Material')) return
       setPurchaseItems(prev => [
         ...prev,
         {
           itemId: itemObj.id,
           name: itemObj.name,
           quantity: 1,
-          costPrice: itemObj.estimatedPrice || 0
+          costPrice: itemObj.estimatedPrice || 0,
+          itemType: 'Material'
         }
       ])
     } else {
       const itemObj = dbProducts.find(x => x.id === itemId)
       if (!itemObj) return
-      if (purchaseItems.some(x => x.itemId === itemId)) return
+      if (purchaseItems.some(x => x.itemId === itemId && x.itemType === 'Product')) return
       setPurchaseItems(prev => [
         ...prev,
         {
           itemId: itemObj.id,
           name: itemObj.name,
           quantity: 1,
-          costPrice: itemObj.currentPrice || 0
+          costPrice: itemObj.currentPrice || 0,
+          itemType: 'Product'
         }
       ])
     }
@@ -881,12 +885,11 @@ export default function PurchasePage() {
               {/* Form Metadata */}
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-gray-100 pb-5'>
                 <div className='flex flex-col gap-1.5'>
-                  <label className='text-[12.5px] font-bold text-gray-600'>Loại hàng hóa nhập <span className='text-red-500'>*</span></label>
+                  <label className='text-[12.5px] font-bold text-gray-600'>Thêm mặt hàng theo nhóm</label>
                   <select
                     value={purchaseType}
                     onChange={e => {
                       setPurchaseType(e.target.value as any)
-                      setPurchaseItems([]) // clear on type change
                     }}
                     className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-[#D32F2F] bg-white font-medium text-gray-800 cursor-pointer'
                   >
@@ -962,14 +965,14 @@ export default function PurchasePage() {
                     <option value=''>-- Nhấp để chọn mặt hàng --</option>
                     {purchaseType === 'Product'
                       ? dbProducts
-                          .filter(x => !purchaseItems.some(item => item.itemId === x.id))
+                          .filter(x => !purchaseItems.some(item => item.itemId === x.id && item.itemType === 'Product'))
                           .map(p => (
                             <option key={p.id} value={p.id}>
                               {p.name} ({formatPrice(p.currentPrice || 0)}đ)
                             </option>
                           ))
                       : dbIngredients
-                          .filter(x => !purchaseItems.some(item => item.itemId === x.id))
+                          .filter(x => !purchaseItems.some(item => item.itemId === x.id && item.itemType === 'Material'))
                           .map(i => (
                             <option key={i.id} value={i.id}>
                               {i.name} (mặc định: {formatPrice(i.estimatedPrice || 0)}đ)
@@ -1002,8 +1005,17 @@ export default function PurchasePage() {
                           const itemTotal = item.quantity * item.costPrice
 
                           return (
-                            <tr key={item.itemId} className='hover:bg-slate-50/50 transition-colors'>
-                              <td className='p-3 font-bold text-slate-800'>{item.name}</td>
+                            <tr key={`${item.itemType}-${item.itemId}`} className='hover:bg-slate-50/50 transition-colors'>
+                              <td className='p-3 font-bold text-slate-800'>
+                                <div className='flex items-center gap-2'>
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                    item.itemType === 'Product' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                                  }`}>
+                                    {item.itemType === 'Product' ? 'Sản phẩm' : 'Nguyên liệu'}
+                                  </span>
+                                  <span>{item.name}</span>
+                                </div>
+                              </td>
                               <td className='p-3 text-center'>
                                 <input
                                   type='number'
