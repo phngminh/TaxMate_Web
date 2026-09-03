@@ -28,6 +28,8 @@ import type {
   QttOffsetObligationOption,
   QttPreview
 } from '../../../types/taxBook.type'
+import LegalBadge from '../../../components/owner/tax/LegalBadge'
+import Tip from '../../../components/owner/tax/Tip'
 import type { TknQttNextStep } from '../../../types/tknTaxPeriod.type'
 
 const money = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
@@ -343,8 +345,17 @@ export default function QttPage() {
     <div className='mx-auto max-w-7xl space-y-5 p-6'>
       <div className='flex flex-wrap items-end justify-between gap-4'>
         <div>
-          <h1 className='text-2xl font-bold text-gray-900'>Quyết toán thuế TNCN</h1>
-          <p className='mt-1 text-sm text-gray-500'>Mẫu 02/CNKD-TNCN-QTT · {currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>
+          <div className='flex flex-wrap items-center gap-2.5'>
+            <h1 className='text-2xl font-bold text-gray-900'>Quyết toán thuế TNCN</h1>
+            <LegalBadge
+              formCode='Mẫu 02/CNKD-TNCN-QTT'
+              circular='Luật QLT 38/2019/QH14'
+              title='Hồ sơ quyết toán thuế TNCN năm theo Luật Quản lý thuế số 38/2019/QH14'
+              article='Khoản 2 Điều 44 Luật Quản lý thuế & Nghị định 126/2020/NĐ-CP'
+              description={'Mẫu 02/CNKD-TNCN-QTT áp dụng cho cá nhân kinh doanh nộp thuế theo phương pháp Thu nhập tính thuế (IncomeBased).\n\n• Thời hạn nộp hồ sơ: Chậm nhất là ngày 31/03 năm tiếp theo.\n• Miễn thuế nhỏ: Số thuế còn phải nộp từ 50.000đ trở xuống được miễn nộp toàn bộ (Điều 79 Luật QLT).\n• Xử lý nộp thừa: Được hoàn về ngân hàng, bù trừ nghĩa vụ thuế khác hoặc chuyển tiếp sang kỳ sau (Điều 60 Luật QLT).'}
+            />
+          </div>
+          <p className='mt-1 text-sm text-gray-500'>Hồ sơ quyết toán năm {year} · {currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>
         </div>
         <div className='flex items-end gap-3'>
           <label className='text-sm text-gray-600'>Năm
@@ -388,19 +399,39 @@ export default function QttPage() {
                 </h3>
                 <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
                   <div className='rounded-lg bg-gray-50 p-3 border border-gray-100'>
-                    <span className='text-xs text-gray-500'>Doanh thu kinh doanh [09a] (S2b)</span>
+                    <span className='text-xs text-gray-500 flex items-center justify-between'>
+                      <span>Doanh thu KD [09a] (S2b)</span>
+                      <Tip content='Doanh thu tổng hợp từ Sổ chi tiết doanh thu S2b-HKD của tất cả các quý trong năm.' side='top' align='end'>
+                        <span className='text-[10px] text-gray-400 cursor-help'>ⓘ</span>
+                      </Tip>
+                    </span>
                     <p className='text-base font-bold text-gray-900 mt-1'>{money.format(calculation.indicators.indicator09a)} đ</p>
                   </div>
                   <div className='rounded-lg bg-gray-50 p-3 border border-gray-100'>
-                    <span className='text-xs text-gray-500'>Chi phí NVL xuất dùng [10a] (S2d)</span>
+                    <span className='text-xs text-gray-500 flex items-center justify-between'>
+                      <span>Chi phí NVL xuất dùng [10a] (S2d)</span>
+                      <Tip content='Giá trị nguyên vật liệu xuất dùng tính theo giá bình quân cả kỳ (S2d), đã tự động loại trừ các phiếu nhập chi tiền mặt từ 5 triệu đồng trở lên.' side='top' align='end' maxWidth='max-w-xs'>
+                        <span className='text-[10px] text-gray-400 cursor-help'>ⓘ</span>
+                      </Tip>
+                    </span>
                     <p className='text-base font-bold text-gray-900 mt-1'>{money.format(calculation.indicators.indicator10a)} đ</p>
                   </div>
                   <div className='rounded-lg bg-gray-50 p-3 border border-gray-100'>
-                    <span className='text-xs text-gray-500'>Thuế TNCN đã tạm nộp [15]</span>
+                    <span className='text-xs text-gray-500 flex items-center justify-between'>
+                      <span>Thuế TNCN đã tạm nộp [15]</span>
+                      <Tip content='Tổng số thuế TNCN chủ hộ đã nộp vào ngân sách nhà nước trong năm tính thuế có chứng từ nộp thành công.' side='top' align='end' maxWidth='max-w-xs'>
+                        <span className='text-[10px] text-gray-400 cursor-help'>ⓘ</span>
+                      </Tip>
+                    </span>
                     <p className='text-base font-bold text-gray-900 mt-1'>{money.format(calculation.indicators.indicator15)} đ</p>
                   </div>
                   <div className='rounded-lg bg-gray-50 p-3 border border-gray-100'>
-                    <span className='text-xs text-gray-500'>Tồn kho cuối năm [34] (S2d)</span>
+                    <span className='text-xs text-gray-500 flex items-center justify-between'>
+                      <span>Tồn kho cuối năm [34] (S2d)</span>
+                      <Tip content='Bảng kê tồn kho cuối năm [25-34] tổng hợp từ Sổ chi tiết tồn kho S2d-HKD (Tồn đầu + Nhập - Xuất = Tồn cuối).' side='top' align='end' maxWidth='max-w-xs'>
+                        <span className='text-[10px] text-gray-400 cursor-help'>ⓘ</span>
+                      </Tip>
+                    </span>
                     <p className='text-base font-bold text-gray-900 mt-1'>{money.format(calculation.inventoryTotals.indicator34)} đ</p>
                     <span className='text-[11px] text-gray-400 block mt-0.5'>Đầu: {money.format(calculation.inventoryTotals.indicator31)} | Nhập: {money.format(calculation.inventoryTotals.indicator32)}</span>
                   </div>
@@ -425,20 +456,40 @@ export default function QttPage() {
                 </div>
                 <div className='mt-3 grid gap-2.5 sm:grid-cols-2 md:grid-cols-4 text-xs'>
                   <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
-                    <span className='text-gray-500'>1. Thu nhập tính thuế [11]</span>
+                    <span className='text-gray-500 flex items-center justify-between'>
+                      <span>1. Thu nhập tính thuế [11]</span>
+                      <Tip content='Doanh thu trừ Chi phí. Nếu chi phí lớn hơn doanh thu (kinh doanh lỗ), số tiền sẽ mang giá trị âm và thuế phát sinh bằng 0đ.' side='top' align='end' maxWidth='max-w-xs'>
+                        <span className='text-[10px] text-blue-400 cursor-help'>ⓘ</span>
+                      </Tip>
+                    </span>
                     <p className='font-bold text-gray-900 mt-1'>[09] - [10] = {money.format(calculation.indicators.indicator11)} đ</p>
                   </div>
                   <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
-                    <span className='text-gray-500'>2. Thuế phát sinh [13]</span>
+                    <span className='text-gray-500 flex items-center justify-between'>
+                      <span>2. Thuế phát sinh [13]</span>
+                      <Tip content={'Bằng max([11], 0) × Thuế suất.\nNếu thu nhập tính thuế âm thì số thuế phát sinh tự động bằng 0đ.'} side='top' align='end' maxWidth='max-w-xs'>
+                        <span className='text-[10px] text-blue-400 cursor-help'>ⓘ</span>
+                      </Tip>
+                    </span>
                     <p className='font-bold text-gray-900 mt-1'>max([11], 0) × {calculation.indicators.indicator12Rate}% = {money.format(calculation.indicators.indicator13)} đ</p>
                   </div>
                   <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
-                    <span className='text-gray-500'>3. Đã tạm nộp [15]</span>
+                    <span className='text-gray-500 flex items-center justify-between'>
+                      <span>3. Đã tạm nộp [15]</span>
+                      <Tip content='Số thuế TNCN thực tế đã nộp vào Kho bạc/Ngân sách Nhà nước theo các quý trong năm.' side='top' align='end' maxWidth='max-w-xs'>
+                        <span className='text-[10px] text-blue-400 cursor-help'>ⓘ</span>
+                      </Tip>
+                    </span>
                     <p className='font-bold text-gray-900 mt-1'>{money.format(calculation.indicators.indicator15)} đ</p>
                   </div>
                   <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
-                    <span className='text-gray-500'>4. Miễn giảm nhỏ [18]</span>
-                    <p className='font-bold text-gray-900 mt-1'>{money.format(calculation.indicators.indicator18)} đ {calculation.indicators.indicator18 > 0 ? '(≤ 50.000đ)' : ''}</p>
+                    <span className='text-gray-500 flex items-center justify-between'>
+                      <span>4. Miễn giảm nhỏ [18]</span>
+                      <Tip content={'Điều 79 Luật QLT 38/2019/QH14:\nSố thuế TNCN còn phải nộp sau quyết toán từ 50.000đ trở xuống được Nhà nước miễn nộp toàn bộ.'} side='top' align='end' maxWidth='max-w-xs'>
+                        <span className='text-[10px] text-blue-400 cursor-help'>ⓘ</span>
+                      </Tip>
+                    </span>
+                    <p className='font-bold text-gray-900 mt-1'>{money.format(calculation.indicators.indicator18)} đ {calculation.indicators.indicator18 > 0 ? '(≤ 50.000đ - Miễn nộp)' : ''}</p>
                   </div>
                 </div>
                 {calculation.applicableRateReason && (
@@ -506,7 +557,20 @@ export default function QttPage() {
 
               {declaration.indicators.indicator20 > 0 && (
                 <div className='space-y-4 rounded-xl border bg-white p-5'>
-                  <div><h2 className='font-semibold text-gray-900'>Xử lý tiền nộp thừa</h2><p className='text-sm text-gray-500'>Tổng có thể phân bổ: {money.format(overpaid)} đ</p></div>
+                  <div className='flex flex-wrap items-center justify-between gap-2 border-b pb-3'>
+                    <div>
+                      <div className='flex items-center gap-2'>
+                        <h2 className='font-semibold text-gray-900'>Xử lý tiền nộp thừa [20]</h2>
+                        <span
+                          className='rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800 cursor-help'
+                          title='Căn cứ Điều 60 Luật Quản lý thuế số 38/2019/QH14 về quyền của người nộp thuế: Bạn có quyền đề nghị hoàn tiền về tài khoản ngân hàng [22], bù trừ vào nghĩa vụ thuế khác [23] hoặc chuyển tiếp trừ vào kỳ sau [24].'
+                        >
+                          Điều 60 Luật QLT ⓘ
+                        </span>
+                      </div>
+                      <p className='text-sm text-gray-500 mt-0.5'>Tổng có thể phân bổ: <strong>{money.format(overpaid)} đ</strong> (Phần còn lại sẽ tự động chuyển sang trừ vào kỳ sau [24])</p>
+                    </div>
+                  </div>
                   <div className='grid gap-4 md:grid-cols-2'>
                     <label className='text-sm text-gray-600'>Số đề nghị hoàn
                       <input disabled={declaration.status !== 'Draft'} className='mt-1 block w-full rounded-lg border px-3 py-2' type='number' min={0} value={refundAmount}

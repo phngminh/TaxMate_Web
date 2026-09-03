@@ -4,6 +4,8 @@ import { toast } from 'react-toastify'
 import { exportS2d, getS2dPreview } from '../../../apis/taxBook.api'
 import { useBusiness } from '../../../contexts/BusinessContext'
 import type { S2dBook } from '../../../types/taxBook.type'
+import LegalBadge from '../../../components/owner/tax/LegalBadge'
+import Tip from '../../../components/owner/tax/Tip'
 
 const number = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 3 })
 const money = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
@@ -58,7 +60,16 @@ export default function S2dBookPage() {
     <div className='mx-auto max-w-7xl p-6'>
       <div className='mb-5 flex flex-wrap items-end justify-between gap-4'>
         <div>
-          <h1 className='text-2xl font-bold text-gray-900'>Sổ chi tiết tồn kho (S2d)</h1>
+          <div className='flex flex-wrap items-center gap-2.5'>
+            <h1 className='text-2xl font-bold text-gray-900'>Sổ chi tiết tồn kho (S2d)</h1>
+            <LegalBadge
+              formCode='Mẫu S2d-HKD'
+              circular='TT 88/2021/TT-BTC'
+              title='Thông tư số 88/2021/TT-BTC ngày 11/10/2021 của Bộ Tài chính'
+              article='Phụ lục 2 - Hệ thống sổ kế toán hộ kinh doanh'
+              description='Sổ S2d-HKD dùng để theo dõi chi tiết số lượng và giá trị nhập, xuất, tồn kho của từng loại nguyên vật liệu, dụng cụ, sản phẩm và hàng hóa theo trình tự thời gian. Dữ liệu này làm căn cứ tính giá trị xuất kho và giá vốn hàng bán trong kỳ quyết toán.'
+            />
+          </div>
           <p className='mt-1 text-sm text-gray-500'>{currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>
         </div>
         <div className='flex flex-wrap items-end gap-3'>
@@ -127,8 +138,21 @@ export default function S2dBookPage() {
                     {item.lines.map((line) => (
                       <tr key={line.inventoryMovementId} className='border-t'>
                         <td className='whitespace-nowrap px-3 py-2'>{new Date(line.documentDate).toLocaleDateString('vi-VN')}</td>
-                        <td className='whitespace-nowrap px-3 py-2'>{line.documentNumber}</td>
-                        <td className='min-w-52 px-3 py-2'>{line.description}{line.isProvisionalValue ? <span className='ml-2 text-xs text-amber-700'>Tạm tính</span> : null}</td>
+                        <td className='min-w-52 px-3 py-2'>
+                          {line.description}
+                          {line.isProvisionalValue ? (
+                            <Tip
+                              content='Theo phương pháp bình quân cả kỳ (TT 88), đơn giá xuất kho trong kỳ mở là tạm tính. Hệ thống sẽ chốt đơn giá bình quân chính thức khi đóng kỳ.'
+                              side='top'
+                              align='start'
+                              maxWidth='max-w-sm'
+                            >
+                              <span className='ml-2 inline-flex items-center rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[11px] font-medium text-amber-800 cursor-help'>
+                                Tạm tính ⓘ
+                              </span>
+                            </Tip>
+                          ) : null}
+                        </td>
                         <td className='px-3 py-2 text-right'>{line.inboundQuantity == null ? '' : number.format(line.inboundQuantity)}</td>
                         <td className='px-3 py-2 text-right'>{line.inboundValue == null ? '' : money.format(line.inboundValue)}</td>
                         <td className='px-3 py-2 text-right'>{line.outboundQuantity == null ? '' : number.format(line.outboundQuantity)}</td>

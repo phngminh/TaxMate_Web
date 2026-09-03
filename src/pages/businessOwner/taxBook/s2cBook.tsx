@@ -4,6 +4,7 @@ import { toast } from 'react-toastify'
 import { confirmS2cEvidenceReview, exportS2c, getS2cPreview } from '../../../apis/taxBook.api'
 import { useBusiness } from '../../../contexts/BusinessContext'
 import type { S2cBook, S2cExpenseGroupCode } from '../../../types/taxBook.type'
+import LegalBadge from '../../../components/owner/tax/LegalBadge'
 
 const money = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
 const groupLabels: Record<S2cExpenseGroupCode, string> = {
@@ -82,7 +83,16 @@ export default function S2cBookPage() {
     <div className='mx-auto max-w-7xl p-6'>
       <div className='mb-5 flex flex-wrap items-end justify-between gap-4'>
         <div>
-          <h1 className='text-2xl font-bold text-gray-900'>Sổ chi phí sản xuất, kinh doanh (S2c)</h1>
+          <div className='flex flex-wrap items-center gap-2.5'>
+            <h1 className='text-2xl font-bold text-gray-900'>Sổ chi phí sản xuất, kinh doanh (S2c)</h1>
+            <LegalBadge
+              formCode='Mẫu S2c-HKD'
+              circular='TT 88/2021/TT-BTC'
+              title='Thông tư số 88/2021/TT-BTC ngày 11/10/2021 của Bộ Tài chính'
+              article='Phụ lục 2 - Hệ thống sổ kế toán hộ kinh doanh'
+              description='Sổ S2c-HKD tập hợp toàn bộ các khoản chi phí thực tế phát sinh phục vụ hoạt động sản xuất kinh doanh theo từng yếu tố: chi phí nhân công, điện nước, viễn thông, thuê mặt bằng, dịch vụ mua ngoài... Số liệu này làm căn cứ xác định tổng chi phí được trừ khi quyết toán thuế TNCN theo phương pháp thu nhập tính thuế.'
+            />
+          </div>
           <p className='mt-1 text-sm text-gray-500'>{currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>
         </div>
         <div className='flex flex-wrap items-end gap-3'>
@@ -132,16 +142,24 @@ export default function S2cBookPage() {
       ) : null}
 
       {book && book.excludedCashPaymentExpenseCount > 0 ? (
-        <div className='mb-5 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900'>
-          {book.excludedCashPaymentExpenseCount} khoản từ 5 triệu đồng trở lên thanh toán bằng tiền mặt,
-          tổng {money.format(book.excludedCashPaymentExpenseAmount)} đ, không được cộng vào chi phí dự kiến được trừ.
+        <div className='mb-5 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950'>
+          <p className='font-bold text-sky-900 mb-1 flex items-center gap-1.5'>
+            <span>💡 Quy định chi tiền mặt từ 5 triệu đồng (Luật thuế):</span>
+          </p>
+          <p>
+            Phát hiện <strong>{book.excludedCashPaymentExpenseCount} khoản chi</strong> từ 5 triệu đồng trở lên thanh toán bằng tiền mặt (tổng <strong>{money.format(book.excludedCashPaymentExpenseAmount)} đ</strong>). Theo quy định về hóa đơn chứng từ hợp pháp, các khoản này không đủ điều kiện thanh toán không dùng tiền mặt nên không được cộng vào chi phí dự kiến được trừ khi quyết toán thuế.
+          </p>
         </div>
       ) : null}
 
       {book && book.excludedInventoryCashCost > 0 ? (
-        <div className='mb-5 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-900'>
-          {money.format(book.excludedInventoryCashCost)} đ trong giá trị nguyên vật liệu xuất dùng có nguồn từ
-          phiếu nhập từ 5 triệu đồng trở lên thanh toán bằng tiền mặt, nên không được cộng vào chi phí dự kiến được trừ.
+        <div className='mb-5 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950'>
+          <p className='font-bold text-sky-900 mb-1 flex items-center gap-1.5'>
+            <span>💡 Chi phí nguyên vật liệu xuất dùng bằng tiền mặt:</span>
+          </p>
+          <p>
+            <strong>{money.format(book.excludedInventoryCashCost)} đ</strong> trong giá trị nguyên vật liệu xuất dùng có nguồn gốc từ phiếu nhập từ 5 triệu đồng trở lên thanh toán bằng tiền mặt, do đó không được tính vào chi phí dự kiến được trừ khi quyết toán thuế.
+          </p>
         </div>
       ) : null}
 

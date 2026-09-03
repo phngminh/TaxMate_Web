@@ -17,6 +17,7 @@ import { getTaxPeriodById } from '../../../apis/taxPeriod.api'
 import { calculateTknTaxPeriod } from '../../../apis/tknTaxPeriod.api'
 import path from '../../../constants/path'
 import type { TaxPeriodDetail } from '../../../types/taxPeriod.type'
+import LegalBadge from '../../../components/owner/tax/LegalBadge'
 import {
   taxPeriodDeclarationPath,
   tknTaxPeriodPreviewPath
@@ -224,12 +225,18 @@ export default function TknTaxPeriodDetailPage() {
                 <ReceiptText size={28} />
               </div>
               <div>
-                <p className='text-xs font-bold uppercase tracking-wide text-gray-400'>
-                  Mẫu 01/TKN-CNKD
-                </p>
-                <h1 className='mt-1 text-2xl font-black text-gray-900'>
-                  {windowLabel(period)}
-                </h1>
+                <div className='flex flex-wrap items-center gap-2.5'>
+                  <h1 className='text-2xl font-black text-gray-900'>
+                    {windowLabel(period)}
+                  </h1>
+                  <LegalBadge
+                    formCode='Mẫu 01/TKN-CNKD'
+                    circular='TT 40/2021/TT-BTC'
+                    title='Thông tư số 40/2021/TT-BTC ngày 01/06/2021 của Bộ Tài chính'
+                    article='Phụ lục 1 - Hướng dẫn quản lý thuế đối với hộ kinh doanh'
+                    description='Bản thông báo doanh thu định kỳ dành cho hộ kinh doanh có quy mô doanh thu không quá 1 tỷ đồng/năm. Hộ thuộc diện này chỉ thông báo doanh thu định kỳ để cơ quan thuế quản lý mà không phải nộp tờ khai quý 01/CNKD.'
+                  />
+                </div>
                 <p className='mt-2 text-sm text-gray-500'>
                   Thông báo doanh thu dành cho chủ hộ thuộc diện không quá ngưỡng áp dụng.
                 </p>

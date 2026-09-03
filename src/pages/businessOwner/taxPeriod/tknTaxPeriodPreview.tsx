@@ -16,6 +16,7 @@ import {
 } from '../../../apis/tknTaxPeriod.api'
 import type { TaxPeriodDetail } from '../../../types/taxPeriod.type'
 import type { TknTaxPeriodPreview } from '../../../types/tknTaxPeriod.type'
+import LegalBadge from '../../../components/owner/tax/LegalBadge'
 import { tknTaxPeriodDetailPath } from '../../../utils/taxPeriodRoute'
 
 function formatMoney(value: number) {
@@ -136,9 +137,18 @@ export default function TknTaxPeriodPreviewPage() {
               <ReceiptText size={28} />
             </div>
             <div>
-              <h1 className='text-2xl font-black text-gray-900'>
-                Xem trước thông báo doanh thu
-              </h1>
+              <div className='flex flex-wrap items-center gap-2.5'>
+                <h1 className='text-2xl font-black text-gray-900'>
+                  Xem trước thông báo doanh thu
+                </h1>
+                <LegalBadge
+                  formCode='Mẫu 01/TKN-CNKD'
+                  circular='TT 40/2021/TT-BTC'
+                  title='Thông tư số 40/2021/TT-BTC ngày 01/06/2021 của Bộ Tài chính'
+                  article='Phụ lục 1 - Hướng dẫn quản lý thuế đối với hộ kinh doanh'
+                  description='Bản thông báo doanh thu định kỳ dành cho hộ kinh doanh có quy mô doanh thu không quá 1 tỷ đồng/năm. Kỳ 6 tháng đầu năm (H1) hạn nộp chậm nhất là ngày 31/07. Kỳ 6 tháng cuối năm (H2) hoặc cả năm hạn nộp chậm nhất là ngày 31/01 năm tiếp theo.'
+                />
+              </div>
               <p className='mt-1 text-sm text-gray-500'>
                 Kiểm tra nguồn doanh thu trước khi khóa kỳ 01/TKN-CNKD.
               </p>

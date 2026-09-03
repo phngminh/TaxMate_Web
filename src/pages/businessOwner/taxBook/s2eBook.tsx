@@ -8,6 +8,7 @@ import { exportS2e, getS2ePreview } from '../../../apis/taxBook.api'
 import { useBusiness } from '../../../contexts/BusinessContext'
 import type { PaymentAccount } from '../../../types/paymentAccount.type'
 import type { S2eAccountSection, S2eBook, S2eBookEntry } from '../../../types/taxBook.type'
+import LegalBadge from '../../../components/owner/tax/LegalBadge'
 
 const money = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
 
@@ -183,7 +184,16 @@ export default function S2eBookPage() {
     <div className='mx-auto max-w-7xl p-6'>
       <div className='mb-5 flex flex-wrap items-end justify-between gap-4'>
         <div>
-          <h1 className='text-2xl font-bold text-gray-900'>Sổ chi tiết tiền (S2e)</h1>
+          <div className='flex flex-wrap items-center gap-2.5'>
+            <h1 className='text-2xl font-bold text-gray-900'>Sổ chi tiết tiền (S2e)</h1>
+            <LegalBadge
+              formCode='Mẫu S2e-HKD'
+              circular='TT 88/2021/TT-BTC'
+              title='Thông tư số 88/2021/TT-BTC ngày 11/10/2021 của Bộ Tài chính'
+              article='Phụ lục 2 - Hệ thống sổ kế toán hộ kinh doanh'
+              description='Sổ S2e-HKD phản ánh chi tiết tình hình thu, chi và tồn quỹ tiền mặt cũng như tiền gửi tại từng tài khoản ngân hàng của hộ kinh doanh theo trình tự phát sinh thực tế. Mỗi tài khoản tiền hoặc quỹ tiền mặt được mở sổ theo dõi riêng biệt.'
+            />
+          </div>
           <p className='mt-1 text-sm text-gray-500'>{currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>
         </div>
         <div className='flex flex-wrap items-end gap-3'>

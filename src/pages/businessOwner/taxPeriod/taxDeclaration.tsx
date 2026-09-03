@@ -44,6 +44,8 @@ import type {
 } from '../../../types/taxPeriod.type'
 import type { PaymentAccount } from '../../../types/paymentAccount.type'
 import type { TknQttNextStep } from '../../../types/tknTaxPeriod.type'
+import LegalBadge from '../../../components/owner/tax/LegalBadge'
+import Tip from '../../../components/owner/tax/Tip'
 
 function formatMoney(value: number) {
   return `${value.toLocaleString('vi-VN')}đ`
@@ -617,11 +619,30 @@ export default function TaxDeclarationPage() {
               </div>
 
               <div>
-                <h1 className='text-2xl font-black'>
-                  {isTkn
-                    ? 'Thông báo doanh thu'
-                    : 'Tờ khai thuế'}
-                </h1>
+                <div className='flex flex-wrap items-center gap-2.5'>
+                  <h1 className='text-2xl font-black'>
+                    {isTkn
+                      ? 'Thông báo doanh thu'
+                      : 'Tờ khai thuế'}
+                  </h1>
+                  {isTkn ? (
+                    <LegalBadge
+                      formCode='Mẫu 01/TKN-CNKD'
+                      circular='TT 40/2021/TT-BTC'
+                      title='Thông tư số 40/2021/TT-BTC ngày 01/06/2021 của Bộ Tài chính'
+                      article='Phụ lục 1 - Hướng dẫn thuế đối với hộ, cá nhân kinh doanh'
+                      description='Mẫu 01/TKN-CNKD áp dụng cho hộ kinh doanh có doanh thu không quá 1 tỷ đồng/năm. Hộ thuộc diện này không phải nộp tờ khai quý 01/CNKD mà chỉ thực hiện thông báo doanh thu định kỳ theo hạn quy định (H1 trước 31/07, H2 và cả năm trước 31/01 năm sau).'
+                    />
+                  ) : (
+                    <LegalBadge
+                      formCode='Mẫu 01/CNKD'
+                      circular='TT 40/2021/TT-BTC'
+                      title='Thông tư số 40/2021/TT-BTC ngày 01/06/2021 của Bộ Tài chính'
+                      article='Phụ lục 1 - Tờ khai thuế đối với hộ, cá nhân kinh doanh'
+                      description='Mẫu 01/CNKD áp dụng cho hộ kinh doanh có doanh thu trên 1 tỷ đồng/năm nộp thuế theo phương pháp kê khai. Thời hạn nộp tờ khai thuế quý chậm nhất là ngày cuối cùng của tháng đầu tiên của quý tiếp theo quý phát sinh nghĩa vụ thuế (Điều 44 Luật Quản lý thuế số 38/2019/QH14).'
+                    />
+                  )}
+                </div>
 
                 <p className='mt-1 text-sm text-gray-500'>
                   {isTkn
@@ -839,11 +860,19 @@ export default function TaxDeclarationPage() {
                         </th>
 
                         <th className='px-5 py-4 text-right'>
-                          Thuế GTGT
+                          <Tip content='Thuế GTGT tính theo tỷ lệ % doanh thu từng ngành nghề, không áp dụng giảm trừ doanh thu 1 tỷ.' side='top' align='end'>
+                            <span className='cursor-help border-b border-dashed border-gray-400'>
+                              Thuế GTGT ⓘ
+                            </span>
+                          </Tip>
                         </th>
 
                         <th className='px-5 py-4 text-right'>
-                          Thuế TNCN
+                          <Tip content={'Thuế TNCN tính theo phương pháp áp dụng:\n• Doanh thu vượt 1 tỷ (RevenueBased)\n• Số tạm nộp quý (IncomeBased)'} side='top' align='end' maxWidth='max-w-xs'>
+                            <span className='cursor-help border-b border-dashed border-gray-400'>
+                              Thuế TNCN ⓘ
+                            </span>
+                          </Tip>
                         </th>
                       </tr>
                     </thead>
