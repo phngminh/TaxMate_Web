@@ -66,8 +66,7 @@ export default function S2dBookPage() {
               formCode='Mẫu S2d-HKD'
               circular='TT 88/2021/TT-BTC'
               title='Thông tư số 88/2021/TT-BTC ngày 11/10/2021 của Bộ Tài chính'
-              article='Phụ lục 2 - Hệ thống sổ kế toán hộ kinh doanh'
-              description='Sổ S2d-HKD dùng để theo dõi chi tiết số lượng và giá trị nhập, xuất, tồn kho của từng loại nguyên vật liệu, dụng cụ, sản phẩm và hàng hóa theo trình tự thời gian. Dữ liệu này làm căn cứ tính giá trị xuất kho và giá vốn hàng bán trong kỳ quyết toán.'
+              description={'Theo dõi nhập - xuất - tồn kho theo giá bình quân cả kỳ (TT 88).\n\n➜ Đích đến: Giá trị xuất dùng cả năm chuyển thành Chi phí nguyên vật liệu [10a] khi quyết toán. (Phiếu chi tiền mặt ≥ 5 triệu không được tính là chi phí hợp lý).'}
             />
           </div>
           <p className='mt-1 text-sm text-gray-500'>{currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>
@@ -142,7 +141,7 @@ export default function S2dBookPage() {
                           {line.description}
                           {line.isProvisionalValue ? (
                             <Tip
-                              content='Theo phương pháp bình quân cả kỳ (TT 88), đơn giá xuất kho trong kỳ mở là tạm tính. Hệ thống sẽ chốt đơn giá bình quân chính thức khi đóng kỳ.'
+                              content='Kỳ thuế đang mở nên đơn giá xuất kho là tạm tính (TT 88). Hệ thống sẽ chốt đơn giá chính thức khi đóng kỳ.'
                               side='top'
                               align='start'
                               maxWidth='max-w-sm'

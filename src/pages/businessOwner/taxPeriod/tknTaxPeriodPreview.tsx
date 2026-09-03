@@ -76,7 +76,7 @@ export default function TknTaxPeriodPreviewPage() {
         setPreview(previewResult)
       } catch (error) {
         if (active) {
-          setLoadError(errorMessage(error, 'Không thể tải dữ liệu xem trước TKN.'))
+          setLoadError(errorMessage(error, 'Không thể tải dữ liệu xem trước thông báo doanh thu.'))
         }
       } finally {
         if (active) setIsLoading(false)
@@ -128,7 +128,7 @@ export default function TknTaxPeriodPreviewPage() {
           onClick={() => navigate(tknTaxPeriodDetailPath(period.id))}
           className='mb-5 flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-red-600'
         >
-          <ArrowLeft size={18} /> Quay lại chi tiết TKN
+          <ArrowLeft size={18} /> Quay lại chi tiết thông báo
         </button>
 
         <section className='rounded-2xl bg-white p-6 shadow-sm'>
@@ -145,8 +145,7 @@ export default function TknTaxPeriodPreviewPage() {
                   formCode='Mẫu 01/TKN-CNKD'
                   circular='TT 40/2021/TT-BTC'
                   title='Thông tư số 40/2021/TT-BTC ngày 01/06/2021 của Bộ Tài chính'
-                  article='Phụ lục 1 - Hướng dẫn quản lý thuế đối với hộ kinh doanh'
-                  description='Bản thông báo doanh thu định kỳ dành cho hộ kinh doanh có quy mô doanh thu không quá 1 tỷ đồng/năm. Kỳ 6 tháng đầu năm (H1) hạn nộp chậm nhất là ngày 31/07. Kỳ 6 tháng cuối năm (H2) hoặc cả năm hạn nộp chậm nhất là ngày 31/01 năm tiếp theo.'
+                  description={'Dành cho hộ kinh doanh có doanh thu không quá 1 tỷ đồng/năm (không phải nộp tờ khai quý 01/CNKD).\n\n• 6 tháng đầu năm: Nộp trước ngày 31/07\n• 6 tháng cuối năm (hoặc cả năm): Nộp trước ngày 31/01 năm sau.'}
                 />
               </div>
               <p className='mt-1 text-sm text-gray-500'>
@@ -211,7 +210,7 @@ export default function TknTaxPeriodPreviewPage() {
             onClick={() => setShowConfirm(true)}
             className='h-12 rounded-xl bg-red-600 px-7 text-sm font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300'
           >
-            Chốt doanh thu kỳ TKN
+            Chốt doanh thu kỳ thông báo
           </button>
         </div>
       </div>

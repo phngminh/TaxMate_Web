@@ -575,8 +575,8 @@ export default function TaxDeclarationPage() {
       setQttNextStep(result)
       toast.success(
         choice === 'Later'
-          ? 'Chưa tạo QTT. Bạn có thể quay lại xử lý khoản này sau.'
-          : 'Đã tạo hồ sơ QTT nháp để đề nghị hoàn.'
+          ? 'Chưa tạo hồ sơ quyết toán. Bạn có thể quay lại xử lý khoản này sau.'
+          : 'Đã tạo hồ sơ quyết toán nháp để đề nghị hoàn.'
       )
     } catch (error) {
       console.error(
@@ -631,7 +631,7 @@ export default function TaxDeclarationPage() {
                       circular='TT 40/2021/TT-BTC'
                       title='Thông tư số 40/2021/TT-BTC ngày 01/06/2021 của Bộ Tài chính'
                       article='Phụ lục 1 - Hướng dẫn thuế đối với hộ, cá nhân kinh doanh'
-                      description='Mẫu 01/TKN-CNKD áp dụng cho hộ kinh doanh có doanh thu không quá 1 tỷ đồng/năm. Hộ thuộc diện này không phải nộp tờ khai quý 01/CNKD mà chỉ thực hiện thông báo doanh thu định kỳ theo hạn quy định (H1 trước 31/07, H2 và cả năm trước 31/01 năm sau).'
+                      description={'Dành cho hộ kinh doanh có doanh thu không quá 1 tỷ đồng/năm (không phải nộp tờ khai quý 01/CNKD).\n\n• 6 tháng đầu năm: Nộp trước ngày 31/07\n• 6 tháng cuối năm (hoặc cả năm): Nộp trước ngày 31/01 năm sau.'}
                     />
                   ) : (
                     <LegalBadge
@@ -860,7 +860,7 @@ export default function TaxDeclarationPage() {
                         </th>
 
                         <th className='px-5 py-4 text-right'>
-                          <Tip content='Thuế GTGT tính theo tỷ lệ % doanh thu từng ngành nghề, không áp dụng giảm trừ doanh thu 1 tỷ.' side='top' align='end'>
+                          <Tip content='Tính theo tỷ lệ % trên toàn bộ doanh thu từng ngành nghề (không trừ 1 tỷ).' side='top' align='end'>
                             <span className='cursor-help border-b border-dashed border-gray-400'>
                               Thuế GTGT ⓘ
                             </span>
@@ -868,7 +868,7 @@ export default function TaxDeclarationPage() {
                         </th>
 
                         <th className='px-5 py-4 text-right'>
-                          <Tip content={'Thuế TNCN tính theo phương pháp áp dụng:\n• Doanh thu vượt 1 tỷ (RevenueBased)\n• Số tạm nộp quý (IncomeBased)'} side='top' align='end' maxWidth='max-w-xs'>
+                          <Tip content={'Tính theo phương pháp đã đăng ký:\n• Nộp theo doanh thu: tính trên phần vượt 1 tỷ/năm\n• Nộp theo thu nhập: tạm nộp từng quý, quyết toán cuối năm'} side='top' align='end' maxWidth='max-w-xs'>
                             <span className='cursor-help border-b border-dashed border-gray-400'>
                               Thuế TNCN ⓘ
                             </span>
@@ -950,7 +950,7 @@ export default function TaxDeclarationPage() {
                   <CheckCircle2 size={18} />
 
                   {isTkn
-                    ? 'TKN đã được gửi'
+                    ? 'Thông báo doanh thu đã được gửi'
                     : 'Tờ khai đã được gửi'}
                 </div>
               ) : (
@@ -967,7 +967,7 @@ export default function TaxDeclarationPage() {
                   {isSubmitting
                     ? 'Đang gửi...'
                     : isTkn
-                      ? 'Đánh dấu đã gửi TKN'
+                      ? 'Đánh dấu đã gửi thông báo'
                       : 'Gửi tờ khai'}
                 </button>
               )}
@@ -979,7 +979,7 @@ export default function TaxDeclarationPage() {
               ) && (
               <section className='mt-6 rounded-2xl border border-violet-200 bg-violet-50 p-6'>
                 <h2 className='text-lg font-black text-violet-900'>
-                  Bước tiếp theo sau TKN
+                  Bước tiếp theo sau thông báo doanh thu
                 </h2>
 
                 {nextStepError ? (
@@ -994,10 +994,10 @@ export default function TaxDeclarationPage() {
                   qttNextStep.qttDeclarationStatus !== 'Draft' ? (
                   <div className='mt-3 rounded-xl border border-violet-200 bg-white p-4'>
                     <p className='text-sm font-bold text-violet-900'>
-                      Hồ sơ QTT đã được chốt
+                      Hồ sơ quyết toán đã được chốt
                     </p>
                     <p className='mt-1 text-sm leading-6 text-gray-600'>
-                      Hồ sơ QTT hiện tại không còn ở trạng thái nháp nên không thể thay đổi lựa chọn hoàn hoặc bù trừ từ TKN.
+                      Hồ sơ quyết toán hiện tại không còn ở trạng thái nháp nên không thể thay đổi lựa chọn hoàn hoặc bù trừ.
                     </p>
                     <button
                       type='button'
@@ -1008,7 +1008,7 @@ export default function TaxDeclarationPage() {
                       }
                       className='mt-4 h-10 rounded-lg bg-violet-600 px-5 text-sm font-bold text-white hover:bg-violet-700'
                     >
-                      Xem hồ sơ QTT
+                      Xem hồ sơ quyết toán
                     </button>
                   </div>
                 ) : qttNextStep.choices.length === 0 ? (
@@ -1019,10 +1019,10 @@ export default function TaxDeclarationPage() {
                     />
                     <div>
                       <p className='text-sm font-bold'>
-                        Hồ sơ TKN đã hoàn tất
+                        Thông báo doanh thu đã hoàn tất
                       </p>
                       <p className='mt-1 text-sm leading-6 text-gray-600'>
-                        Không có khoản PIT theo phương pháp thu nhập cần tạo thêm hồ sơ QTT.
+                        Không có khoản thuế TNCN theo phương pháp thu nhập cần tạo thêm hồ sơ quyết toán.
                       </p>
                     </div>
                   </div>
@@ -1041,7 +1041,7 @@ export default function TaxDeclarationPage() {
                     {qttNextStep.blockingIssues.length > 0 && (
                       <div className='mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4'>
                         <p className='text-sm font-bold text-amber-800'>
-                          Cần rà soát trước khi tạo QTT
+                          Cần rà soát trước khi tạo hồ sơ quyết toán
                         </p>
                         <ul className='mt-2 space-y-1 text-sm text-amber-700'>
                           {qttNextStep.blockingIssues.map(
@@ -1061,7 +1061,7 @@ export default function TaxDeclarationPage() {
                           Để lại xử lý sau
                         </h3>
                         <p className='mt-1 text-sm leading-6 text-gray-500'>
-                          Hoàn tất TKN và chưa tạo hồ sơ QTT lúc này.
+                          Hoàn tất thông báo doanh thu và chưa tạo hồ sơ quyết toán lúc này.
                         </p>
                         <button
                           type='button'
@@ -1132,7 +1132,7 @@ export default function TaxDeclarationPage() {
                           }
                           className='mt-4 h-10 w-full rounded-lg bg-violet-600 text-sm font-bold text-white hover:bg-violet-700 disabled:bg-gray-300'
                         >
-                          Tạo QTT đề nghị hoàn
+                          Tạo hồ sơ quyết toán đề nghị hoàn
                         </button>
                       </div>
 
@@ -1141,7 +1141,7 @@ export default function TaxDeclarationPage() {
                           Bù trừ nghĩa vụ thuế
                         </h3>
                         <p className='mt-1 text-sm leading-6 text-gray-500'>
-                          Mở màn QTT để chọn nghĩa vụ và phân bổ đủ số tiền bù trừ.
+                          Mở hồ sơ quyết toán để chọn nghĩa vụ và phân bổ đủ số tiền bù trừ.
                         </p>
                         <button
                           type='button'
@@ -1156,7 +1156,7 @@ export default function TaxDeclarationPage() {
                           }
                           className='mt-4 h-10 w-full rounded-lg bg-violet-600 text-sm font-bold text-white hover:bg-violet-700 disabled:bg-gray-300'
                         >
-                          Mở QTT để bù trừ
+                          Mở quyết toán để bù trừ
                         </button>
                       </div>
                     </div>

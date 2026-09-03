@@ -89,8 +89,7 @@ export default function S2cBookPage() {
               formCode='Mẫu S2c-HKD'
               circular='TT 88/2021/TT-BTC'
               title='Thông tư số 88/2021/TT-BTC ngày 11/10/2021 của Bộ Tài chính'
-              article='Phụ lục 2 - Hệ thống sổ kế toán hộ kinh doanh'
-              description='Sổ S2c-HKD tập hợp toàn bộ các khoản chi phí thực tế phát sinh phục vụ hoạt động sản xuất kinh doanh theo từng yếu tố: chi phí nhân công, điện nước, viễn thông, thuê mặt bằng, dịch vụ mua ngoài... Số liệu này làm căn cứ xác định tổng chi phí được trừ khi quyết toán thuế TNCN theo phương pháp thu nhập tính thuế.'
+              description={'Ghi nhận các khoản chi phí kinh doanh thực tế (mặt bằng, điện nước, mua ngoài...). \n\n➜ Đích đến: Tổng hợp thành Chỉ tiêu [10] khi quyết toán để giảm trừ thu nhập chịu thuế.'}
             />
           </div>
           <p className='mt-1 text-sm text-gray-500'>{currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>
@@ -192,7 +191,7 @@ export default function S2cBookPage() {
                 {money.format(book.netIncome)} đ
               </span>
             </div>
-            <div className='mt-2 text-xs text-sky-800'>Chi phí nhân công chưa được TaxMate hỗ trợ nên không được tự động cộng vào sổ.</div>
+            <div className='mt-2 text-xs text-sky-800'>Chi phí nhân công cần nhập tay tại mục Chi phí (chưa tự động lấy từ bảng lương).</div>
           </div>
 
           <div className='overflow-x-auto rounded-xl border bg-white'>

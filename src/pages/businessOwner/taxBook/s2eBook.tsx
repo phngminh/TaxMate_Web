@@ -190,8 +190,7 @@ export default function S2eBookPage() {
               formCode='Mẫu S2e-HKD'
               circular='TT 88/2021/TT-BTC'
               title='Thông tư số 88/2021/TT-BTC ngày 11/10/2021 của Bộ Tài chính'
-              article='Phụ lục 2 - Hệ thống sổ kế toán hộ kinh doanh'
-              description='Sổ S2e-HKD phản ánh chi tiết tình hình thu, chi và tồn quỹ tiền mặt cũng như tiền gửi tại từng tài khoản ngân hàng của hộ kinh doanh theo trình tự phát sinh thực tế. Mỗi tài khoản tiền hoặc quỹ tiền mặt được mở sổ theo dõi riêng biệt.'
+              description={'Theo dõi tiền mặt trong két và tiền gửi từng ngân hàng theo thực tế thu/chi.\n\n➜ Đích đến: Không tính thuế, dùng làm căn cứ đối chiếu nguồn gốc dòng tiền với doanh thu khi cơ quan thuế kiểm tra.'}
             />
           </div>
           <p className='mt-1 text-sm text-gray-500'>{currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>

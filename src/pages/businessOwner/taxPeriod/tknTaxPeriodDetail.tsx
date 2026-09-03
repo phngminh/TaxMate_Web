@@ -233,8 +233,7 @@ export default function TknTaxPeriodDetailPage() {
                     formCode='Mẫu 01/TKN-CNKD'
                     circular='TT 40/2021/TT-BTC'
                     title='Thông tư số 40/2021/TT-BTC ngày 01/06/2021 của Bộ Tài chính'
-                    article='Phụ lục 1 - Hướng dẫn quản lý thuế đối với hộ kinh doanh'
-                    description='Bản thông báo doanh thu định kỳ dành cho hộ kinh doanh có quy mô doanh thu không quá 1 tỷ đồng/năm. Hộ thuộc diện này chỉ thông báo doanh thu định kỳ để cơ quan thuế quản lý mà không phải nộp tờ khai quý 01/CNKD.'
+                    description={'Dành cho hộ kinh doanh có doanh thu không quá 1 tỷ đồng/năm (không phải nộp tờ khai quý 01/CNKD).\n\n• 6 tháng đầu năm: Nộp trước ngày 31/07\n• 6 tháng cuối năm (hoặc cả năm): Nộp trước ngày 31/01 năm sau.'}
                   />
                 </div>
                 <p className='mt-2 text-sm text-gray-500'>
@@ -306,7 +305,7 @@ export default function TknTaxPeriodDetailPage() {
         <section className='mt-6 rounded-2xl border border-sky-200 bg-sky-50 p-5'>
           <p className='font-bold text-sky-800'>Không phát sinh số thuế phải nộp</p>
           <p className='mt-1 text-sm leading-6 text-sky-700'>
-            Hồ sơ này dùng để thông báo doanh thu. Thuế GTGT và thuế TNCN trên kết quả TKN đều bằng 0.
+            Hồ sơ này dùng để thông báo doanh thu. Thuế GTGT và thuế TNCN đều bằng 0đ.
           </p>
         </section>
 
@@ -342,7 +341,7 @@ export default function TknTaxPeriodDetailPage() {
               className='flex h-12 items-center gap-2 rounded-xl bg-red-600 px-6 text-sm font-bold text-white hover:bg-red-700'
             >
               <FileText size={18} />
-              {hasDeclaration ? 'Xem hồ sơ TKN' : 'Tạo hồ sơ TKN'}
+              {hasDeclaration ? 'Xem thông báo doanh thu' : 'Tạo thông báo doanh thu'}
               <ArrowRight size={17} />
             </button>
           )}

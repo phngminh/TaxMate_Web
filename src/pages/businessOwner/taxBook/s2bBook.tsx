@@ -66,8 +66,7 @@ export default function S2bBookPage() {
               formCode='Mẫu S2b-HKD'
               circular='TT 88/2021/TT-BTC'
               title='Thông tư số 88/2021/TT-BTC ngày 11/10/2021 của Bộ Tài chính'
-              article='Phụ lục 2 - Hệ thống sổ kế toán hộ kinh doanh'
-              description='Sổ S2b-HKD dùng để ghi chép toàn bộ doanh thu bán hàng hóa và cung cấp dịch vụ của hộ kinh doanh, được phân loại chi tiết theo từng nhóm ngành nghề chịu thuế GTGT và thuế TNCN.'
+              description={'Ghi chép toàn bộ doanh thu bán hàng/dịch vụ theo nhóm ngành nghề.\n\n➜ Đích đến: Tự động tổng hợp thành Chỉ tiêu [09] trên tờ khai quý và hồ sơ quyết toán năm.'}
             />
           </div>
           <p className='mt-1 text-sm text-gray-500'>{currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>

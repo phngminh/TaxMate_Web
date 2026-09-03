@@ -177,9 +177,9 @@ export default function QttPage() {
         outstandingAmount: item.outstandingAmount,
         offsetAmount: item.offsetAmount
       })))
-      toast.success(next.status === 'Draft' ? 'Đã mở hồ sơ QTT nháp' : 'Đã tải hồ sơ QTT')
+      toast.success(next.status === 'Draft' ? 'Đã mở hồ sơ quyết toán nháp' : 'Đã tải hồ sơ quyết toán')
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể tạo hồ sơ QTT')
+      toast.error(error?.response?.data?.message || 'Không thể tạo hồ sơ quyết toán')
     } finally {
       setWorking(false)
     }
@@ -217,15 +217,15 @@ export default function QttPage() {
 
     if (fromTkn) {
       if (!tknBridge || tknBridge.taxYear !== year) {
-        toast.error('Hãy tải lại dữ liệu TKN trước khi bù trừ')
+        toast.error('Hãy tải lại dữ liệu thông báo doanh thu trước khi bù trừ')
         return
       }
       if (!tknBridge.choices.includes('Offset') || !tknBridge.canCreateQttDraft) {
-        toast.error('TKN này hiện không đủ điều kiện thực hiện bù trừ')
+        toast.error('Kỳ thông báo này hiện không đủ điều kiện thực hiện bù trừ')
         return
       }
       if (refundAmount !== 0) {
-        toast.error('Luồng bù trừ từ TKN không đồng thời đề nghị hoàn')
+        toast.error('Luồng bù trừ từ thông báo doanh thu không đồng thời đề nghị hoàn')
         return
       }
       if (
@@ -233,7 +233,7 @@ export default function QttPage() {
         offsetAmount !== overpaid ||
         offsetAmount !== tknBridge.incomeBasedPitPaid
       ) {
-        toast.error('Hãy phân bổ đủ toàn bộ số PIT nộp thừa từ TKN')
+        toast.error('Hãy phân bổ đủ toàn bộ số thuế TNCN nộp thừa')
         return
       }
     }
@@ -279,7 +279,7 @@ export default function QttPage() {
           })
       setDeclaration(next)
       toast.success(fromTkn
-        ? 'Đã lưu bù trừ toàn bộ số PIT nộp thừa từ TKN'
+        ? 'Đã lưu bù trừ toàn bộ số thuế TNCN nộp thừa'
         : 'Đã lưu cách xử lý tiền nộp thừa')
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Không thể lưu cách xử lý tiền nộp thừa')
@@ -298,9 +298,9 @@ export default function QttPage() {
         declaration.draftRevision
       )
       setDeclaration(next)
-      toast.success('Đã xác nhận và khóa hồ sơ QTT')
+      toast.success('Đã xác nhận và khóa hồ sơ quyết toán')
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể xác nhận hồ sơ QTT')
+      toast.error(error?.response?.data?.message || 'Không thể xác nhận hồ sơ quyết toán')
     } finally {
       setWorking(false)
     }
@@ -320,7 +320,7 @@ export default function QttPage() {
       anchor.remove()
       URL.revokeObjectURL(url)
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể xuất tờ khai QTT')
+      toast.error(error?.response?.data?.message || 'Không thể xuất tờ khai quyết toán')
     } finally {
       setExporting(false)
     }
@@ -328,12 +328,12 @@ export default function QttPage() {
 
   const submitDeclaration = async () => {
     if (!currentBusiness || !declaration || declaration.status !== 'Generated') return
-    if (!window.confirm('Bạn có chắc chắn muốn đánh dấu tờ khai QTT đã nộp bên ngoài không?')) return
+    if (!window.confirm('Bạn có chắc chắn muốn đánh dấu tờ khai quyết toán đã nộp bên ngoài không?')) return
     try {
       setWorking(true)
       await submitTaxDeclaration(declaration.declarationId)
       setDeclaration((prev) => (prev ? { ...prev, status: 'Submitted' } : prev))
-      toast.success('Đã đánh dấu tờ khai QTT nộp thành công!')
+      toast.success('Đã đánh dấu tờ khai quyết toán nộp thành công!')
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Không thể đánh dấu nộp tờ khai')
     } finally {
@@ -352,7 +352,7 @@ export default function QttPage() {
               circular='Luật QLT 38/2019/QH14'
               title='Hồ sơ quyết toán thuế TNCN năm theo Luật Quản lý thuế số 38/2019/QH14'
               article='Khoản 2 Điều 44 Luật Quản lý thuế & Nghị định 126/2020/NĐ-CP'
-              description={'Mẫu 02/CNKD-TNCN-QTT áp dụng cho cá nhân kinh doanh nộp thuế theo phương pháp Thu nhập tính thuế (IncomeBased).\n\n• Thời hạn nộp hồ sơ: Chậm nhất là ngày 31/03 năm tiếp theo.\n• Miễn thuế nhỏ: Số thuế còn phải nộp từ 50.000đ trở xuống được miễn nộp toàn bộ (Điều 79 Luật QLT).\n• Xử lý nộp thừa: Được hoàn về ngân hàng, bù trừ nghĩa vụ thuế khác hoặc chuyển tiếp sang kỳ sau (Điều 60 Luật QLT).'}
+              description={'Hồ sơ quyết toán thuế TNCN năm cho cá nhân kinh doanh nộp thuế theo phương pháp Thu nhập tính thuế.\n\n• Thời hạn nộp hồ sơ: Chậm nhất là ngày 31/03 năm tiếp theo.\n• Miễn thuế nhỏ: Số thuế còn phải nộp từ 50.000đ trở xuống được miễn nộp toàn bộ (Điều 79 Luật QLT).\n• Xử lý nộp thừa: Được hoàn về ngân hàng, bù trừ nghĩa vụ thuế khác hoặc chuyển tiếp sang kỳ sau (Điều 60 Luật QLT).'}
             />
           </div>
           <p className='mt-1 text-sm text-gray-500'>Hồ sơ quyết toán năm {year} · {currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>
@@ -371,9 +371,9 @@ export default function QttPage() {
 
       {fromTkn && (
         <div className='rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm leading-6 text-violet-800'>
-          Bạn đang tiếp tục từ hồ sơ 01/TKN-CNKD. Hãy bấm <strong>Xem dữ liệu</strong>, tạo hồ sơ QTT rồi phân bổ toàn bộ số PIT nộp thừa vào các nghĩa vụ cần bù trừ.
+          Bạn đang tiếp tục từ hồ sơ 01/TKN-CNKD. Hãy bấm <strong>Xem dữ liệu</strong>, tạo hồ sơ quyết toán rồi phân bổ toàn bộ số thuế TNCN nộp thừa vào các nghĩa vụ cần bù trừ.
           {tknBridge?.selectedChoice === 'Offset' && (
-            <p className='mt-2 font-semibold text-emerald-700'>Lựa chọn bù trừ từ TKN đã được lưu.</p>
+            <p className='mt-2 font-semibold text-emerald-700'>Lựa chọn bù trừ từ thông báo doanh thu đã được lưu.</p>
           )}
         </div>
       )}
@@ -395,13 +395,13 @@ export default function QttPage() {
               {/* QTT-FE-01: 4 Thẻ kiểm tra dữ liệu nguồn */}
               <div className='rounded-xl border border-gray-200 bg-white p-4'>
                 <h3 className='text-xs font-bold uppercase tracking-wider text-gray-500 mb-3'>
-                  Kiểm tra số liệu nguồn (Cross-Book Verification)
+                  Đối chiếu số liệu giữa các sổ kế toán
                 </h3>
                 <div className='grid gap-3 sm:grid-cols-2 lg:grid-cols-4'>
                   <div className='rounded-lg bg-gray-50 p-3 border border-gray-100'>
                     <span className='text-xs text-gray-500 flex items-center justify-between'>
                       <span>Doanh thu KD [09a] (S2b)</span>
-                      <Tip content='Doanh thu tổng hợp từ Sổ chi tiết doanh thu S2b-HKD của tất cả các quý trong năm.' side='top' align='end'>
+                      <Tip content='Tổng doanh thu bán hàng cả năm từ Sổ S2b. Căn cứ gốc để tính thu nhập chịu thuế.' side='top' align='end'>
                         <span className='text-[10px] text-gray-400 cursor-help'>ⓘ</span>
                       </Tip>
                     </span>
@@ -409,8 +409,8 @@ export default function QttPage() {
                   </div>
                   <div className='rounded-lg bg-gray-50 p-3 border border-gray-100'>
                     <span className='text-xs text-gray-500 flex items-center justify-between'>
-                      <span>Chi phí NVL xuất dùng [10a] (S2d)</span>
-                      <Tip content='Giá trị nguyên vật liệu xuất dùng tính theo giá bình quân cả kỳ (S2d), đã tự động loại trừ các phiếu nhập chi tiền mặt từ 5 triệu đồng trở lên.' side='top' align='end' maxWidth='max-w-xs'>
+                      <span>Chi phí nguyên vật liệu xuất dùng [10a] (S2d)</span>
+                      <Tip content='Tổng tiền nguyên vật liệu xuất dùng cả năm (từ Sổ kho S2d), tự động loại trừ phiếu chi tiền mặt từ 5 triệu trở lên.' side='top' align='end' maxWidth='max-w-xs'>
                         <span className='text-[10px] text-gray-400 cursor-help'>ⓘ</span>
                       </Tip>
                     </span>
@@ -419,7 +419,7 @@ export default function QttPage() {
                   <div className='rounded-lg bg-gray-50 p-3 border border-gray-100'>
                     <span className='text-xs text-gray-500 flex items-center justify-between'>
                       <span>Thuế TNCN đã tạm nộp [15]</span>
-                      <Tip content='Tổng số thuế TNCN chủ hộ đã nộp vào ngân sách nhà nước trong năm tính thuế có chứng từ nộp thành công.' side='top' align='end' maxWidth='max-w-xs'>
+                      <Tip content='Tổng số tiền thuế TNCN thực tế đã nộp vào Kho bạc trong năm (có chứng từ xác nhận).' side='top' align='end' maxWidth='max-w-xs'>
                         <span className='text-[10px] text-gray-400 cursor-help'>ⓘ</span>
                       </Tip>
                     </span>
@@ -428,7 +428,7 @@ export default function QttPage() {
                   <div className='rounded-lg bg-gray-50 p-3 border border-gray-100'>
                     <span className='text-xs text-gray-500 flex items-center justify-between'>
                       <span>Tồn kho cuối năm [34] (S2d)</span>
-                      <Tip content='Bảng kê tồn kho cuối năm [25-34] tổng hợp từ Sổ chi tiết tồn kho S2d-HKD (Tồn đầu + Nhập - Xuất = Tồn cuối).' side='top' align='end' maxWidth='max-w-xs'>
+                      <Tip content='Tổng giá trị tồn kho cuối năm tính từ Sổ kho S2d, dùng để đối chiếu giá vốn khi quyết toán.' side='top' align='end' maxWidth='max-w-xs'>
                         <span className='text-[10px] text-gray-400 cursor-help'>ⓘ</span>
                       </Tip>
                     </span>
@@ -458,7 +458,7 @@ export default function QttPage() {
                   <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
                     <span className='text-gray-500 flex items-center justify-between'>
                       <span>1. Thu nhập tính thuế [11]</span>
-                      <Tip content='Doanh thu trừ Chi phí. Nếu chi phí lớn hơn doanh thu (kinh doanh lỗ), số tiền sẽ mang giá trị âm và thuế phát sinh bằng 0đ.' side='top' align='end' maxWidth='max-w-xs'>
+                      <Tip content='Doanh thu trừ Chi phí. Nếu kinh doanh bị lỗ, số tiền này sẽ mang giá trị âm.' side='top' align='end' maxWidth='max-w-xs'>
                         <span className='text-[10px] text-blue-400 cursor-help'>ⓘ</span>
                       </Tip>
                     </span>
@@ -467,7 +467,7 @@ export default function QttPage() {
                   <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
                     <span className='text-gray-500 flex items-center justify-between'>
                       <span>2. Thuế phát sinh [13]</span>
-                      <Tip content={'Bằng max([11], 0) × Thuế suất.\nNếu thu nhập tính thuế âm thì số thuế phát sinh tự động bằng 0đ.'} side='top' align='end' maxWidth='max-w-xs'>
+                      <Tip content='Lấy Thu nhập tính thuế × Thuế suất. Nếu kinh doanh bị lỗ (thu nhập âm), số thuế tự động = 0đ.' side='top' align='end' maxWidth='max-w-xs'>
                         <span className='text-[10px] text-blue-400 cursor-help'>ⓘ</span>
                       </Tip>
                     </span>
@@ -476,7 +476,7 @@ export default function QttPage() {
                   <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
                     <span className='text-gray-500 flex items-center justify-between'>
                       <span>3. Đã tạm nộp [15]</span>
-                      <Tip content='Số thuế TNCN thực tế đã nộp vào Kho bạc/Ngân sách Nhà nước theo các quý trong năm.' side='top' align='end' maxWidth='max-w-xs'>
+                      <Tip content='Tiền thuế TNCN đã tạm nộp theo các quý trong năm để trừ vào số thuế cả năm.' side='top' align='end' maxWidth='max-w-xs'>
                         <span className='text-[10px] text-blue-400 cursor-help'>ⓘ</span>
                       </Tip>
                     </span>
@@ -485,7 +485,7 @@ export default function QttPage() {
                   <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
                     <span className='text-gray-500 flex items-center justify-between'>
                       <span>4. Miễn giảm nhỏ [18]</span>
-                      <Tip content={'Điều 79 Luật QLT 38/2019/QH14:\nSố thuế TNCN còn phải nộp sau quyết toán từ 50.000đ trở xuống được Nhà nước miễn nộp toàn bộ.'} side='top' align='end' maxWidth='max-w-xs'>
+                      <Tip content={'Điều 79 Luật Quản lý thuế:\nSố thuế còn phải nộp từ 50.000đ trở xuống được Nhà nước miễn nộp toàn bộ.'} side='top' align='end' maxWidth='max-w-xs'>
                         <span className='text-[10px] text-blue-400 cursor-help'>ⓘ</span>
                       </Tip>
                     </span>
@@ -563,9 +563,9 @@ export default function QttPage() {
                         <h2 className='font-semibold text-gray-900'>Xử lý tiền nộp thừa [20]</h2>
                         <span
                           className='rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800 cursor-help'
-                          title='Căn cứ Điều 60 Luật Quản lý thuế số 38/2019/QH14 về quyền của người nộp thuế: Bạn có quyền đề nghị hoàn tiền về tài khoản ngân hàng [22], bù trừ vào nghĩa vụ thuế khác [23] hoặc chuyển tiếp trừ vào kỳ sau [24].'
+                          title='Điều 60 Luật Quản lý thuế: Tiền nộp thừa có thể hoàn về ngân hàng [22], bù trừ thuế khác [23], hoặc chuyển trừ vào năm sau [24].'
                         >
-                          Điều 60 Luật QLT ⓘ
+                          Điều 60 Luật Quản lý thuế ⓘ
                         </span>
                       </div>
                       <p className='text-sm text-gray-500 mt-0.5'>Tổng có thể phân bổ: <strong>{money.format(overpaid)} đ</strong> (Phần còn lại sẽ tự động chuyển sang trừ vào kỳ sau [24])</p>
@@ -595,7 +595,7 @@ export default function QttPage() {
                   ))}
                   {declaration.status === 'Draft' && (
                     <button onClick={saveAllocation} disabled={working}
-                      className='inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'><Save size={16} /> {fromTkn ? 'Hoàn tất bù trừ từ TKN' : 'Lưu phân bổ'}</button>
+                      className='inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'><Save size={16} /> {fromTkn ? 'Hoàn tất bù trừ' : 'Lưu phân bổ'}</button>
                   )}
                 </div>
               )}
