@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'react-toastify'
 
 import {
@@ -50,6 +50,18 @@ export default function TaxProfileCard({
   )
   const [busy, setBusy] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
+
+  useEffect(() => {
+    if (window.location.hash === '#threshold-review') {
+      const timer = setTimeout(() => {
+        const el = document.getElementById('threshold-review')
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+      }, 150)
+      return () => clearTimeout(timer)
+    }
+  }, [profile.thresholdReviews])
 
   async function saveInitialProfile() {
     try {
@@ -122,7 +134,7 @@ export default function TaxProfileCard({
     }
 
     return (
-      <section className='mt-6 rounded-2xl border border-sky-200 bg-sky-50 p-6'>
+      <section id='threshold-review' className='mt-6 rounded-2xl border border-sky-200 bg-sky-50 p-6 scroll-mt-20'>
         <div className='flex items-start justify-between gap-4'>
           <div>
             <h2 className='text-xl font-extrabold text-sky-950'>Thiết lập hồ sơ thuế</h2>
@@ -181,7 +193,7 @@ export default function TaxProfileCard({
   }
 
   return (
-    <section className='mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm'>
+    <section id='threshold-review' className='mt-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm scroll-mt-20'>
       <div className='flex flex-wrap items-start justify-between gap-4'>
         <div>
           <p className='text-xs font-bold uppercase tracking-wide text-gray-400'>Hồ sơ thuế hiện tại</p>
