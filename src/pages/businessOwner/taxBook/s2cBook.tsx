@@ -191,7 +191,7 @@ export default function S2cBookPage() {
                 {money.format(book.netIncome)} đ
               </span>
             </div>
-            <div className='mt-2 text-xs text-sky-800'>Chi phí nhân công cần nhập tay tại mục Chi phí (chưa tự động lấy từ bảng lương).</div>
+            <div className='mt-2 text-xs text-sky-800'>TaxMate hiện chưa hỗ trợ chi phí nhân công; khoản này chưa được tổng hợp vào sổ S2c.</div>
           </div>
 
           <div className='overflow-x-auto rounded-xl border bg-white'>

@@ -33,6 +33,7 @@ import TaxQuarterCard from '../../components/owner/tax/TaxQuarterCard'
 import TaxProfileCard from '../../components/owner/tax/TaxProfileCard'
 import path from '../../constants/path'
 import { useBusiness } from '../../contexts/BusinessContext'
+import { useTaxProfileRevision } from '../../hooks/useTaxProfileRevision'
 
 import type {
   TaxDashboardUiData
@@ -85,6 +86,7 @@ function formatRemaining(value: number) {
 
 export default function TaxDashboard() {
   const navigate = useNavigate()
+  const profileRevision = useTaxProfileRevision()
 
   const {
     currentBusiness,
@@ -216,6 +218,7 @@ export default function TaxDashboard() {
           ]
         }
 
+        if (!active) return
         setFilingTasks(resolvedTasks)
         setAnnualConclusion(annualConclusionResponse)
         setTaxProfile(taxProfileResponse)
@@ -266,7 +269,8 @@ export default function TaxDashboard() {
   }, [
     businessId,
     conclusionYear,
-    currentYear
+    currentYear,
+    profileRevision
   ])
 
   function findQuarterTaxPeriod(
@@ -443,11 +447,6 @@ export default function TaxDashboard() {
     } finally {
       setIsConfirmingConclusion(false)
     }
-  }
-
-  async function reloadTaxProfile() {
-    if (!businessId) return
-    setTaxProfile(await getOwnerTaxProfile(businessId))
   }
 
   if (!businessId) {
@@ -870,7 +869,6 @@ export default function TaxDashboard() {
             businessId={businessId}
             profile={taxProfile}
             onChanged={setTaxProfile}
-            onReload={reloadTaxProfile}
           />
         )}
 

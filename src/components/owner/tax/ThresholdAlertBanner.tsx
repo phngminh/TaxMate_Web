@@ -5,6 +5,7 @@ import { toast } from 'react-toastify'
 import { dismissThresholdReview, getOwnerTaxProfile } from '../../../apis/taxProfile.api'
 import path from '../../../constants/path'
 import type { RevenueThresholdReview } from '../../../types/taxProfile.type'
+import { useTaxProfileRevision } from '../../../hooks/useTaxProfileRevision'
 
 interface ThresholdAlertBannerProps {
   businessId: string
@@ -15,6 +16,7 @@ export default function ThresholdAlertBanner({ businessId }: ThresholdAlertBanne
   const [dismissingId, setDismissingId] = useState<string | null>(null)
   const location = useLocation()
   const navigate = useNavigate()
+  const profileRevision = useTaxProfileRevision()
 
   useEffect(() => {
     if (!businessId) {
@@ -28,7 +30,8 @@ export default function ThresholdAlertBanner({ businessId }: ThresholdAlertBanne
         const profile = await getOwnerTaxProfile(businessId)
         if (isMounted && profile?.thresholdReviews) {
           const pending = profile.thresholdReviews.filter(
-            (review) => review.status === 'PendingReview'
+            (review) => review.status === 'PendingReview' ||
+              (review.status === 'Acknowledged' && review.canConfirm)
           )
           setReviews(pending)
         }
@@ -42,7 +45,7 @@ export default function ThresholdAlertBanner({ businessId }: ThresholdAlertBanne
     return () => {
       isMounted = false
     }
-  }, [businessId, location.pathname])
+  }, [businessId, location.pathname, profileRevision])
 
   const activeAlert = useMemo(() => {
     if (!reviews.length) return null
@@ -57,13 +60,13 @@ export default function ThresholdAlertBanner({ businessId }: ThresholdAlertBanne
 
   if (!activeAlert) return null
 
-  const isOutsideScope = activeAlert.isOutsideSupportedScope || activeAlert.thresholdCode === 'Crossed50B'
+  const isOutsideScope = activeAlert.isOutsideSupportedScope
 
   const getAlertContent = () => {
     if (isOutsideScope) {
       return {
         title: 'Doanh thu vượt mốc 50 tỷ đồng — Ngoài phạm vi hỗ trợ',
-        subtitle: 'TaxMate hiện chỉ hỗ trợ kê khai cho hộ kinh doanh có doanh thu dưới 50 tỷ đồng.',
+        subtitle: activeAlert.message,
         ctaText: 'Xem chi tiết',
         badgeBg: 'bg-red-500',
         pingBg: 'bg-red-400',
@@ -74,11 +77,15 @@ export default function ThresholdAlertBanner({ businessId }: ThresholdAlertBanne
       }
     }
 
-    if (activeAlert.thresholdCode === 'Crossed3B') {
+    if (activeAlert.canDismiss || activeAlert.thresholdCode !== 'Crossed1B') {
       return {
-        title: 'Doanh thu vượt mốc 3 tỷ đồng',
-        subtitle: 'Cần xem lại phương pháp kê khai thuế TNCN cho năm tiếp theo.',
-        ctaText: 'Xác nhận ngay',
+        title: activeAlert.canDismiss
+          ? 'Doanh thu hiện không còn vượt mốc này'
+          : activeAlert.thresholdCode === 'Crossed3B'
+            ? 'Doanh thu vượt mốc 3 tỷ đồng'
+            : `Cảnh báo ngưỡng doanh thu ${activeAlert.thresholdAmount.toLocaleString('vi-VN')}đ`,
+        subtitle: activeAlert.canDismiss ? 'Bạn có thể đóng cảnh báo.' : activeAlert.message,
+        ctaText: activeAlert.canConfirm ? 'Xác nhận ngay' : 'Xem chi tiết',
         badgeBg: 'bg-amber-500',
         pingBg: 'bg-amber-400',
         containerBg: 'from-[#451a03] via-[#78350f] to-[#451a03]',
@@ -120,7 +127,6 @@ export default function ThresholdAlertBanner({ businessId }: ThresholdAlertBanne
     try {
       setDismissingId(activeAlert.alertId)
       await dismissThresholdReview(businessId, activeAlert.alertId)
-      setReviews((prev) => prev.filter((r) => r.alertId !== activeAlert.alertId))
       toast.info('Đã đóng thông báo ngưỡng doanh thu')
     } catch {
       toast.error('Không thể đóng thông báo lúc này')
@@ -182,7 +188,7 @@ export default function ThresholdAlertBanner({ businessId }: ThresholdAlertBanne
             <ArrowRight size={13} strokeWidth={2.5} />
           </button>
 
-          {activeAlert.canDismiss && !isOutsideScope && (
+          {activeAlert.canDismiss && (
             <button
               type='button'
               disabled={dismissingId === activeAlert.alertId}

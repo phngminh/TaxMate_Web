@@ -17,7 +17,6 @@ interface Props {
   businessId: string
   profile: OwnerTaxProfile
   onChanged: (profile: OwnerTaxProfile) => void
-  onReload: () => Promise<void>
 }
 
 const bracketLabels: Record<RevenueBracket, string> = {
@@ -36,8 +35,7 @@ function errorMessage(error: unknown) {
 export default function TaxProfileCard({
   businessId,
   profile,
-  onChanged,
-  onReload
+  onChanged
 }: Props) {
   const [bracket, setBracket] = useState<RevenueBracket>('AtOrBelow1B')
   const [method, setMethod] = useState<TaxMethod>('RevenueBased')
@@ -93,7 +91,6 @@ export default function TaxProfileCard({
         alertId,
         reviewMethods[alertId]
       )
-      await onReload()
       toast.success('Đã xác nhận chuyển diện doanh thu.')
     } catch (error) {
       toast.error(errorMessage(error))
@@ -106,7 +103,6 @@ export default function TaxProfileCard({
     try {
       setBusy(true)
       await dismissThresholdReview(businessId, alertId)
-      await onReload()
     } catch (error) {
       toast.error(errorMessage(error))
     } finally {
