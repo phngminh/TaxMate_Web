@@ -106,6 +106,9 @@ export default function S2eBookPage() {
         getMoneyAccounts(currentBusiness.id)
       ])
       setBook(nextBook)
+      setSelectedAccountTab(current =>
+        nextBook.accounts.some(account => account.paymentAccountId === current) ? current : 'all'
+      )
       setAccounts(nextAccounts)
       setBalances(Object.fromEntries(nextAccounts.map((account) => [
         account.paymentAccountId,
@@ -121,6 +124,8 @@ export default function S2eBookPage() {
   useEffect(() => {
     setBook(null)
     setAccounts([])
+    setSelectedAccountTab('all')
+    setSelectedDetailEntry(null)
     void load()
   }, [load])
 

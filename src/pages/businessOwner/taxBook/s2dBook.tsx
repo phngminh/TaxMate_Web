@@ -137,6 +137,7 @@ export default function S2dBookPage() {
                     {item.lines.map((line) => (
                       <tr key={line.inventoryMovementId} className='border-t'>
                         <td className='whitespace-nowrap px-3 py-2'>{new Date(line.documentDate).toLocaleDateString('vi-VN')}</td>
+                        <td className='whitespace-nowrap px-3 py-2'>{line.documentNumber}</td>
                         <td className='min-w-52 px-3 py-2'>
                           {line.description}
                           {line.isProvisionalValue ? (

@@ -55,6 +55,7 @@ export async function updateOwnerTaxProfile(
     `/tax-profile/business/${businessId}`,
     request
   )
+  notifyTaxProfileChanged()
   return response.data.data
 }
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { NumericFormat } from 'react-number-format'
 import {
@@ -82,8 +82,11 @@ export default function PurchasePage() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
-  const page = Number(searchParams.get('page') ?? '1')
+  const requestedPage = Number(searchParams.get('page') ?? '1')
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
   const pageSize = 7
+  const [totalPages, setTotalPages] = useState(1)
+  const loadRevision = useRef(0)
 
   const changePage = (newPage: number) => {
     const params = new URLSearchParams(searchParams)
@@ -143,6 +146,7 @@ export default function PurchasePage() {
 
   // 1. Fetch data depending on active tab
   const loadData = async () => {
+    const revision = ++loadRevision.current
     if (!businessId) {
       setLoading(false)
       return
@@ -151,30 +155,39 @@ export default function PurchasePage() {
       setLoading(true)
       if (activeTab === 'purchases') {
         const [purchaseRes, supRes, ingRes, prodRes] = await Promise.all([
-          getInventoryPurchases(businessId),
+          getInventoryPurchases(businessId, page, pageSize),
           getSuppliers(businessId),
           getAllIngredients(businessId),
           getAllProducts(businessId, 1, 100)
         ])
-        if (purchaseRes.success) setInventoryPurchases(purchaseRes.data.items || [])
+        if (revision !== loadRevision.current) return
+        if (purchaseRes.success) {
+          const lastPage = Math.max(1, purchaseRes.data.totalPages)
+          setTotalPages(lastPage)
+          setInventoryPurchases(purchaseRes.data.items || [])
+          if (page > lastPage) changePage(lastPage)
+        }
         if (supRes.success) setSuppliers(supRes.data || [])
         if (ingRes.success) setDbIngredients(ingRes.data?.items || ingRes.data || [])
         if (prodRes.success) setDbProducts(prodRes.data.items || [])
       } else if (activeTab === 'suppliers') {
         const res = await getSuppliers(businessId)
+        if (revision !== loadRevision.current) return
         if (res.success) setSuppliers(res.data || [])
       }
     } catch (err) {
+      if (revision !== loadRevision.current) return
       console.error(err)
       toast.error('Không thể nạp dữ liệu chi phí.')
     } finally {
-      setLoading(false)
+      if (revision === loadRevision.current) setLoading(false)
     }
   }
 
   useEffect(() => {
     loadData()
-  }, [businessId, activeTab])
+    return () => { loadRevision.current++ }
+  }, [businessId, activeTab, page])
 
   // Automatically refresh product, ingredient, and supplier lookups when opening purchase modal
   useEffect(() => {
@@ -496,15 +509,10 @@ export default function PurchasePage() {
         receiptImageUrl: purchase.receiptImageUrl || undefined,
         materialItems
       }
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    })
   }, [inventoryPurchases])
 
-  const paginatedPurchases = useMemo(() => {
-    const start = (page - 1) * pageSize
-    return combinedPurchases.slice(start, start + pageSize)
-  }, [combinedPurchases, page])
-
-  const totalPages = Math.ceil(combinedPurchases.length / pageSize)
+  const paginatedPurchases = combinedPurchases
 
   return (
     <div className='flex flex-col bg-[#f8f9fa] min-h-[calc(100vh-51px)] w-full'>

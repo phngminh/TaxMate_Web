@@ -438,7 +438,7 @@ export default function IngredientPage() {
           break
         }
         case 'edit-ingredient': {
-          const body = getValidatedIngredientBody()
+          const body = getValidatedIngredientBody(false)
           if (!body) break
           await updateIngredient(confirmAction.id, body)
           toast.success('Cập nhật nguyên liệu thành công.')

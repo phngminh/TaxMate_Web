@@ -8,6 +8,7 @@ export interface InventoryControlItem {
 }
 
 export interface InventoryInitializationPreview {
+  version: string
   businessId: string
   isInitialized: boolean
   isStockTrackingEnabled: boolean
@@ -36,7 +37,7 @@ export interface InitializeInventoryRequest {
 }
 
 export interface ReconcileInventoryRequest {
-  occurredAt: string
+  expectedVersion: string
   documentNumber: string
   description: string
   lines: InventoryCountLineRequest[]

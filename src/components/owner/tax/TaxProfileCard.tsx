@@ -83,13 +83,13 @@ export default function TaxProfileCard({
     }
   }
 
-  async function confirmReview(alertId: string) {
+  async function confirmReview(alertId: string, selectedMethod?: TaxMethod) {
     try {
       setBusy(true)
       await confirmThresholdReview(
         businessId,
         alertId,
-        reviewMethods[alertId]
+        selectedMethod
       )
       toast.success('Đã xác nhận chuyển diện doanh thu.')
     } catch (error) {
@@ -201,17 +201,18 @@ export default function TaxProfileCard({
 
       {profile.thresholdReviews.map((review) => {
         const choices = review.allowedTaxMethods
+        const selectedMethod = reviewMethods[review.alertId] ?? choices[0]
         return (
           <div key={review.alertId} className={`mt-4 rounded-xl border p-4 ${review.isOutsideSupportedScope ? 'border-red-300 bg-red-50' : 'border-amber-200 bg-amber-50'}`}>
             <p className='text-sm font-bold text-gray-900'>Vượt mốc {review.thresholdAmount.toLocaleString('vi-VN')}đ trong quý {review.quarter}/{review.year}</p>
             <p className='mt-1 text-sm text-gray-700'>{review.message}</p>
             {review.canConfirm && choices.length > 1 && (
-              <select className='mt-3 rounded-lg border bg-white px-3 py-2 text-sm' value={reviewMethods[review.alertId] ?? choices[0]} onChange={(event) => setReviewMethods((current) => ({ ...current, [review.alertId]: event.target.value as TaxMethod }))}>
+              <select className='mt-3 rounded-lg border bg-white px-3 py-2 text-sm' value={selectedMethod} onChange={(event) => setReviewMethods((current) => ({ ...current, [review.alertId]: event.target.value as TaxMethod }))}>
                 {choices.map((choice) => <option key={choice} value={choice}>{choice === 'IncomeBased' ? 'Thu nhập tính thuế' : 'Doanh thu'}</option>)}
               </select>
             )}
             <div className='mt-3 flex gap-2'>
-              {review.canConfirm && <button disabled={busy} className='rounded-lg bg-amber-700 px-4 py-2 text-sm font-bold text-white disabled:bg-gray-300' onClick={() => void confirmReview(review.alertId)}>Xác nhận</button>}
+              {review.canConfirm && <button disabled={busy} className='rounded-lg bg-amber-700 px-4 py-2 text-sm font-bold text-white disabled:bg-gray-300' onClick={() => void confirmReview(review.alertId, selectedMethod)}>Xác nhận</button>}
               {review.canDismiss && <button disabled={busy} className='rounded-lg border bg-white px-4 py-2 text-sm font-bold text-gray-700' onClick={() => void dismissReview(review.alertId)}>Đóng cảnh báo</button>}
             </div>
           </div>
