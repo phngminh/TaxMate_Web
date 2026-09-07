@@ -146,7 +146,7 @@ export default function S2eBookPage() {
 
   const saveBalances = async (startFromZero: boolean) => {
     if (!book || unconfirmedAccounts.length === 0) return
-    const initialBalanceDate = book.fromInclusive.split('T')[0]
+    const initialBalanceDate = `${year}-${String((quarter - 1) * 3 + 1).padStart(2, '0')}-01`
     try {
       setSaving(true)
       await Promise.all(unconfirmedAccounts.map((account) => updateInitialBalance(
@@ -228,7 +228,7 @@ export default function S2eBookPage() {
             <WalletCards size={19} /> Khai báo số tiền có sẵn để bắt đầu Sổ tiền (S2e)
           </div>
           <p className='mt-2 text-sm text-amber-900'>
-            Nhập số tiền thực tế đang có trong két tiền mặt hoặc tài khoản ngân hàng tính đến ngày <strong>{new Date(book.fromInclusive).toLocaleDateString('vi-VN')}</strong>.
+            Nhập số tiền thực tế đang có trong két tiền mặt hoặc tài khoản ngân hàng tính đến ngày <strong>{new Date(year, (quarter - 1) * 3, 1).toLocaleDateString('vi-VN')}</strong>.
           </p>
           <div className='mt-2 flex flex-col gap-1 rounded-lg bg-amber-100/70 p-3 text-xs text-amber-950'>
             <span className='font-medium text-emerald-850'>

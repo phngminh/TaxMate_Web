@@ -152,7 +152,7 @@ export default function QttPage() {
   }
 
   const prepareDeclaration = async () => {
-    if (!currentBusiness || !preview?.canClose) return
+    if (!currentBusiness) return
     try {
       setWorking(true)
       const calculated = await calculateQtt(currentBusiness.id, year)
@@ -511,7 +511,7 @@ export default function QttPage() {
           )}
 
           <div className='flex flex-wrap gap-3'>
-            <button onClick={prepareDeclaration} disabled={!preview.canClose || working}
+            <button onClick={prepareDeclaration} disabled={working}
               className='rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'>
               {declaration ? 'Tải lại hồ sơ' : 'Tính và tạo hồ sơ'}
             </button>
