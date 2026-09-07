@@ -35,9 +35,6 @@ import {
   getTaxDeclarationByTaxPeriod
 } from '../../../apis/taxDeclaration.api'
 
-import {
-  getTaxDashboard
-} from '../../../apis/taxDashboard.api'
 
 import path from '../../../constants/path'
 
@@ -313,108 +310,6 @@ export default function TaxPeriodDetailPage() {
           return
         }
 
-        /*
-        * STEP 2
-        * Tập hợp tất cả BusinessProfile
-        * thuộc Owner.
-        *
-        * periodResult.businessId được
-        * thêm vào để tránh trường hợp
-        * BusinessContext chưa có profile
-        * hiện tại.
-        */
-        const ownerBusinessIds =
-          Array.from(
-            new Set([
-              periodResult.businessId,
-              ...businesses.map(
-                (business) =>
-                  business.id
-              )
-            ])
-          )
-
-        /*
-        * STEP 3
-        * Lấy Tax Dashboard của tất cả
-        * business trong cùng năm.
-        */
-        const ownerDashboards =
-          await Promise.all(
-            ownerBusinessIds.map(
-              (ownerBusinessId) =>
-                getTaxDashboard({
-                  businessId:
-                    ownerBusinessId,
-                  year:
-                    periodResult.year
-                })
-            )
-          )
-
-        if (!active) {
-          return
-        }
-
-        /*
-        * STEP 4
-        * Cộng doanh thu của toàn Owner.
-        */
-        const ownerAnnualRevenue =
-          ownerDashboards.reduce(
-            (total, item) =>
-              total +
-              item.threshold
-                .accumulatedRevenue,
-            0
-          )
-
-        /*
-        * Tất cả dashboard dùng cùng
-        * threshold nên lấy từ phần tử đầu.
-        */
-        const thresholdAmount =
-          ownerDashboards[0]
-            ?.threshold.amount ??
-          1_000_000_000
-
-        const isQuarterlyFilingRequired =
-          ownerAnnualRevenue >
-          thresholdAmount
-
-        /*
-        * STEP 5
-        * Owner chưa vượt ngưỡng cấu hình:
-        *
-        * KHÔNG cho mở TaxPeriod Detail.
-        *
-        * Bao gồm cả trường hợp user tự
-        * gõ URL.
-        */
-        if (
-          !isQuarterlyFilingRequired
-        ) {
-          toast.info(
-            `Tổng doanh thu của chủ hộ trong năm ${periodResult.year} chưa vượt ngưỡng ${thresholdAmount.toLocaleString(
-              'vi-VN'
-            )}đ. Bạn chưa thuộc diện thực hiện kê khai thuế theo quý.`
-          )
-
-          navigate(
-            path.BUSINESS_OWNER_TAX,
-            {
-              replace: true
-            }
-          )
-
-          return
-        }
-
-        /*
-        * STEP 6
-        * Đã vượt ngưỡng:
-        * cho phép hiển thị Detail.
-        */
         setTaxPeriod(
           periodResult
         )

@@ -292,22 +292,6 @@ export default function TaxDashboard() {
       return
     }
 
-    /*
-    * BE là source of truth.
-    */
-    if (
-      dashboard.accumulatedRevenue <=
-      dashboard.thresholdAmount
-    ) {
-      toast.info(
-        `Tổng doanh thu của chủ hộ chưa vượt ngưỡng ${formatVnd(
-          dashboard.thresholdAmount
-        )}. Bạn hiện chỉ có thể theo dõi doanh thu theo quý.`
-      )
-
-      return
-    }
-
     if (!taxPeriodId) {
       toast.info(
         'Không tìm thấy kỳ thuế cho quý này.'
