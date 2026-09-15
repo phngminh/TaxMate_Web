@@ -52,6 +52,11 @@ export const updateExpense = async (expenseId: string, body: UpdateExpenseReques
   return response.data
 }
 
+export const getExpenseById = async (expenseId: string) => {
+  const response = await http.get<ApiResponse<ExpenseDTO>>(`/Expense/${expenseId}`)
+  return response.data
+}
+
 export const deleteExpense = async (expenseId: string) => {
   const response = await http.delete<ApiResponse<boolean>>(`/Expense/${expenseId}`)
   return response.data

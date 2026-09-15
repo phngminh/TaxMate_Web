@@ -37,7 +37,7 @@ import {
 import { getSuppliers, createSupplier, updateSupplier, deleteSupplier } from '../../apis/supplier.api'
 import { getAllIngredients } from '../../apis/ingredient.api'
 import { getAllProducts } from '../../apis/product.api'
-import { createInventoryPurchase, deleteInventoryPurchase, getInventoryPurchases } from '../../apis/inventoryPurchase.api'
+import { createInventoryPurchase, deleteInventoryPurchase, getInventoryPurchases, getInventoryPurchaseById } from '../../apis/inventoryPurchase.api'
 import { getMoneyAccounts } from '../../apis/paymentAccount.api'
 import { uploadImage } from '../../apis/image.api'
 import type { Supplier } from '../../types/supplier.type'
@@ -513,6 +513,78 @@ export default function PurchasePage() {
   }, [inventoryPurchases])
 
   const paginatedPurchases = combinedPurchases
+
+  const autoOpenedPurchaseRef = useRef(false)
+  useEffect(() => {
+    const autoOpen = searchParams.get('autoOpen') === 'true'
+    const targetId = (searchParams.get('id') || searchParams.get('voucherNumber') || searchParams.get('search') || '').trim()
+    if (!autoOpen || autoOpenedPurchaseRef.current) return
+
+    if (targetId) {
+      const lower = targetId.toLowerCase()
+      const found = combinedPurchases.find(
+        p => p.id.toLowerCase() === lower || p.invoiceNumber.toLowerCase() === lower
+      )
+      if (found) {
+        autoOpenedPurchaseRef.current = true
+        setSelectedPurchaseType(found.type)
+        setSelectedMaterialDetail({
+          invoiceNumber: found.invoiceNumber,
+          date: found.date,
+          supplierName: found.supplierName,
+          totalAmount: found.amount,
+          receiptImageUrl: found.receiptImageUrl,
+          items: found.materialItems || []
+        })
+        setSelectedExpenseDetail(null)
+        setShowPurchaseDetailModal(true)
+      } else {
+        // Fetch single purchase by ID if not in current paginated page
+        void getInventoryPurchaseById(targetId)
+          .then(res => {
+            if (res.success && res.data) {
+              autoOpenedPurchaseRef.current = true
+              const p = res.data
+              const isProduct = p.lines.some(l => !!l.productId)
+              const materialItems = p.lines.map((line, index) => ({
+                id: line.productId ?? line.ingredientId ?? `${p.expenseId}-${index}`,
+                name: line.itemName,
+                quantity: line.quantity,
+                unit: line.unit || 'đơn vị',
+                totalCost: line.totalValue
+              }))
+              setSelectedPurchaseType(isProduct ? 'Product' : 'Material')
+              setSelectedMaterialDetail({
+                invoiceNumber: p.voucherNumber,
+                date: p.purchaseDate,
+                supplierName: p.supplierName || 'Vãng lai',
+                totalAmount: p.amount,
+                receiptImageUrl: p.receiptImageUrl || undefined,
+                items: materialItems
+              })
+              setSelectedExpenseDetail(null)
+              setShowPurchaseDetailModal(true)
+            }
+          })
+          .catch(err => console.error('Failed to auto-open purchase by ID:', err))
+      }
+    } else if (combinedPurchases.length > 0) {
+      // If no ID is specified, open the first purchase
+      const first = combinedPurchases[0]
+      autoOpenedPurchaseRef.current = true
+      setSelectedPurchaseType(first.type)
+      setSelectedMaterialDetail({
+        invoiceNumber: first.invoiceNumber,
+        date: first.date,
+        supplierName: first.supplierName,
+        totalAmount: first.amount,
+        receiptImageUrl: first.receiptImageUrl,
+        items: first.materialItems || []
+      })
+      setSelectedExpenseDetail(null)
+      setShowPurchaseDetailModal(true)
+    }
+  }, [combinedPurchases, searchParams])
 
   return (
     <div className='flex flex-col bg-[#f8f9fa] min-h-[calc(100vh-51px)] w-full'>

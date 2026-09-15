@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ArrowUpCircle, ArrowDownCircle, MoreVertical, RotateCcw, Plus, ChevronRight, ImagePlus, Loader2 } from 'lucide-react'
 import { NumericFormat } from 'react-number-format'
 import { useBusiness } from '../../../contexts/BusinessContext'
@@ -312,14 +313,7 @@ export default function Expense() {
         }
       })
 
-      // Sort by date descending
-      const merged = [...mappedExps, ...mappedIncs].sort((a, b) => {
-        // Simple sort by assuming ID or Date. Since we have date string in vi-VN format, we might need a proper date parsing. 
-        // For now, we leave as is or sort by ID roughly if dates are equal.
-        // A robust sort would use the original date value, but since the previous code had static array, it's fine.
-        return 0;
-      })
-
+      const merged = [...mappedExps, ...mappedIncs]
       setApiRecords(merged)
     } catch (error) {
       console.error(error)
@@ -327,9 +321,31 @@ export default function Expense() {
     }
   }
 
+  const [searchParams] = useSearchParams()
+  const autoOpenedRef = useRef(false)
+
   useEffect(() => {
     fetchData()
   }, [businessId])
+
+  useEffect(() => {
+    const autoOpen = searchParams.get('autoOpen') === 'true'
+    const targetId = (searchParams.get('expenseId') || searchParams.get('id') || searchParams.get('search') || '').toLowerCase().trim()
+    if (autoOpen && !autoOpenedRef.current && apiRecords.length > 0) {
+      const found = targetId
+        ? apiRecords.find(r => r.id.toLowerCase() === targetId || r.content.toLowerCase().includes(targetId))
+        : apiRecords[0]
+      if (found) {
+        autoOpenedRef.current = true
+        setEditingRecord(found)
+        setEditExpenseCategoryId(found.categoryId)
+        setEditPaymentMethod(found.rawPaymentMethod || 'Cash')
+        setIsEditModalOpen(true)
+        setEditImage(null)
+        setEditImagePreview(found.imageUrl || null)
+      }
+    }
+  }, [apiRecords, searchParams])
 
   const expenseCategoryNames = useMemo(() => {
     const names = new Set<string>()

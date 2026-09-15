@@ -143,19 +143,33 @@ export default function OrderPage() {
     }
   }
 
-  // Auto-open modal when navigating from S2e or external link with autoOpen=true
+  // Auto-open modal when navigating from S2d/S2e or external link with autoOpen=true
   useEffect(() => {
-    if (autoOpenFromUrl && !autoOpenedRef.current && orders.length > 0) {
-      const code = (searchParams.get('orderCode') || searchParams.get('search') || '').toLowerCase().trim()
-      const found = code
-        ? orders.find(
-            o => o.transactionCode.toLowerCase() === code ||
-                 (o.invoiceNumber && o.invoiceNumber.toLowerCase() === code)
-          ) || orders[0]
-        : orders[0]
-      if (found) {
+    if (autoOpenFromUrl && !autoOpenedRef.current) {
+      const directId = searchParams.get('id')
+      if (directId) {
         autoOpenedRef.current = true
-        handleViewDetails(found.transactionId)
+        void handleViewDetails(directId)
+        return
+      }
+
+      if (orders.length > 0) {
+        const code = (searchParams.get('orderCode') || searchParams.get('search') || '').toLowerCase().trim()
+        if (code) {
+          const found = orders.find(
+            o =>
+              o.transactionCode.toLowerCase() === code ||
+              o.transactionId.toLowerCase() === code ||
+              (o.invoiceNumber && o.invoiceNumber.toLowerCase() === code)
+          )
+          if (found) {
+            autoOpenedRef.current = true
+            void handleViewDetails(found.transactionId)
+          }
+        } else {
+          autoOpenedRef.current = true
+          void handleViewDetails(orders[0].transactionId)
+        }
       }
     }
   }, [orders, autoOpenFromUrl, searchParams])
