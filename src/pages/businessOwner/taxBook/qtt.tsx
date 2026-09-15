@@ -4,6 +4,7 @@ import { toast } from 'react-toastify'
 import { useSearchParams } from 'react-router-dom'
 import {
   calculateQtt,
+  getQttDeclaration,
   confirmQttDeclaration,
   createQttDeclaration,
   exportQttDeclaration,
@@ -122,42 +123,7 @@ export default function QttPage() {
     setTknBridge(null)
   }, [currentBusiness?.id, year, fromTkn])
 
-  const load = async () => {
-    if (!currentBusiness) return
-    try {
-      setLoading(true)
-      const [nextPreview, accountResponse, nextObligations, nextTknBridge] = await Promise.all([
-        getQttPreview(currentBusiness.id, year),
-        getPaymentAccounts(currentBusiness.id),
-        getQttOffsetObligations(currentBusiness.id),
-        fromTkn ? getTknQttNextStep(fromTkn) : Promise.resolve(null)
-      ])
-      if (nextTknBridge && nextTknBridge.taxYear !== year) {
-        throw new Error('TKN_YEAR_MISMATCH')
-      }
-      setPreview(nextPreview)
-      setTknBridge(nextTknBridge)
-      setAccounts((accountResponse.data ?? []).filter((x) => x.accountType === 'Bank' && x.isActive))
-      setObligations(nextObligations)
-      if (nextPreview.canClose) {
-        setCalculation(await getQttCalculationPreview(currentBusiness.id, year))
-      } else {
-        setCalculation(null)
-      }
-    } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Không thể tải dữ liệu quyết toán')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const prepareDeclaration = async () => {
-    if (!currentBusiness) return
-    try {
-      setWorking(true)
-      const calculated = await calculateQtt(currentBusiness.id, year)
-      setCalculation(calculated.calculation)
-      const next = await createQttDeclaration(currentBusiness.id, year)
+  const hydrateDeclaration = (next: QttDeclaration) => {
       setDeclaration(next)
       setRefundAmount(next.indicators.indicator22)
       setRefundAccountId(next.refundAccount?.paymentAccountId ?? '')
@@ -177,6 +143,48 @@ export default function QttPage() {
         outstandingAmount: item.outstandingAmount,
         offsetAmount: item.offsetAmount
       })))
+  }
+
+  const load = async () => {
+    if (!currentBusiness) return
+    try {
+      setLoading(true)
+      const [nextPreview, accountResponse, nextObligations, nextTknBridge, saved] = await Promise.all([
+        getQttPreview(currentBusiness.id, year),
+        getPaymentAccounts(currentBusiness.id),
+        getQttOffsetObligations(currentBusiness.id),
+        fromTkn ? getTknQttNextStep(fromTkn) : Promise.resolve(null),
+        getQttDeclaration(currentBusiness.id, year)
+      ])
+      if (nextTknBridge && nextTknBridge.taxYear !== year) {
+        throw new Error('TKN_YEAR_MISMATCH')
+      }
+      setDeclaration(null)
+      if (saved) hydrateDeclaration(saved)
+      setPreview(nextPreview)
+      setTknBridge(nextTknBridge)
+      setAccounts((accountResponse.data ?? []).filter((x) => x.accountType === 'Bank' && x.isActive))
+      setObligations(nextObligations)
+      if (nextPreview.canClose && !saved) {
+        setCalculation(await getQttCalculationPreview(currentBusiness.id, year))
+      } else {
+        setCalculation(null)
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Không thể tải dữ liệu quyết toán')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const prepareDeclaration = async () => {
+    if (!currentBusiness) return
+    try {
+      setWorking(true)
+      const calculated = await calculateQtt(currentBusiness.id, year)
+      setCalculation(calculated.calculation)
+      const next = await createQttDeclaration(currentBusiness.id, year)
+      hydrateDeclaration(next)
       toast.success(next.status === 'Draft' ? 'Đã mở hồ sơ quyết toán nháp' : 'Đã tải hồ sơ quyết toán')
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Không thể tạo hồ sơ quyết toán')
@@ -511,7 +519,7 @@ export default function QttPage() {
           )}
 
           <div className='flex flex-wrap gap-3'>
-            <button onClick={prepareDeclaration} disabled={working}
+            <button onClick={declaration ? load : prepareDeclaration} disabled={working}
               className='rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'>
               {declaration ? 'Tải lại hồ sơ' : 'Tính và tạo hồ sơ'}
             </button>

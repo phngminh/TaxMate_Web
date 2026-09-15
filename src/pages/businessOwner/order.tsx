@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { Eye, Search, Box, X, Scan, RotateCcw, Loader2, PlayCircle, Trash2, CheckCircle } from 'lucide-react'
 import { toast } from 'react-toastify'
@@ -15,12 +15,32 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../../components/ui/pagination'
+// Database timestamps are UTC without an offset; calendar filters use Bangkok days.
+function orderDateRange(filter: string, custom: string) {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+  const [y, m, d] = today.split('-').map(Number)
+  let start = Date.UTC(y, m - 1, d)
+  let end = start + 86400000
+  if (filter === '7 ngày qua') start -= 6 * 86400000
+  else if (filter === '30 ngày qua') start -= 29 * 86400000
+  else if (filter === 'Tháng này') { start = Date.UTC(y, m - 1, 1); end = Date.UTC(y, m, 1) }
+  else if (filter === 'Tháng trước') { start = Date.UTC(y, m - 2, 1); end = Date.UTC(y, m - 1, 1) }
+  else if (filter === 'Năm nay') { start = Date.UTC(y, 0, 1); end = Date.UTC(y + 1, 0, 1) }
+  else if (filter === 'Tùy chọn') {
+    if (!custom) return {}
+    start = Date.parse(`${custom}T00:00:00Z`); end = start + 86400000
+  }
+  return { startDate: new Date(start - 7 * 3600000).toISOString().slice(0, -1), endDate: new Date(end - 7 * 3600000).toISOString().slice(0, -1) }
+}
+
 export default function OrderPage() {
   const { currentBusiness } = useBusiness()
   const businessId = currentBusiness?.id
   const navigate = useNavigate()
 
   // Data states
+  const [totalCount, setTotalCount] = useState(0)
+  const requestVersion = useRef(0)
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedOrder, setSelectedOrder] = useState<OrderDetail | null>(null)
@@ -42,7 +62,8 @@ export default function OrderPage() {
 
   // Pagination
   const [searchParams, setSearchParams] = useSearchParams()
-  const page = Number(searchParams.get('page') ?? '1')
+  const requestedPage = Number(searchParams.get('page') ?? '1')
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
   const pageSize = 10
 
   const changePage = (newPage: number) => {
@@ -57,30 +78,40 @@ export default function OrderPage() {
 
   const fetchOrders = async () => {
     if (!businessId) return
+    const version = ++requestVersion.current
     try {
       setLoading(true)
       const res = await getOrders(businessId, {
-        pageNumber: 1,
-        pageSize: 100,
+        pageNumber: page,
+        pageSize,
+        ...orderDateRange(timeFilter, customDate),
+        search: searchQuery,
+        excludeEmptyDrafts: true,
         status: statusFilter !== 'all' ? statusFilter : null,
         paymentMethod: paymentFilter !== 'all' ? paymentFilter : null
       })
 
+      if (version !== requestVersion.current) return
       if (res.success && res.data) {
+        setTotalCount(res.data.totalCount)
         setOrders(res.data.items || [])
       }
       console.log('Fetched orders:', res.data?.items)
     } catch (err: any) {
+      if (version !== requestVersion.current) return
+      setOrders([])
+      setTotalCount(0)
       console.error(err)
       toast.error('Không thể tải danh sách đơn hàng.')
     } finally {
-      setLoading(false)
+      if (version === requestVersion.current) setLoading(false)
     }
   }
 
   useEffect(() => {
     fetchOrders()
-  }, [businessId, statusFilter, paymentFilter, page])
+    return () => { requestVersion.current++ }
+  }, [businessId, statusFilter, paymentFilter, page, timeFilter, customDate, searchQuery])
 
   // Fetch full details of an order on click
   const handleViewDetails = async (orderId: string) => {
@@ -156,73 +187,8 @@ export default function OrderPage() {
     changePage(1)
   }
 
-  // Filter loaded orders by time and search query locally
-  const filteredOrders = useMemo(() => {
-    return orders.filter(order => {
-      if (order.status === 'Draft' && order.itemCount === 0) return false
-
-      // 1. Search Query
-      if (searchQuery.trim() !== '') {
-        const query = searchQuery.toLowerCase().trim()
-        const matchesCode = order.transactionCode.toLowerCase().includes(query)
-        const matchesInvoice = order.invoiceNumber?.toLowerCase().includes(query)
-        if (!matchesCode && !matchesInvoice) return false
-      }
-
-      // 2. Time Filter
-      const utcDateStr = order.transactionDate.endsWith('Z') ? order.transactionDate : `${order.transactionDate}Z`
-      const orderDate = new Date(typeof utcDateStr === 'string' && !utcDateStr.endsWith('Z') ? utcDateStr + 'Z' : utcDateStr)
-      const now = new Date()
-      const diffTime = Math.abs(now.getTime() - orderDate.getTime())
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-      if (timeFilter === 'Hôm nay') {
-        const isToday =
-          orderDate.getDate() === now.getDate() &&
-          orderDate.getMonth() === now.getMonth() &&
-          orderDate.getFullYear() === now.getFullYear()
-        if (!isToday) return false
-      } else if (timeFilter === '7 ngày qua') {
-        if (diffDays > 7) return false
-      } else if (timeFilter === '30 ngày qua') {
-        if (diffDays > 30) return false
-      } else if (timeFilter === 'Tháng này') {
-        const isThisMonth =
-          orderDate.getMonth() === now.getMonth() &&
-          orderDate.getFullYear() === now.getFullYear()
-        if (!isThisMonth) return false
-      } else if (timeFilter === 'Tháng trước') {
-        const lastMonth = now.getMonth() === 0 ? 11 : now.getMonth() - 1
-        const yearOfLastMonth = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()
-        const isLastMonth =
-          orderDate.getMonth() === lastMonth && orderDate.getFullYear() === yearOfLastMonth
-        if (!isLastMonth) return false
-      } else if (timeFilter === 'Năm nay') {
-        const isThisYear = orderDate.getFullYear() === now.getFullYear()
-        if (!isThisYear) return false
-      } else if (timeFilter === 'Tùy chọn') {
-        if (customDate) {
-          const selectedDate = new Date(typeof customDate === 'string' && !customDate.endsWith('Z') ? customDate + 'Z' : customDate)
-
-          const isSameDate =
-            orderDate.getDate() === selectedDate.getDate() &&
-            orderDate.getMonth() === selectedDate.getMonth() &&
-            orderDate.getFullYear() === selectedDate.getFullYear()
-
-          if (!isSameDate) return false
-        }
-      }
-
-      return true
-    })
-  }, [orders, searchQuery, timeFilter])
-
-  const paginatedOrders = useMemo(() => {
-    const start = (page - 1) * pageSize
-    return filteredOrders.slice(start, start + pageSize)
-  }, [filteredOrders, page])
-
-  const totalPages = Math.ceil(filteredOrders.length / pageSize)
+  const paginatedOrders = orders
+  const totalPages = Math.ceil(totalCount / pageSize)
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -589,10 +555,10 @@ export default function OrderPage() {
           )}
 
           {/* Phân trang */}
-          {!loading && filteredOrders.length > 0 && (
+          {!loading && totalCount > 0 && (
             <div className='p-4 border-t border-gray-100 flex items-center justify-between'>
               <span className='text-[13px] text-gray-500 font-semibold'>
-                Hiển thị <span className='font-bold text-gray-800'>{filteredOrders.length}</span> đơn hàng
+                Hiển thị <span className='font-bold text-gray-800'>{totalCount}</span> đơn hàng
               </span>
               <Pagination>
                 <PaginationContent>
@@ -608,7 +574,7 @@ export default function OrderPage() {
                   <PaginationItem>
                     <PaginationNext
                       onClick={() => changePage(page + 1)}
-                      className={filteredOrders.length < pageSize ? 'pointer-events-none opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                      className={page >= totalPages ? 'pointer-events-none opacity-50 cursor-not-allowed' : 'cursor-pointer'}
                     />
                   </PaginationItem>
                 </PaginationContent>

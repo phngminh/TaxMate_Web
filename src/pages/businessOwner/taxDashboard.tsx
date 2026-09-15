@@ -874,7 +874,7 @@ export default function TaxDashboard() {
                   }
                 </h2>
                 <p className='mt-2 text-sm leading-6 text-emerald-900'>
-                  TaxMate đã tổng hợp {formatVnd(annualConclusion.annualRevenue)}. Thay đổi áp dụng từ năm {annualConclusion.appliesFromYear}; các tờ khai và khoản đã nộp trước đó vẫn được giữ nguyên.
+                  Dữ liệu đang ghi nhận cho năm {annualConclusion.taxYear}: {formatVnd(annualConclusion.annualRevenue)}. Đây là bản xem trước; hãy kiểm tra dữ liệu của cả năm trước khi xác nhận. Nếu đủ điều kiện, kết luận áp dụng từ năm {annualConclusion.appliesFromYear}.
                 </p>
                 {annualConclusion.allowedTaxMethods.length > 1 && (
                   <select

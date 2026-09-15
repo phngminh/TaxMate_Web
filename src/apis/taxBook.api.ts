@@ -38,6 +38,12 @@ export const calculateQtt = async (businessId: string, year: number) => {
   return response.data.data
 }
 
+export const getQttDeclaration = async (businessId: string, year: number) => {
+  const response = await http.get<ApiResponse<QttDeclaration | null>>(
+    `/businesses/${businessId}/tax-books/qtt/declaration`, { params: { year } })
+  return response.data.data
+}
+
 export const createQttDeclaration = async (businessId: string, year: number) => {
   const response = await http.post<ApiResponse<QttDeclaration>>(
     `/businesses/${businessId}/tax-books/qtt/declaration`,
