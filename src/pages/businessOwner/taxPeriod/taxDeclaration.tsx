@@ -65,6 +65,26 @@ function formatDate(
   return date.toLocaleDateString('vi-VN')
 }
 
+function getPeriodLabel(period: TaxPeriodDetail) {
+  if (period.periodType === 'Tkn') {
+    switch (period.filingWindow) {
+      case 'FirstHalf':
+        return `6 tháng đầu năm ${period.year}`
+      case 'SecondHalf':
+        return `6 tháng cuối năm ${period.year}`
+      default:
+        return `Năm ${period.year}`
+    }
+  }
+  if (period.periodType === 'Quarterly') {
+    return `Quý ${period.quarter}/${period.year}`
+  }
+  if (period.periodType === 'Monthly') {
+    return `Tháng ${period.month}/${period.year}`
+  }
+  return `Năm ${period.year}`
+}
+
 function InfoRow({
   label,
   value,
@@ -412,12 +432,14 @@ export default function TaxDeclarationPage() {
           result.blob
         )
 
+      const fallbackName = `${declaration.formCode || '01-CNKD'}_${taxPeriod?.periodType === 'Quarterly' ? `Q${taxPeriod.quarter}` : `Thang${taxPeriod?.month || ''}`}_${taxPeriod?.year || new Date().getFullYear()}.docx`
+
       const anchor =
         document.createElement('a')
 
       anchor.href = url
       anchor.download =
-        result.fileName
+        result.fileName || fallbackName
 
       document.body.appendChild(
         anchor
@@ -603,12 +625,12 @@ export default function TaxDeclarationPage() {
         <button
           type='button'
           onClick={() =>
-            navigate(-1)
+            isTkn ? navigate(path.BUSINESS_OWNER_TAX) : navigate(-1)
           }
           className='mb-5 flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-red-600'
         >
           <ArrowLeft size={18} />
-          Quay lại
+          {isTkn ? 'Quay lại tổng quan thuế' : 'Quay lại'}
         </button>
 
         <div className='rounded-2xl bg-white p-6 shadow-sm'>
@@ -631,7 +653,7 @@ export default function TaxDeclarationPage() {
                       circular='TT 40/2021/TT-BTC'
                       title='Thông tư số 40/2021/TT-BTC ngày 01/06/2021 của Bộ Tài chính'
                       article='Phụ lục 1 - Hướng dẫn thuế đối với hộ, cá nhân kinh doanh'
-                      description={'Dành cho hộ kinh doanh có doanh thu không quá 1 tỷ đồng/năm (không phải nộp tờ khai quý 01/CNKD).\n\n• 6 tháng đầu năm: Nộp trước ngày 31/07\n• 6 tháng cuối năm (hoặc cả năm): Nộp trước ngày 31/01 năm sau.'}
+                      description={'Dành cho hộ kinh doanh có doanh thu không quá 1 tỷ đồng/năm (không phải nộp tờ khai quý 01/CNKD).\n\nHạn nộp theo TT 40/2021/TT-BTC:\n• HKD hoạt động cả năm: Nộp 1 lần trước ngày 31/01 năm sau.\n• HKD mới lập nửa đầu năm: Nộp lần 1 trước 31/07 (6 tháng đầu), lần 2 trước 31/01 năm sau (6 tháng cuối).\n• HKD mới lập nửa cuối năm: Nộp 1 lần trước ngày 31/01 năm sau.'}
                     />
                   ) : (
                     <LegalBadge
@@ -654,27 +676,26 @@ export default function TaxDeclarationPage() {
 
             {declaration && (
               <div className='text-right'>
-                <p className='text-xs font-semibold uppercase text-gray-400'>
-                  Mã tờ khai
-                </p>
+                <div className='flex items-center justify-end gap-2'>
+                  <span className='text-sm font-bold text-gray-900'>
+                    {declaration.declarationType === 'Supplement'
+                      ? `Tờ khai bổ sung lần ${declaration.supplementNumber ?? 1} · ${getPeriodLabel(taxPeriod)}`
+                      : `Tờ khai lần đầu · ${getPeriodLabel(taxPeriod)}`}
+                  </span>
+                  <span
+                    className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                      declaration.status === 'Submitted'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
+                    {declaration.status === 'Submitted' ? 'Đã gửi' : 'Bản nháp'}
+                  </span>
+                </div>
 
-                <p className='mt-1 text-lg font-black text-red-600'>
-                  {declaration.declarationCode}
+                <p className='mt-1 text-xs text-gray-400'>
+                  Mã hồ sơ: <span className='font-mono font-medium text-gray-500'>{declaration.declarationCode}</span>
                 </p>
-
-                <span
-                  className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ${
-                    declaration.status ===
-                    'Submitted'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-amber-100 text-amber-700'
-                  }`}
-                >
-                  {declaration.status ===
-                  'Submitted'
-                    ? 'Đã gửi'
-                    : 'Bản nháp'}
-                </span>
               </div>
             )}
           </div>

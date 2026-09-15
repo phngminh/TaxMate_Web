@@ -11,13 +11,15 @@ import { toast } from 'react-toastify'
 
 import { getTaxPeriodById } from '../../../apis/taxPeriod.api'
 import {
+  calculateTknTaxPeriod,
   closeTknTaxPeriod,
   getTknTaxPeriodPreview
 } from '../../../apis/tknTaxPeriod.api'
+import path from '../../../constants/path'
 import type { TaxPeriodDetail } from '../../../types/taxPeriod.type'
 import type { TknTaxPeriodPreview } from '../../../types/tknTaxPeriod.type'
 import LegalBadge from '../../../components/owner/tax/LegalBadge'
-import { tknTaxPeriodDetailPath } from '../../../utils/taxPeriodRoute'
+import { taxPeriodDeclarationPath } from '../../../utils/taxPeriodRoute'
 
 function formatMoney(value: number) {
   return `${value.toLocaleString('vi-VN')}đ`
@@ -96,8 +98,13 @@ export default function TknTaxPeriodPreviewPage() {
       await closeTknTaxPeriod(taxPeriodId, {
         confirmWarnings: preview.warnings.length > 0
       })
-      toast.success('Đã chốt doanh thu kỳ thông báo.')
-      navigate(tknTaxPeriodDetailPath(taxPeriodId), { replace: true })
+      try {
+        await calculateTknTaxPeriod(taxPeriodId)
+      } catch (calcError) {
+        console.error('[TknPreview] Calculate after close failed:', calcError)
+      }
+      toast.success('Đã chốt doanh thu và tổng hợp mẫu 01/TKN-CNKD.')
+      navigate(taxPeriodDeclarationPath(taxPeriodId), { replace: true })
     } catch (error) {
       toast.error(errorMessage(error, 'Không thể chốt kỳ thông báo doanh thu.'))
     } finally {
@@ -125,10 +132,10 @@ export default function TknTaxPeriodPreviewPage() {
       <div className='mx-auto max-w-5xl'>
         <button
           type='button'
-          onClick={() => navigate(tknTaxPeriodDetailPath(period.id))}
+          onClick={() => navigate(path.BUSINESS_OWNER_TAX)}
           className='mb-5 flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-red-600'
         >
-          <ArrowLeft size={18} /> Quay lại chi tiết thông báo
+          <ArrowLeft size={18} /> Quay lại tổng quan thuế
         </button>
 
         <section className='rounded-2xl bg-white p-6 shadow-sm'>
@@ -145,7 +152,7 @@ export default function TknTaxPeriodPreviewPage() {
                   formCode='Mẫu 01/TKN-CNKD'
                   circular='TT 40/2021/TT-BTC'
                   title='Thông tư số 40/2021/TT-BTC ngày 01/06/2021 của Bộ Tài chính'
-                  description={'Dành cho hộ kinh doanh có doanh thu không quá 1 tỷ đồng/năm (không phải nộp tờ khai quý 01/CNKD).\n\n• 6 tháng đầu năm: Nộp trước ngày 31/07\n• 6 tháng cuối năm (hoặc cả năm): Nộp trước ngày 31/01 năm sau.'}
+                  description={'Dành cho hộ kinh doanh có doanh thu không quá 1 tỷ đồng/năm (không phải nộp tờ khai quý 01/CNKD).\n\nHạn nộp theo TT 40/2021/TT-BTC:\n• HKD hoạt động cả năm: Nộp 1 lần trước ngày 31/01 năm sau.\n• HKD mới lập nửa đầu năm: Nộp lần 1 trước 31/07 (6 tháng đầu), lần 2 trước 31/01 năm sau (6 tháng cuối).\n• HKD mới lập nửa cuối năm: Nộp 1 lần trước ngày 31/01 năm sau.'}
                 />
               </div>
               <p className='mt-1 text-sm text-gray-500'>

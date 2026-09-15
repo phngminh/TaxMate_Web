@@ -52,16 +52,20 @@ export default function OrderPage() {
   const [cancellingOrder, setCancellingOrder] = useState(false)
   const [confirmingPayment, setConfirmingPayment] = useState(false)
 
+  // Pagination & URL params
+  const [searchParams, setSearchParams] = useSearchParams()
+  const orderCodeFromUrl = searchParams.get('orderCode') || searchParams.get('search') || ''
+  const autoOpenFromUrl = searchParams.get('autoOpen') === 'true'
+  const autoOpenedRef = useRef(false)
+
   // Filters state
-  const [searchQuery, setSearchQuery] = useState('')
+  const [searchQuery, setSearchQuery] = useState(orderCodeFromUrl)
   const [statusFilter, setStatusFilter] = useState('all')
   const [paymentFilter, setPaymentFilter] = useState('all')
-  const [timeFilter, setTimeFilter] = useState('Tháng này')
+  const [timeFilter, setTimeFilter] = useState(orderCodeFromUrl ? 'Năm nay' : 'Tháng này')
   const [customDate, setCustomDate] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Pagination
-  const [searchParams, setSearchParams] = useSearchParams()
   const requestedPage = Number(searchParams.get('page') ?? '1')
   const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
   const pageSize = 10
@@ -75,6 +79,16 @@ export default function OrderPage() {
     }
     setSearchParams(params, { replace: true })
   }
+
+  // Sync search if URL param changes
+  useEffect(() => {
+    const code = searchParams.get('orderCode') || searchParams.get('search') || ''
+    if (code && code !== searchQuery) {
+      setSearchQuery(code)
+      setTimeFilter('Năm nay')
+      autoOpenedRef.current = false
+    }
+  }, [searchParams])
 
   const fetchOrders = async () => {
     if (!businessId) return
@@ -128,6 +142,23 @@ export default function OrderPage() {
       setLoadingDetail(false)
     }
   }
+
+  // Auto-open modal when navigating from S2e or external link with autoOpen=true
+  useEffect(() => {
+    if (autoOpenFromUrl && !autoOpenedRef.current && orders.length > 0) {
+      const code = (searchParams.get('orderCode') || searchParams.get('search') || '').toLowerCase().trim()
+      const found = code
+        ? orders.find(
+            o => o.transactionCode.toLowerCase() === code ||
+                 (o.invoiceNumber && o.invoiceNumber.toLowerCase() === code)
+          ) || orders[0]
+        : orders[0]
+      if (found) {
+        autoOpenedRef.current = true
+        handleViewDetails(found.transactionId)
+      }
+    }
+  }, [orders, autoOpenFromUrl, searchParams])
 
   const triggerCancelOrder = (orderId: string) => {
     setTargetCancelOrderId(orderId)

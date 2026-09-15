@@ -51,12 +51,16 @@ function InfoRow({
   label,
   value,
   highlight,
-  danger
+  danger,
+  warning,
+  success
 }: {
   label: string
   value: string
   highlight?: boolean
   danger?: boolean
+  warning?: boolean
+  success?: boolean
 }) {
   return (
     <div className='flex items-center justify-between gap-6 border-b border-gray-100 py-4 last:border-b-0'>
@@ -68,9 +72,13 @@ function InfoRow({
         className={`text-right text-sm font-black ${
           danger
             ? 'text-red-600'
-            : highlight
-              ? 'text-blue-700'
-              : 'text-gray-800'
+            : warning
+              ? 'text-amber-600'
+              : success
+                ? 'text-green-600'
+                : highlight
+                  ? 'text-blue-700'
+                  : 'text-gray-800'
         }`}
       >
         {value}
@@ -461,13 +469,24 @@ export default function TaxCalculationPage() {
             />
 
             <InfoRow
-              label='Nợ thuế hiện tại'
+              label='Số thuế chưa nộp'
               value={formatMoney(
                 taxPeriod.taxAmountDebt
               )}
               danger={
-                taxPeriod.taxAmountDebt >
-                0
+                taxPeriod.taxAmountDebt > 0 &&
+                Boolean(
+                  taxPeriod.dueDate &&
+                    new Date() > new Date(taxPeriod.dueDate)
+                )
+              }
+              warning={
+                taxPeriod.taxAmountDebt > 0 &&
+                (!taxPeriod.dueDate ||
+                  new Date() <= new Date(taxPeriod.dueDate))
+              }
+              success={
+                taxPeriod.taxAmountDebt === 0
               }
             />
 

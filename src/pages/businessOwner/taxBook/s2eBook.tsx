@@ -1,7 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ChevronDown, ChevronUp, Download, RefreshCw, WalletCards } from 'lucide-react'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  ExternalLink,
+  RefreshCw,
+  WalletCards,
+} from 'lucide-react'
 import { NumericFormat } from 'react-number-format'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { getMoneyAccounts, updateInitialBalance } from '../../../apis/paymentAccount.api'
 import { exportS2e, getS2ePreview } from '../../../apis/taxBook.api'
@@ -11,6 +21,9 @@ import type { S2eAccountSection, S2eBook, S2eBookEntry } from '../../../types/ta
 import LegalBadge from '../../../components/owner/tax/LegalBadge'
 
 const money = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
+
+type SortKey = 'movementDate' | 'documentNumber' | 'description' | 'amountIn' | 'amountOut'
+type SortOrder = 'asc' | 'desc'
 
 type BlockerSeverity = 'error' | 'warning'
 const BLOCKER_META: Record<string, { label: string; severity: BlockerSeverity }> = {
@@ -47,14 +60,27 @@ export default function S2eBookPage() {
   const [balances, setBalances] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const navigate = useNavigate()
   const [exporting, setExporting] = useState(false)
   const [expandedCodes, setExpandedCodes] = useState<Set<string>>(new Set())
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
   const [selectedAccountTab, setSelectedAccountTab] = useState<string>('all')
+  const [collapsedAccountIds, setCollapsedAccountIds] = useState<Set<string>>(new Set())
+  const [sortKey, setSortKey] = useState<SortKey>('movementDate')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
   const [selectedDetailEntry, setSelectedDetailEntry] = useState<{
     entry: S2eBookEntry
     account: S2eAccountSection
   } | null>(null)
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortKey(key)
+      setSortOrder(key === 'movementDate' ? 'desc' : 'asc')
+    }
+  }
 
   const accountNameById = useMemo(() => {
     const map: Record<string, string> = {}
@@ -79,11 +105,33 @@ export default function S2eBookPage() {
     return Array.from(map.entries()).map(([code, items]) => ({ code, items }))
   }, [book])
 
-  const displayedAccounts = useMemo(() => {
+  const sortedAccounts = useMemo(() => {
     if (!book) return []
-    if (selectedAccountTab === 'all') return book.accounts
-    return book.accounts.filter(a => a.paymentAccountId === selectedAccountTab)
-  }, [book, selectedAccountTab])
+    const source = selectedAccountTab === 'all'
+      ? book.accounts
+      : book.accounts.filter(a => a.paymentAccountId === selectedAccountTab)
+
+    return source.map(acc => {
+      const sortedEntries = [...acc.entries].sort((a, b) => {
+        let valA: any = a[sortKey]
+        let valB: any = b[sortKey]
+
+        if (sortKey === 'movementDate') {
+          valA = new Date(a.movementDate).getTime()
+          valB = new Date(b.movementDate).getTime()
+        } else if (typeof valA === 'string') {
+          valA = valA.toLowerCase()
+          valB = (valB || '').toLowerCase()
+          return sortOrder === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA)
+        }
+
+        if (valA < valB) return sortOrder === 'asc' ? -1 : 1
+        if (valA > valB) return sortOrder === 'asc' ? 1 : -1
+        return 0
+      })
+      return { ...acc, entries: sortedEntries }
+    })
+  }, [book, selectedAccountTab, sortKey, sortOrder])
 
   const toggleCode = (code: string) => setExpandedCodes(prev => {
     const next = new Set(prev)
@@ -94,6 +142,12 @@ export default function S2eBookPage() {
   const toggleItems = (code: string) => setExpandedItems(prev => {
     const next = new Set(prev)
     next.has(code) ? next.delete(code) : next.add(code)
+    return next
+  })
+
+  const toggleAccountCollapse = (id: string) => setCollapsedAccountIds(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
     return next
   })
 
@@ -125,6 +179,7 @@ export default function S2eBookPage() {
     setBook(null)
     setAccounts([])
     setSelectedAccountTab('all')
+    setCollapsedAccountIds(new Set())
     setSelectedDetailEntry(null)
     void load()
   }, [load])
@@ -442,7 +497,15 @@ export default function S2eBookPage() {
                 <button
                   key={acc.paymentAccountId}
                   type='button'
-                  onClick={() => setSelectedAccountTab(acc.paymentAccountId)}
+                  onClick={() => {
+                    setSelectedAccountTab(acc.paymentAccountId)
+                    setCollapsedAccountIds(prev => {
+                      if (!prev.has(acc.paymentAccountId)) return prev
+                      const next = new Set(prev)
+                      next.delete(acc.paymentAccountId)
+                      return next
+                    })
+                  }}
                   className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-colors ${
                     selectedAccountTab === acc.paymentAccountId
                       ? 'bg-blue-600 text-white shadow-xs'
@@ -455,49 +518,158 @@ export default function S2eBookPage() {
             </div>
           )}
 
-          {displayedAccounts.map((account) => (
-            <section key={account.paymentAccountId} className='overflow-hidden rounded-xl border bg-white'>
-              <div className='flex flex-wrap justify-between gap-2 px-5 py-4'>
-                <div className='font-semibold text-gray-900'>{account.displayName}{account.isActive ? '' : ' (đã ngừng sử dụng)'}</div>
-                <div className='text-right text-sm text-gray-600'>
-                  <div>Đầu kỳ {money.format(account.openingBalance)} đ · Cuối kỳ <strong>{money.format(account.endingBalance)} đ</strong></div>
-                  <div className='mt-1 text-xs tabular-nums'>
-                    {money.format(account.openingBalance)} + <span className='text-emerald-700'>{money.format(account.totalIn)} vào</span> − <span className='text-orange-700'>{money.format(account.totalOut)} ra</span> = {money.format(account.endingBalance)} đ
+          {sortedAccounts.map((account) => {
+            const isCollapsed = collapsedAccountIds.has(account.paymentAccountId)
+            return (
+            <section key={account.paymentAccountId} className='overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-xs'>
+              {/* Account Header: Tóm tắt số dư đầu kỳ & cuối kỳ tinh gọn — click để thu gọn / mở rộng */}
+              <div
+                onClick={() => toggleAccountCollapse(account.paymentAccountId)}
+                className='flex flex-wrap items-center justify-between gap-3 px-5 py-4 bg-gradient-to-r from-gray-50/90 to-white border-b border-gray-100 cursor-pointer select-none hover:from-gray-100/90 hover:to-gray-50'
+                title='Nhấp để thu gọn / mở rộng'
+              >
+                <div>
+                  <div className='flex items-center gap-2'>
+                    <span className='text-base font-bold text-gray-900'>{account.displayName}</span>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                      account.accountType === 'Cash' ? 'bg-amber-100 text-amber-800' : 'bg-blue-100 text-blue-800'
+                    }`}>
+                      {account.accountType === 'Cash' ? 'Tiền mặt' : 'Tài khoản ngân hàng'}
+                    </span>
+                    {!account.isActive && (
+                      <span className='text-xs text-gray-400 font-normal'>(đã ngừng sử dụng)</span>
+                    )}
+                  </div>
+
+                  <div className='flex flex-wrap items-center gap-2 mt-1.5 text-xs text-gray-600'>
+                    <span className='inline-flex items-center gap-1 rounded-md bg-blue-50 px-2.5 py-1 font-semibold text-blue-900 border border-blue-200/60'>
+                      Số dư đầu kỳ: <strong className='text-blue-950'>{money.format(account.openingBalance)} đ</strong>
+                    </span>
+                    <span className='text-gray-300'>|</span>
+                    <span className='font-semibold text-emerald-700'>+{money.format(account.totalIn)} đ thu vào</span>
+                    <span className='text-gray-300'>|</span>
+                    <span className='font-semibold text-orange-700'>−{money.format(account.totalOut)} đ chi ra</span>
                   </div>
                 </div>
+
+                <div className='flex items-center gap-3'>
+                  <div className='text-right'>
+                    <div className='text-xs text-gray-500 font-medium'>Số dư cuối kỳ</div>
+                    <div className='text-lg font-black text-gray-900 tabular-nums'>{money.format(account.endingBalance)} đ</div>
+                  </div>
+                  <span className='rounded-lg p-1.5 text-gray-400'>
+                    {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                  </span>
+                </div>
               </div>
-              <div className='overflow-x-auto border-t'>
+
+              {/* Table Data */}
+              {!isCollapsed && (
+              <div className='overflow-x-auto'>
                 <table className='min-w-full text-sm'>
-                  <thead className='bg-gray-50 text-gray-600'><tr>{['Ngày', 'Chứng từ', 'Diễn giải', 'Thu / Gửi vào', 'Chi / Rút ra'].map((label) => <th key={label} className='whitespace-nowrap px-3 py-3 text-right first:text-left'>{label}</th>)}</tr></thead>
-                  <tbody>
-                    <tr className='border-t bg-blue-50/50'>
-                      <td className='px-3 py-2' colSpan={5}>
-                        <div className='flex items-center gap-2'>
-                          <span>Số dư đầu kỳ:</span>
-                          <strong className='text-blue-950'>{money.format(account.openingBalance)} đ</strong>
+                  <thead className='bg-gray-50 text-gray-600 text-xs font-semibold uppercase tracking-wider border-b border-gray-100'>
+                    <tr>
+                      <th
+                        onClick={() => handleSort('movementDate')}
+                        className='whitespace-nowrap px-4 py-3 text-left cursor-pointer select-none hover:bg-gray-100 transition-colors'
+                      >
+                        <div className='inline-flex items-center gap-1.5'>
+                          <span>Ngày</span>
+                          {sortKey === 'movementDate' ? (
+                            sortOrder === 'asc' ? <ArrowUp size={13} className='text-blue-600' /> : <ArrowDown size={13} className='text-blue-600' />
+                          ) : (
+                            <ArrowUpDown size={13} className='text-gray-400' />
+                          )}
                         </div>
-                      </td>
+                      </th>
+                      <th
+                        onClick={() => handleSort('documentNumber')}
+                        className='whitespace-nowrap px-4 py-3 text-left cursor-pointer select-none hover:bg-gray-100 transition-colors'
+                      >
+                        <div className='inline-flex items-center gap-1.5'>
+                          <span>Chứng từ</span>
+                          {sortKey === 'documentNumber' ? (
+                            sortOrder === 'asc' ? <ArrowUp size={13} className='text-blue-600' /> : <ArrowDown size={13} className='text-blue-600' />
+                          ) : (
+                            <ArrowUpDown size={13} className='text-gray-400' />
+                          )}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort('description')}
+                        className='whitespace-nowrap px-4 py-3 text-left cursor-pointer select-none hover:bg-gray-100 transition-colors'
+                      >
+                        <div className='inline-flex items-center gap-1.5'>
+                          <span>Diễn giải</span>
+                          {sortKey === 'description' ? (
+                            sortOrder === 'asc' ? <ArrowUp size={13} className='text-blue-600' /> : <ArrowDown size={13} className='text-blue-600' />
+                          ) : (
+                            <ArrowUpDown size={13} className='text-gray-400' />
+                          )}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort('amountIn')}
+                        className='whitespace-nowrap px-4 py-3 text-right cursor-pointer select-none hover:bg-gray-100 transition-colors'
+                      >
+                        <div className='inline-flex items-center justify-end gap-1.5 w-full'>
+                          <span>Thu / Gửi vào</span>
+                          {sortKey === 'amountIn' ? (
+                            sortOrder === 'asc' ? <ArrowUp size={13} className='text-blue-600' /> : <ArrowDown size={13} className='text-blue-600' />
+                          ) : (
+                            <ArrowUpDown size={13} className='text-gray-400' />
+                          )}
+                        </div>
+                      </th>
+                      <th
+                        onClick={() => handleSort('amountOut')}
+                        className='whitespace-nowrap px-4 py-3 text-right cursor-pointer select-none hover:bg-gray-100 transition-colors'
+                      >
+                        <div className='inline-flex items-center justify-end gap-1.5 w-full'>
+                          <span>Chi / Rút ra</span>
+                          {sortKey === 'amountOut' ? (
+                            sortOrder === 'asc' ? <ArrowUp size={13} className='text-blue-600' /> : <ArrowDown size={13} className='text-blue-600' />
+                          ) : (
+                            <ArrowUpDown size={13} className='text-gray-400' />
+                          )}
+                        </div>
+                      </th>
                     </tr>
+                  </thead>
+                  <tbody className='divide-y divide-gray-100'>
                     {account.entries.map((entry) => (
                       <tr
                         key={entry.moneyMovementId}
                         onClick={() => setSelectedDetailEntry({ entry, account })}
-                        className='border-t hover:bg-blue-50/60 cursor-pointer transition-colors group'
+                        className='hover:bg-blue-50/50 cursor-pointer transition-colors group'
                         title='Nhấp để xem chi tiết biến động tiền'
                       >
-                        <td className='whitespace-nowrap px-3 py-2.5'>{new Date(entry.movementDate).toLocaleDateString('vi-VN')}</td>
-                        <td className='whitespace-nowrap px-3 py-2.5 font-medium text-blue-600 group-hover:underline'>{entry.documentNumber}</td>
-                        <td className='min-w-64 px-3 py-2.5'>{entry.description}</td>
-                        <td className='px-3 py-2.5 text-right font-medium text-emerald-700'>{entry.amountIn ? `+${money.format(entry.amountIn)} đ` : ''}</td>
-                        <td className='px-3 py-2.5 text-right font-medium text-orange-700'>{entry.amountOut ? `−${money.format(entry.amountOut)} đ` : ''}</td>
+                        <td className='whitespace-nowrap px-4 py-2.5 text-left text-gray-600 font-medium'>{new Date(entry.movementDate).toLocaleDateString('vi-VN')}</td>
+                        <td className='whitespace-nowrap px-4 py-2.5 text-left font-semibold text-blue-600 group-hover:underline'>{entry.documentNumber}</td>
+                        <td className='min-w-64 px-4 py-2.5 text-left text-gray-800'>{entry.description}</td>
+                        <td className='px-4 py-2.5 text-right font-bold text-emerald-700 tabular-nums'>{entry.amountIn ? `+${money.format(entry.amountIn)} đ` : ''}</td>
+                        <td className='px-4 py-2.5 text-right font-bold text-orange-700 tabular-nums'>{entry.amountOut ? `−${money.format(entry.amountOut)} đ` : ''}</td>
                       </tr>
                     ))}
-                    <tr className='border-t bg-gray-50 font-semibold'><td className='px-3 py-3' colSpan={3}>Cộng phát sinh</td><td className='px-3 py-3 text-right'>{money.format(account.totalIn)} đ</td><td className='px-3 py-3 text-right'>{money.format(account.totalOut)} đ</td></tr>
+                    {account.entries.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className='py-8 text-center text-gray-400'>
+                          Chưa có phát sinh biến động tiền trong kỳ này
+                        </td>
+                      </tr>
+                    )}
+                    <tr className='bg-gray-50/90 font-bold text-gray-900 border-t-2 border-gray-200'>
+                      <td className='px-4 py-3 text-left' colSpan={3}>Cộng phát sinh trong kỳ</td>
+                      <td className='px-4 py-3 text-right text-emerald-700 tabular-nums'>+{money.format(account.totalIn)} đ</td>
+                      <td className='px-4 py-3 text-right text-orange-700 tabular-nums'>−{money.format(account.totalOut)} đ</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
+              )}
             </section>
-          ))}
+            )
+          })}
         </div>
       )}
 
@@ -540,12 +712,12 @@ export default function S2eBookPage() {
               <div className='rounded-xl bg-gray-50 p-3 col-span-2'>
                 <span className='text-xs text-gray-500'>Loại & Số tiền</span>
                 <div className='mt-1 flex items-center justify-between'>
-                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-bold ${
+                  <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-bold ${
                     selectedDetailEntry.entry.amountIn > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-orange-100 text-orange-800'
                   }`}>
                     {selectedDetailEntry.entry.amountIn > 0 ? 'Thu / Gửi vào (+)' : 'Chi / Rút ra (−)'}
                   </span>
-                  <span className={`text-base font-extrabold ${
+                  <span className={`text-lg font-black ${
                     selectedDetailEntry.entry.amountIn > 0 ? 'text-emerald-700' : 'text-orange-700'
                   }`}>
                     {selectedDetailEntry.entry.amountIn > 0
@@ -556,15 +728,47 @@ export default function S2eBookPage() {
               </div>
               <div className='rounded-xl bg-gray-50 p-3 col-span-2'>
                 <span className='text-xs text-gray-500'>Diễn giải nghiệp vụ</span>
-                <p className='font-medium text-gray-800 mt-0.5'>{selectedDetailEntry.entry.description}</p>
-              </div>
-              <div className='rounded-xl bg-gray-50 p-3 col-span-2 space-y-1 text-xs text-gray-500 font-mono'>
-                <div><span className='text-gray-400'>Mã tham chiếu (ReferenceId): </span>{selectedDetailEntry.entry.referenceId || 'N/A'}</div>
-                <div><span className='text-gray-400'>Mã biến động (MovementId): </span>{selectedDetailEntry.entry.moneyMovementId}</div>
+                <p className='font-medium text-gray-800 mt-0.5 leading-relaxed'>{selectedDetailEntry.entry.description}</p>
               </div>
             </div>
 
-            <div className='flex justify-end pt-2 border-t'>
+            <div className='flex items-center justify-between pt-3 border-t gap-2'>
+              <div>
+                {selectedDetailEntry.entry.amountIn > 0 ? (
+                  <button
+                    onClick={() => {
+                      const entry = selectedDetailEntry.entry
+                      const match = entry.description.match(/(?:đơn\s*(?:hàng)?|hóa\s*đơn|order)\s*:?\s*([A-Za-z0-9_-]+)/i)
+                      const orderCode = match && match[1]
+                        ? match[1].trim()
+                        : (entry.documentNumber && (entry.documentNumber.startsWith('DM-') || entry.documentNumber.startsWith('DH-') || entry.documentNumber.startsWith('ORD-') || entry.documentNumber.startsWith('HD-'))
+                            ? entry.documentNumber.trim()
+                            : '')
+                      setSelectedDetailEntry(null)
+                      if (orderCode) {
+                        navigate(`/business-owner/orders?orderCode=${encodeURIComponent(orderCode)}&autoOpen=true`)
+                      } else {
+                        navigate('/business-owner/orders')
+                      }
+                    }}
+                    className='inline-flex items-center gap-1.5 rounded-xl bg-blue-50 border border-blue-200 px-3.5 py-2 text-xs font-bold text-blue-700 hover:bg-blue-100 transition-colors'
+                  >
+                    <span>Xem chi tiết đơn hàng</span>
+                    <ExternalLink size={13} />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setSelectedDetailEntry(null)
+                      navigate('/business-owner/expense')
+                    }}
+                    className='inline-flex items-center gap-1.5 rounded-xl bg-orange-50 border border-orange-200 px-3.5 py-2 text-xs font-bold text-orange-700 hover:bg-orange-100 transition-colors'
+                  >
+                    <span>Xem danh sách chi phí</span>
+                    <ExternalLink size={13} />
+                  </button>
+                )}
+              </div>
               <button
                 onClick={() => setSelectedDetailEntry(null)}
                 className='rounded-xl bg-gray-900 px-5 py-2 text-sm font-semibold text-white hover:bg-gray-800 transition-colors'

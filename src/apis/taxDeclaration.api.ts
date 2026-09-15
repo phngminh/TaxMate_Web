@@ -14,30 +14,30 @@ function getFileNameFromContentDisposition(
   contentDisposition?: string
 ): string {
   if (!contentDisposition) {
-    return 'tax-declaration.docx'
+    return ''
   }
 
   const utf8Match =
     contentDisposition.match(
-      /filename\*=UTF-8''([^;]+)/
+      /filename\*=UTF-8''([^;]+)/i
     )
 
   if (utf8Match?.[1]) {
     return decodeURIComponent(
-      utf8Match[1]
+      utf8Match[1].trim()
     )
   }
 
   const normalMatch =
     contentDisposition.match(
-      /filename="?([^"]+)"?/
+      /filename="?([^";]+)"?/i
     )
 
   if (normalMatch?.[1]) {
-    return normalMatch[1]
+    return normalMatch[1].trim()
   }
 
-  return 'tax-declaration.docx'
+  return ''
 }
 
 export async function getTaxDeclarationByTaxPeriod(

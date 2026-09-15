@@ -197,11 +197,15 @@ function getPrimaryActionLabel(
 function MetricCard({
   label,
   value,
-  danger
+  danger,
+  warning,
+  success
 }: {
   label: string
   value: string
   danger?: boolean
+  warning?: boolean
+  success?: boolean
 }) {
   return (
     <div className='rounded-2xl border border-gray-100 bg-white p-5 shadow-sm'>
@@ -213,7 +217,11 @@ function MetricCard({
         className={`mt-2 text-2xl font-black ${
           danger
             ? 'text-red-600'
-            : 'text-gray-900'
+            : warning
+              ? 'text-amber-600'
+              : success
+                ? 'text-green-600'
+                : 'text-gray-900'
         }`}
       >
         {value}
@@ -570,13 +578,24 @@ export default function TaxPeriodDetailPage() {
           />
 
           <MetricCard
-            label='Nợ thuế'
+            label='Số thuế chưa nộp'
             value={formatMoney(
               taxPeriod.taxAmountDebt
             )}
             danger={
-              taxPeriod.taxAmountDebt >
-              0
+              taxPeriod.taxAmountDebt > 0 &&
+              Boolean(
+                taxPeriod.dueDate &&
+                  new Date() > new Date(taxPeriod.dueDate)
+              )
+            }
+            warning={
+              taxPeriod.taxAmountDebt > 0 &&
+              (!taxPeriod.dueDate ||
+                new Date() <= new Date(taxPeriod.dueDate))
+            }
+            success={
+              taxPeriod.taxAmountDebt === 0
             }
           />
         </div>

@@ -10,6 +10,14 @@ import Tip from '../../../components/owner/tax/Tip'
 const number = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 3 })
 const money = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
 
+const MOVEMENT_LABEL: Record<string, string> = {
+  OpeningBalance: 'Số dư đầu kỳ',
+  PurchaseIn: 'Nhập hàng',
+  OrderOut: 'Xuất hàng (đơn)',
+  AdjustmentIn: 'Điều chỉnh tăng',
+  AdjustmentOut: 'Điều chỉnh giảm',
+}
+
 export default function S2dBookPage() {
   const { currentBusiness } = useBusiness()
   const now = new Date()
@@ -126,7 +134,7 @@ export default function S2dBookPage() {
               <div className='overflow-x-auto border-t'>
                 <table className='min-w-full text-sm'>
                   <thead className='bg-gray-50 text-gray-600'>
-                    <tr>{['Ngày', 'Chứng từ', 'Diễn giải', 'Nhập SL', 'Nhập tiền', 'Xuất SL', 'Xuất tiền', 'Tồn SL', 'Tồn tiền'].map((label) => <th key={label} className='whitespace-nowrap px-3 py-3 text-right first:text-left'>{label}</th>)}</tr>
+                    <tr>{['Ngày', 'Chứng từ', 'Diễn giải', 'Nhập (SL)', 'Nhập tiền', 'Xuất (SL)', 'Xuất tiền', 'Tồn (SL)', 'Tồn tiền'].map((label) => <th key={label} className='whitespace-nowrap px-3 py-3 text-right first:text-left'>{label}</th>)}</tr>
                   </thead>
                   <tbody>
                     <tr className='border-t bg-blue-50/50'>
@@ -139,7 +147,9 @@ export default function S2dBookPage() {
                         <td className='whitespace-nowrap px-3 py-2'>{new Date(line.documentDate).toLocaleDateString('vi-VN')}</td>
                         <td className='whitespace-nowrap px-3 py-2'>{line.documentNumber}</td>
                         <td className='min-w-52 px-3 py-2'>
-                          {line.description}
+                          {line.description && !MOVEMENT_LABEL[line.description]
+                            ? line.description
+                            : (MOVEMENT_LABEL[line.movementType] ?? line.description)}
                           {line.isProvisionalValue ? (
                             <Tip
                               content='Kỳ thuế đang mở nên đơn giá xuất kho là tạm tính (TT 88). Hệ thống sẽ chốt đơn giá chính thức khi đóng kỳ.'

@@ -27,7 +27,7 @@ import {
   getTaxFilingTasks,
   openTaxFilingTask
 } from '../../apis/taxFilingTask.api'
-import { getBusinessTaxPeriods } from '../../apis/taxPeriod.api'
+import { getBusinessTaxPeriods, getTaxPeriodById } from '../../apis/taxPeriod.api'
 import TaxFilingTaskCard from '../../components/owner/tax/TaxFilingTaskCard'
 import TaxQuarterCard from '../../components/owner/tax/TaxQuarterCard'
 import TaxProfileCard from '../../components/owner/tax/TaxProfileCard'
@@ -60,8 +60,9 @@ import {
 } from '../../utils/taxDashboardMapper'
 
 import {
+  taxPeriodDeclarationPath,
   taxPeriodDetailPath,
-  tknTaxPeriodDetailPath
+  tknTaxPeriodPreviewPath
 } from '../../utils/taxPeriodRoute'
 
 function formatVnd(value: number) {
@@ -341,11 +342,46 @@ export default function TaxDashboard() {
         return
       }
 
-      navigate(
-        tknTaxPeriodDetailPath(
-          task.taxPeriodId
+      if (
+        task.status === 'Completed' ||
+        task.primaryAction.code === 'View'
+      ) {
+        navigate(
+          taxPeriodDeclarationPath(
+            task.taxPeriodId
+          )
         )
-      )
+        return
+      }
+
+      try {
+        setOpeningTaskId(task.taskId)
+        const period =
+          await getTaxPeriodById(
+            task.taxPeriodId
+          )
+        if (period.status === 'Open') {
+          navigate(
+            tknTaxPeriodPreviewPath(
+              task.taxPeriodId
+            )
+          )
+        } else {
+          navigate(
+            taxPeriodDeclarationPath(
+              task.taxPeriodId
+            )
+          )
+        }
+      } catch {
+        navigate(
+          taxPeriodDeclarationPath(
+            task.taxPeriodId
+          )
+        )
+      } finally {
+        setOpeningTaskId(null)
+      }
       return
     }
 
@@ -372,7 +408,7 @@ export default function TaxDashboard() {
       }
 
       navigate(
-        tknTaxPeriodDetailPath(
+        tknTaxPeriodPreviewPath(
           opened.taxPeriodId
         )
       )
