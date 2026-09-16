@@ -11,7 +11,7 @@ import {
   UploadCloud,
   X,
 } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { confirmS2cEvidenceReview, exportS2c, getS2cPreview } from '../../../apis/taxBook.api'
 import { getExpenseById, updateExpense } from '../../../apis/expense.api'
@@ -67,9 +67,20 @@ interface EvidenceTarget {
 export default function S2cBookPage() {
   const { currentBusiness } = useBusiness()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const now = new Date()
-  const [year, setYear] = useState(now.getFullYear())
-  const [quarter, setQuarter] = useState(Math.floor(now.getMonth() / 3) + 1)
+  const yearFromUrl = Number(searchParams.get('year'))
+  const quarterFromUrl = Number(searchParams.get('quarter'))
+  const [year, setYear] = useState(
+    Number.isInteger(yearFromUrl) && yearFromUrl >= 2024 && yearFromUrl <= 2030
+      ? yearFromUrl
+      : now.getFullYear()
+  )
+  const [quarter, setQuarter] = useState(
+    Number.isInteger(quarterFromUrl) && quarterFromUrl >= 1 && quarterFromUrl <= 4
+      ? quarterFromUrl
+      : Math.floor(now.getMonth() / 3) + 1
+  )
   const [book, setBook] = useState<S2cBook | null>(null)
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)

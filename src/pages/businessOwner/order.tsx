@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { Eye, Search, Box, X, Scan, RotateCcw, Loader2, PlayCircle, Trash2, CheckCircle } from 'lucide-react'
+import { Eye, Search, Box, X, Scan, RotateCcw, Loader2, PlayCircle, Trash2, CheckCircle, Store } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useBusiness } from '../../contexts/BusinessContext'
 import { getOrders, getOrderById, cancelOrder, confirmPayment } from '../../apis/order.api'
@@ -34,7 +34,7 @@ function orderDateRange(filter: string, custom: string) {
 }
 
 export default function OrderPage() {
-  const { currentBusiness } = useBusiness()
+  const { businesses, currentBusiness, setCurrentBusiness } = useBusiness()
   const businessId = currentBusiness?.id
   const navigate = useNavigate()
 
@@ -55,14 +55,22 @@ export default function OrderPage() {
   // Pagination & URL params
   const [searchParams, setSearchParams] = useSearchParams()
   const orderCodeFromUrl = searchParams.get('orderCode') || searchParams.get('search') || ''
+  const statusFromUrl = searchParams.get('status') || 'all'
+  const hasInvoiceFromUrl = searchParams.get('hasInvoice') || 'all'
+  const timeFilterFromUrl = searchParams.get('timeFilter')
+  const startDateFromUrl = searchParams.get('startDate')
+  const endDateFromUrl = searchParams.get('endDate')
   const autoOpenFromUrl = searchParams.get('autoOpen') === 'true'
   const autoOpenedRef = useRef(false)
 
   // Filters state
   const [searchQuery, setSearchQuery] = useState(orderCodeFromUrl)
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState(statusFromUrl)
+  const [hasInvoiceFilter, setHasInvoiceFilter] = useState(hasInvoiceFromUrl)
   const [paymentFilter, setPaymentFilter] = useState('all')
-  const [timeFilter, setTimeFilter] = useState(orderCodeFromUrl ? 'Năm nay' : 'Tháng này')
+  const [timeFilter, setTimeFilter] = useState(
+    timeFilterFromUrl || (startDateFromUrl && endDateFromUrl ? 'Kỳ kê khai' : orderCodeFromUrl ? 'Năm nay' : 'Tháng này')
+  )
   const [customDate, setCustomDate] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -80,29 +88,74 @@ export default function OrderPage() {
     setSearchParams(params, { replace: true })
   }
 
-  // Sync search if URL param changes
+  // Sync filters if URL params change
   useEffect(() => {
     const code = searchParams.get('orderCode') || searchParams.get('search') || ''
-    if (code && code !== searchQuery) {
+    if (code !== searchQuery) {
       setSearchQuery(code)
-      setTimeFilter('Năm nay')
       autoOpenedRef.current = false
     }
+
+    const stat = searchParams.get('status') || 'all'
+    if (stat !== statusFilter) {
+      setStatusFilter(stat)
+    }
+
+    const inv = searchParams.get('hasInvoice') || 'all'
+    if (inv !== hasInvoiceFilter) {
+      setHasInvoiceFilter(inv)
+    }
+
+    const sDate = searchParams.get('startDate')
+    const eDate = searchParams.get('endDate')
+    const tf = searchParams.get('timeFilter')
+    if (sDate && eDate) {
+      setTimeFilter('Kỳ kê khai')
+    } else if (tf && tf !== timeFilter) {
+      setTimeFilter(tf)
+    } else if (!sDate && !eDate && !tf && timeFilter === 'Kỳ kê khai') {
+      setTimeFilter('Tháng này')
+    }
   }, [searchParams])
+
+  const businessIdFromUrl = searchParams.get('businessId')
+  useEffect(() => {
+    if (businessIdFromUrl && businesses.length > 0) {
+      const target = businesses.find((b) => b.id === businessIdFromUrl)
+      if (target && target.id !== currentBusiness?.id) {
+        setCurrentBusiness(target)
+      }
+    }
+  }, [businessIdFromUrl, businesses, currentBusiness, setCurrentBusiness])
+
+  const handleSwitchBusiness = (business: any) => {
+    setCurrentBusiness(business)
+    const newParams = new URLSearchParams(searchParams)
+    newParams.set('businessId', business.id)
+    newParams.delete('page')
+    setSearchParams(newParams, { replace: true })
+  }
 
   const fetchOrders = async () => {
     if (!businessId) return
     const version = ++requestVersion.current
     try {
       setLoading(true)
+
+      // Use exact startDate and endDate from URL if provided and timeFilter is 'Kỳ kê khai' or custom
+      const dateParams = (startDateFromUrl && endDateFromUrl && (timeFilter === 'Kỳ kê khai' || timeFilter === 'Năm nay' || timeFilter === 'Tùy chọn'))
+        ? { startDate: startDateFromUrl, endDate: endDateFromUrl }
+        : orderDateRange(timeFilter, customDate)
+
       const res = await getOrders(businessId, {
         pageNumber: page,
         pageSize,
-        ...orderDateRange(timeFilter, customDate),
+        ...dateParams,
         search: searchQuery,
         excludeEmptyDrafts: true,
         status: statusFilter !== 'all' ? statusFilter : null,
-        paymentMethod: paymentFilter !== 'all' ? paymentFilter : null
+        paymentMethod: paymentFilter !== 'all' ? paymentFilter : null,
+        hasInvoice: hasInvoiceFilter === 'all' ? null : hasInvoiceFilter === 'true'
       })
 
       if (version !== requestVersion.current) return
@@ -125,7 +178,7 @@ export default function OrderPage() {
   useEffect(() => {
     fetchOrders()
     return () => { requestVersion.current++ }
-  }, [businessId, statusFilter, paymentFilter, page, timeFilter, customDate, searchQuery])
+  }, [businessId, statusFilter, hasInvoiceFilter, paymentFilter, page, timeFilter, customDate, searchQuery, startDateFromUrl, endDateFromUrl])
 
   // Fetch full details of an order on click
   const handleViewDetails = async (orderId: string) => {
@@ -224,16 +277,66 @@ export default function OrderPage() {
     }
   }
 
+  const handleStatusFilterChange = (val: string) => {
+    setStatusFilter(val)
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('page')
+    if (val !== 'all') {
+      newParams.set('status', val)
+    } else {
+      newParams.delete('status')
+    }
+    setSearchParams(newParams, { replace: true })
+  }
+
+  const handleInvoiceFilterChange = (val: string) => {
+    setHasInvoiceFilter(val)
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('page')
+    if (val !== 'all') {
+      newParams.set('hasInvoice', val)
+    } else {
+      newParams.delete('hasInvoice')
+    }
+    setSearchParams(newParams, { replace: true })
+  }
+
+  const handleTimeFilterChange = (opt: string) => {
+    setTimeFilter(opt)
+    const newParams = new URLSearchParams(searchParams)
+    newParams.delete('startDate')
+    newParams.delete('endDate')
+    newParams.delete('page')
+    if (opt !== 'Tháng này') {
+      newParams.set('timeFilter', opt)
+    } else {
+      newParams.delete('timeFilter')
+    }
+    setSearchParams(newParams, { replace: true })
+  }
+
   const handleResetFilters = () => {
     setSearchQuery('')
     setStatusFilter('all')
+    setHasInvoiceFilter('all')
     setPaymentFilter('all')
     setTimeFilter('Tháng này')
-    changePage(1)
+    setCustomDate('')
+    navigate('/business-owner/orders')
   }
 
   const paginatedOrders = orders
   const totalPages = Math.ceil(totalCount / pageSize)
+
+  const formatDateOnly = (dateStr: string) => {
+    try {
+      const utcDateStr = dateStr.endsWith('Z') ? dateStr : `${dateStr}Z`
+      const d = new Date(utcDateStr)
+      return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    } catch {
+      return dateStr
+    }
+  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -323,25 +426,19 @@ export default function OrderPage() {
           />
           <Search className='text-gray-400 size-5 shrink-0 hover:text-gray-600 transition-colors cursor-pointer' />
         </div>
-
-        {/* <div className='flex justify-end'>
-          <button className='flex items-center gap-2 px-4 py-2 border border-[#D32F2F] text-[#D32F2F] rounded-[8px] hover:bg-[#fef2f2] font-bold text-[13.5px] transition-colors cursor-pointer'>
-            <FileDown size={16} />
-            Xuất file
-          </button>
-        </div> */}
       </div>
 
       <div className='flex grow w-full overflow-hidden'>
         {/* SIDEBAR BỘ LỌC */}
         <div className='w-72 bg-white border-r border-[#ffe5e5] p-6 flex flex-col gap-6 shrink-0 overflow-y-auto select-none'>
-          {/* Trạng thái */}
+          {/* Trạng thái thanh toán */}
           <div className='flex flex-col gap-3'>
-            <span className='text-[13px] font-bold text-gray-500'>Trạng thái</span>
+            <span className='text-[13px] font-bold text-gray-500'>Trạng thái thanh toán</span>
             <div className='flex flex-col gap-3.5'>
               {[
                 { val: 'all', label: 'Tất cả' },
                 { val: 'Completed', label: 'Hoàn thành' },
+                { val: 'Unpaid', label: 'Chưa thanh toán' },
                 { val: 'AwaitingPayment', label: 'Chờ thanh toán' },
                 { val: 'Cancelled', label: 'Đã hủy' },
                 { val: 'Draft', label: 'Đơn nháp' }
@@ -351,10 +448,7 @@ export default function OrderPage() {
                     type='radio'
                     name='statusFilter'
                     checked={statusFilter === opt.val}
-                    onChange={() => {
-                      setStatusFilter(opt.val)
-                      changePage(1)
-                    }}
+                    onChange={() => handleStatusFilterChange(opt.val)}
                     className='sr-only'
                   />
                   <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${
@@ -374,6 +468,40 @@ export default function OrderPage() {
             </div>
           </div>
 
+          {/* Trạng thái Hóa đơn */}
+          <div className='flex flex-col gap-3'>
+            <span className='text-[13px] font-bold text-gray-500'>Hóa đơn điện tử</span>
+            <div className='flex flex-col gap-3.5'>
+              {[
+                { val: 'all', label: 'Tất cả' },
+                { val: 'false', label: 'Chưa có hóa đơn' },
+                { val: 'true', label: 'Đã có hóa đơn' }
+              ].map(opt => (
+                <label key={opt.val} className='flex items-center gap-3 cursor-pointer group text-[13.5px] text-gray-700 select-none'>
+                  <input
+                    type='radio'
+                    name='hasInvoiceFilter'
+                    checked={hasInvoiceFilter === opt.val}
+                    onChange={() => handleInvoiceFilterChange(opt.val)}
+                    className='sr-only'
+                  />
+                  <div className={`size-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                    hasInvoiceFilter === opt.val
+                      ? 'border-[#D32F2F] bg-white'
+                      : 'border-gray-300 group-hover:border-gray-400 bg-white'
+                  }`}>
+                    {hasInvoiceFilter === opt.val && (
+                      <div className='size-2.5 rounded-full bg-[#D32F2F]' />
+                    )}
+                  </div>
+                  <span className={`${hasInvoiceFilter === opt.val ? 'font-bold text-[#D32F2F]' : 'text-gray-600 font-medium'}`}>
+                    {opt.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
           {/* Loại thanh toán */}
           <div className='flex flex-col gap-3'>
             <span className='text-[13px] font-bold text-gray-500'>Loại thanh toán</span>
@@ -381,7 +509,6 @@ export default function OrderPage() {
               {[
                 { val: 'all', label: 'Tất cả' },
                 { val: 'Cash', label: 'Tiền mặt' },
-                // { val: 'EWallet', label: 'Thẻ' },
                 { val: 'Transfer', label: 'Chuyển khoản' }
               ].map(opt => (
                 <label key={opt.val} className='flex items-center gap-3 cursor-pointer group text-[13.5px] text-gray-700 select-none'>
@@ -417,7 +544,10 @@ export default function OrderPage() {
             <span className='text-[13px] font-bold text-gray-500'>Thời gian</span>
 
             <div className='flex flex-col gap-3.5'>
-              {['Hôm nay', '7 ngày qua', '30 ngày qua', 'Tháng này', 'Tháng trước', 'Năm nay', 'Tùy chọn'].map(opt => (
+              {(startDateFromUrl && endDateFromUrl
+                ? ['Kỳ kê khai', 'Hôm nay', '7 ngày qua', '30 ngày qua', 'Tháng này', 'Tháng trước', 'Năm nay', 'Tùy chọn']
+                : ['Hôm nay', '7 ngày qua', '30 ngày qua', 'Tháng này', 'Tháng trước', 'Năm nay', 'Tùy chọn']
+              ).map(opt => (
                 <label
                   key={opt}
                   className='flex items-center gap-3 cursor-pointer group text-[13.5px] text-gray-700 select-none'
@@ -428,8 +558,7 @@ export default function OrderPage() {
                     checked={timeFilter === opt}
                     onChange={() => {
                       if (opt !== 'Tùy chọn') {
-                        setTimeFilter(opt)
-                        changePage(1)
+                        handleTimeFilterChange(opt)
                       }
                     }}
                     onClick={() => {
@@ -478,7 +607,7 @@ export default function OrderPage() {
           </div>
 
           {/* Reset Filters */}
-          {(searchQuery || statusFilter !== 'all' || paymentFilter !== 'all' || timeFilter !== 'Tháng này') && (
+          {(searchQuery || statusFilter !== 'all' || hasInvoiceFilter !== 'all' || paymentFilter !== 'all' || timeFilter !== 'Tháng này' || startDateFromUrl || endDateFromUrl) && (
             <button
               onClick={handleResetFilters}
               className='mt-auto flex items-center justify-center gap-2 border border-dashed border-[#D32F2F] hover:bg-[#fef2f2] text-[#D32F2F] text-[13px] font-bold py-2.5 rounded-[8px] transition-colors cursor-pointer'
@@ -490,6 +619,117 @@ export default function OrderPage() {
 
         {/* BẢNG DANH SÁCH ĐƠN HÀNG */}
         <div className='grow p-8 flex flex-col gap-4 overflow-y-auto'>
+          {/* Multi-Store Switcher */}
+          {businesses && businesses.length > 1 && (
+            <div className='flex flex-wrap items-center justify-between gap-3 bg-white border border-gray-200/90 rounded-2xl p-3 px-4 shadow-xs'>
+              <div className='flex items-center gap-3'>
+                <div className='size-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-black'>
+                  <Store size={18} />
+                </div>
+                <div className='flex flex-col'>
+                  <span className='text-[11px] font-medium text-gray-400 leading-none'>Cơ sở đang xem</span>
+                  <span className='text-sm font-bold text-gray-900 flex items-center gap-2 mt-0.5'>
+                    {currentBusiness?.businessName || 'Chưa chọn cơ sở'}
+                    <span className='rounded-full bg-red-50 text-red-600 border border-red-100 text-[11px] font-bold px-2.5 py-0.2'>
+                      {totalCount} đơn
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <div className='flex flex-wrap items-center gap-1.5'>
+                <span className='text-xs text-gray-400 font-medium mr-1 hidden sm:inline'>Chuyển cơ sở:</span>
+                {businesses.map((biz) => {
+                  const isSelected = biz.id === currentBusiness?.id
+                  return (
+                    <button
+                      key={biz.id}
+                      type='button'
+                      onClick={() => handleSwitchBusiness(biz)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-red-600 text-white shadow-xs'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900 border border-gray-200'
+                      }`}
+                    >
+                      <span className={`size-2 rounded-full ${isSelected ? 'bg-white' : 'bg-gray-400'}`} />
+                      <span className='truncate max-w-[140px]'>{biz.businessName}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Active filter banner */}
+          {(startDateFromUrl || statusFilter !== 'all' || hasInvoiceFilter !== 'all' || searchQuery) && (
+            <div className='flex flex-wrap items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 text-xs text-amber-900 shadow-2xs'>
+              <span className='font-bold flex items-center gap-1.5 text-amber-800'>
+                <Search size={14} /> Đang lọc:
+              </span>
+              {startDateFromUrl && endDateFromUrl && timeFilter === 'Kỳ kê khai' && (
+                <span className='inline-flex items-center gap-1 bg-white border border-amber-200 px-2.5 py-1 rounded-md font-semibold text-gray-800 shadow-2xs'>
+                  Kỳ kê khai: {formatDateOnly(startDateFromUrl)} - {formatDateOnly(endDateFromUrl)}
+                  <button
+                    onClick={() => handleTimeFilterChange('Tháng này')}
+                    className='text-gray-400 hover:text-red-500 ml-1 cursor-pointer'
+                    title='Bỏ lọc thời gian'
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              )}
+              {statusFilter !== 'all' && (
+                <span className='inline-flex items-center gap-1 bg-white border border-amber-200 px-2.5 py-1 rounded-md font-semibold text-gray-800 shadow-2xs'>
+                  Trạng thái: {statusFilter === 'Unpaid' ? 'Chưa thanh toán' : statusFilter === 'Completed' ? 'Hoàn thành' : statusFilter === 'AwaitingPayment' ? 'Chờ thanh toán' : statusFilter === 'Draft' ? 'Đơn nháp' : 'Đã hủy'}
+                  <button
+                    onClick={() => handleStatusFilterChange('all')}
+                    className='text-gray-400 hover:text-red-500 ml-1 cursor-pointer'
+                    title='Bỏ lọc trạng thái'
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              )}
+              {hasInvoiceFilter !== 'all' && (
+                <span className='inline-flex items-center gap-1 bg-white border border-amber-200 px-2.5 py-1 rounded-md font-semibold text-gray-800 shadow-2xs'>
+                  Hóa đơn: {hasInvoiceFilter === 'false' ? 'Chưa có hóa đơn' : 'Đã có hóa đơn'}
+                  <button
+                    onClick={() => handleInvoiceFilterChange('all')}
+                    className='text-gray-400 hover:text-red-500 ml-1 cursor-pointer'
+                    title='Bỏ lọc hóa đơn'
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              )}
+              {searchQuery && (
+                <span className='inline-flex items-center gap-1 bg-white border border-amber-200 px-2.5 py-1 rounded-md font-semibold text-gray-800 shadow-2xs'>
+                  Tìm kiếm: "{searchQuery}"
+                  <button
+                    onClick={() => {
+                      setSearchQuery('')
+                      const newP = new URLSearchParams(searchParams)
+                      newP.delete('orderCode')
+                      newP.delete('search')
+                      setSearchParams(newP, { replace: true })
+                    }}
+                    className='text-gray-400 hover:text-red-500 ml-1 cursor-pointer'
+                    title='Xóa tìm kiếm'
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              )}
+              <button
+                onClick={handleResetFilters}
+                className='ml-auto text-xs font-bold text-red-600 hover:underline cursor-pointer'
+              >
+                Xóa tất cả
+              </button>
+            </div>
+          )}
+
           {loading ? (
             <div className='flex justify-center items-center py-20'>
               <Loader2 className='animate-spin text-[#D32F2F] size-10' />

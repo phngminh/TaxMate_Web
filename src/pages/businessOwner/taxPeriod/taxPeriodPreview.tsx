@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   CircleAlert,
+  ExternalLink,
   LockKeyhole,
   ReceiptText
 } from 'lucide-react'
@@ -516,49 +517,125 @@ export default function TaxPeriodPreviewPage() {
           <div className='mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5'>
             <CountCard
               label='Giao dịch'
-              value={
-                preview.transactionCount
-              }
+              value={preview.transactionCount}
+              onClick={() => {
+                const p = new URLSearchParams()
+                if (taxPeriod?.periodStartDate) p.set('startDate', taxPeriod.periodStartDate)
+                if (taxPeriod?.periodEndDate) p.set('endDate', taxPeriod.periodEndDate)
+                navigate(`/business-owner/orders?${p.toString()}`)
+              }}
+              breakdowns={preview.businessBreakdowns?.map((b) => ({
+                businessId: b.businessId,
+                businessName: b.businessName,
+                count: b.transactionCount,
+                onClick: (e) => {
+                  e.stopPropagation()
+                  const p = new URLSearchParams()
+                  p.set('businessId', b.businessId)
+                  if (taxPeriod?.periodStartDate) p.set('startDate', taxPeriod.periodStartDate)
+                  if (taxPeriod?.periodEndDate) p.set('endDate', taxPeriod.periodEndDate)
+                  navigate(`/business-owner/orders?${p.toString()}`)
+                }
+              }))}
             />
 
             <CountCard
               label='Hoàn tất'
-              value={
-                preview.completedTransactionCount
-              }
+              value={preview.completedTransactionCount}
+              onClick={() => {
+                const p = new URLSearchParams()
+                p.set('status', 'Completed')
+                if (taxPeriod?.periodStartDate) p.set('startDate', taxPeriod.periodStartDate)
+                if (taxPeriod?.periodEndDate) p.set('endDate', taxPeriod.periodEndDate)
+                navigate(`/business-owner/orders?${p.toString()}`)
+              }}
+              breakdowns={preview.businessBreakdowns?.map((b) => ({
+                businessId: b.businessId,
+                businessName: b.businessName,
+                count: b.paidTransactionCount,
+                onClick: (e) => {
+                  e.stopPropagation()
+                  const p = new URLSearchParams()
+                  p.set('businessId', b.businessId)
+                  p.set('status', 'Completed')
+                  if (taxPeriod?.periodStartDate) p.set('startDate', taxPeriod.periodStartDate)
+                  if (taxPeriod?.periodEndDate) p.set('endDate', taxPeriod.periodEndDate)
+                  navigate(`/business-owner/orders?${p.toString()}`)
+                }
+              }))}
             />
 
             <CountCard
               label='Chưa thanh toán'
-              value={
-                preview.unpaidTransactionCount
-              }
-              warning={
-                preview.unpaidTransactionCount >
-                0
-              }
+              value={preview.unpaidTransactionCount}
+              warning={preview.unpaidTransactionCount > 0}
+              danger={preview.unpaidTransactionCount > 0}
+              actionText={preview.unpaidTransactionCount > 0 ? 'Xử lý ngay' : undefined}
+              onClick={() => {
+                const p = new URLSearchParams()
+                p.set('status', 'Unpaid')
+                if (taxPeriod?.periodStartDate) p.set('startDate', taxPeriod.periodStartDate)
+                if (taxPeriod?.periodEndDate) p.set('endDate', taxPeriod.periodEndDate)
+                navigate(`/business-owner/orders?${p.toString()}`)
+              }}
+              breakdowns={preview.businessBreakdowns?.map((b) => ({
+                businessId: b.businessId,
+                businessName: b.businessName,
+                count: b.unpaidTransactionCount,
+                onClick: (e) => {
+                  e.stopPropagation()
+                  const p = new URLSearchParams()
+                  p.set('businessId', b.businessId)
+                  p.set('status', 'Unpaid')
+                  if (taxPeriod?.periodStartDate) p.set('startDate', taxPeriod.periodStartDate)
+                  if (taxPeriod?.periodEndDate) p.set('endDate', taxPeriod.periodEndDate)
+                  navigate(`/business-owner/orders?${p.toString()}`)
+                }
+              }))}
             />
 
             <CountCard
               label='Đã hủy'
-              value={
-                preview.cancelledTransactionCount
-              }
-              warning={
-                preview.cancelledTransactionCount >
-                0
-              }
+              value={preview.cancelledTransactionCount}
+              warning={preview.cancelledTransactionCount > 0}
+              onClick={() => {
+                const p = new URLSearchParams()
+                p.set('status', 'Cancelled')
+                if (taxPeriod?.periodStartDate) p.set('startDate', taxPeriod.periodStartDate)
+                if (taxPeriod?.periodEndDate) p.set('endDate', taxPeriod.periodEndDate)
+                navigate(`/business-owner/orders?${p.toString()}`)
+              }}
             />
 
             <CountCard
-              label='Thiếu hóa đơn'
-              value={
-                preview.missingInvoiceCount
-              }
-              warning={
-                preview.missingInvoiceCount >
-                0
-              }
+              label='Chưa xuất HĐĐT'
+              value={preview.missingInvoiceCount}
+              warning={preview.missingInvoiceCount > 0}
+              danger={preview.missingInvoiceCount > 0}
+              actionText={preview.missingInvoiceCount > 0 ? 'Xuất HĐ ngay' : undefined}
+              onClick={() => {
+                const p = new URLSearchParams()
+                p.set('status', 'Completed')
+                p.set('hasInvoice', 'false')
+                if (taxPeriod?.periodStartDate) p.set('startDate', taxPeriod.periodStartDate)
+                if (taxPeriod?.periodEndDate) p.set('endDate', taxPeriod.periodEndDate)
+                navigate(`/business-owner/orders?${p.toString()}`)
+              }}
+              breakdowns={preview.businessBreakdowns?.map((b) => ({
+                businessId: b.businessId,
+                businessName: b.businessName,
+                count: b.missingInvoiceCount,
+                onClick: (e) => {
+                  e.stopPropagation()
+                  const p = new URLSearchParams()
+                  p.set('businessId', b.businessId)
+                  p.set('status', 'Completed')
+                  p.set('hasInvoice', 'false')
+                  if (taxPeriod?.periodStartDate) p.set('startDate', taxPeriod.periodStartDate)
+                  if (taxPeriod?.periodEndDate) p.set('endDate', taxPeriod.periodEndDate)
+                  navigate(`/business-owner/orders?${p.toString()}`)
+                }
+              }))}
             />
           </div>
 
@@ -663,36 +740,107 @@ export default function TaxPeriodPreviewPage() {
   )
 }
 
+interface BreakdownChip {
+  businessId: string
+  businessName: string
+  count: number
+  onClick: (e: React.MouseEvent) => void
+}
+
 function CountCard({
   label,
   value,
-  warning
+  warning,
+  danger,
+  onClick,
+  actionText,
+  breakdowns
 }: {
   label: string
   value: number
   warning?: boolean
+  danger?: boolean
+  onClick?: () => void
+  actionText?: string
+  breakdowns?: BreakdownChip[]
 }) {
+  const isZero = value === 0
+  const canClick = Boolean(onClick && (!danger && !warning || !isZero))
+
   return (
     <div
-      className={`rounded-xl border p-4 ${
-        warning
-          ? 'border-amber-200 bg-amber-50'
-          : 'border-gray-100 bg-gray-50'
+      onClick={canClick ? onClick : undefined}
+      className={`rounded-xl border p-4 transition-all flex flex-col justify-between ${
+        canClick ? 'cursor-pointer hover:shadow-md hover:-translate-y-0.5 group' : ''
+      } ${
+        danger && !isZero
+          ? 'border-red-200 bg-red-50 hover:bg-red-100/70'
+          : warning && !isZero
+            ? 'border-amber-200 bg-amber-50 hover:bg-amber-100/70'
+            : isZero
+              ? 'border-gray-100 bg-gray-50/60'
+              : 'border-gray-100 bg-gray-50 hover:bg-white hover:border-gray-300'
       }`}
     >
-      <p className='text-xs font-semibold text-gray-500'>
-        {label}
-      </p>
+      <div>
+        <div className='flex items-center justify-between'>
+          <p
+            className={`text-xs font-semibold transition-colors ${
+              canClick ? 'text-gray-500 group-hover:text-gray-900' : 'text-gray-400'
+            }`}
+          >
+            {label}
+          </p>
+          {canClick && (
+            <ExternalLink size={12} className='text-gray-400 group-hover:text-blue-600 transition-colors' />
+          )}
+        </div>
 
-      <p
-        className={`mt-2 text-2xl font-black ${
-          warning
-            ? 'text-amber-700'
-            : 'text-gray-900'
-        }`}
-      >
-        {value}
-      </p>
+        <p
+          className={`mt-2 text-2xl font-black ${
+            danger && !isZero
+              ? 'text-red-700'
+              : warning && !isZero
+                ? 'text-amber-700'
+                : 'text-gray-900'
+          }`}
+        >
+          {value}
+        </p>
+
+        {canClick && actionText && !isZero && (
+          <span className='mt-2 inline-block text-[11px] font-bold text-blue-600 group-hover:underline'>
+            {actionText} →
+          </span>
+        )}
+      </div>
+
+      {breakdowns && breakdowns.length > 1 && (
+        <div className='mt-3 flex flex-wrap gap-1 border-t border-gray-200/60 pt-2'>
+          {breakdowns.map((b) => {
+            const isItemZero = b.count === 0
+            return (
+              <button
+                key={b.businessId}
+                type='button'
+                disabled={isItemZero}
+                onClick={isItemZero ? undefined : b.onClick}
+                className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold transition select-none ${
+                  isItemZero
+                    ? 'bg-gray-50/90 text-gray-400 border border-gray-200/70 cursor-default'
+                    : b.count > 0 && (danger || warning)
+                      ? 'bg-red-100 text-red-800 hover:bg-red-200 hover:scale-105 cursor-pointer'
+                      : 'bg-white text-gray-700 hover:bg-gray-200 border border-gray-200 hover:scale-105 cursor-pointer'
+                }`}
+                title={isItemZero ? 'Không có đơn nào' : `Xem đơn của ${b.businessName}`}
+              >
+                <span className='truncate max-w-[65px]'>{b.businessName}:</span>
+                <span className={`font-black ${isItemZero ? 'text-gray-400' : ''}`}>{b.count}</span>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

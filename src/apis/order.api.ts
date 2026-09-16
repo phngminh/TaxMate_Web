@@ -25,6 +25,7 @@ export const getOrders = async (
     paymentMethod?: string | null
     minAmount?: number | null
     maxAmount?: number | null
+    hasInvoice?: boolean | null
   }
 ) => {
   const response = await http.get<ApiResponse<PagedResult<Order>>>(`/Order/business/${businessId}`, {

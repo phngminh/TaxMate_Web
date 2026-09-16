@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   Calculator,
+  Clock,
   ReceiptText
 } from 'lucide-react'
 import {
@@ -53,7 +54,8 @@ function InfoRow({
   highlight,
   danger,
   warning,
-  success
+  success,
+  isPending
 }: {
   label: string
   value: string
@@ -61,6 +63,7 @@ function InfoRow({
   danger?: boolean
   warning?: boolean
   success?: boolean
+  isPending?: boolean
 }) {
   return (
     <div className='flex items-center justify-between gap-6 border-b border-gray-100 py-4 last:border-b-0'>
@@ -68,21 +71,27 @@ function InfoRow({
         {label}
       </span>
 
-      <span
-        className={`text-right text-sm font-black ${
-          danger
-            ? 'text-red-600'
-            : warning
-              ? 'text-amber-600'
-              : success
-                ? 'text-green-600'
-                : highlight
-                  ? 'text-blue-700'
-                  : 'text-gray-800'
-        }`}
-      >
-        {value}
-      </span>
+      {isPending ? (
+        <span className='inline-flex items-center rounded-md bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500'>
+          {value}
+        </span>
+      ) : (
+        <span
+          className={`text-right text-sm font-black ${
+            danger
+              ? 'text-red-600'
+              : warning
+                ? 'text-amber-600'
+                : success
+                  ? 'text-green-600'
+                  : highlight
+                    ? 'text-blue-700'
+                    : 'text-gray-800'
+          }`}
+        >
+          {value}
+        </span>
+      )}
     </div>
   )
 }
@@ -370,6 +379,7 @@ export default function TaxCalculationPage() {
     )
   }
 
+  const isCalculated = ['Calculated', 'Submitted', 'Paid'].includes(taxPeriod.status)
   const totalTax =
     taxPeriod.vatTaxAmount +
     taxPeriod.personalIncomeTaxAmount
@@ -445,7 +455,8 @@ export default function TaxCalculationPage() {
 
             <InfoRow
               label='Tỷ lệ thuế tạm tính'
-              value={`${appliedTaxRate}%`}
+              value={isCalculated ? `${appliedTaxRate}%` : 'Chờ tính toán'}
+              isPending={!isCalculated}
             />
           </div>
 
@@ -456,24 +467,22 @@ export default function TaxCalculationPage() {
 
             <InfoRow
               label='Thuế GTGT'
-              value={formatMoney(
-                taxPeriod.vatTaxAmount
-              )}
+              value={isCalculated ? formatMoney(taxPeriod.vatTaxAmount) : 'Chưa tính'}
+              isPending={!isCalculated}
             />
 
             <InfoRow
               label='Thuế TNCN'
-              value={formatMoney(
-                taxPeriod.personalIncomeTaxAmount
-              )}
+              value={isCalculated ? formatMoney(taxPeriod.personalIncomeTaxAmount) : 'Chưa tính'}
+              isPending={!isCalculated}
             />
 
             <InfoRow
               label='Số thuế chưa nộp'
-              value={formatMoney(
-                taxPeriod.taxAmountDebt
-              )}
+              value={isCalculated ? formatMoney(taxPeriod.taxAmountDebt) : 'Chưa tính'}
+              isPending={!isCalculated}
               danger={
+                isCalculated &&
                 taxPeriod.taxAmountDebt > 0 &&
                 Boolean(
                   taxPeriod.dueDate &&
@@ -481,24 +490,48 @@ export default function TaxCalculationPage() {
                 )
               }
               warning={
+                isCalculated &&
                 taxPeriod.taxAmountDebt > 0 &&
                 (!taxPeriod.dueDate ||
                   new Date() <= new Date(taxPeriod.dueDate))
               }
               success={
-                taxPeriod.taxAmountDebt === 0
+                isCalculated && taxPeriod.taxAmountDebt === 0
               }
             />
 
-            <div className='mt-5 rounded-2xl bg-red-50 p-5'>
-              <p className='text-sm font-bold text-red-700'>
-                Tổng thuế phải nộp
-              </p>
+            {isCalculated ? (
+              <div className='mt-5 rounded-2xl bg-red-50 p-5'>
+                <p className='text-sm font-bold text-red-700'>
+                  Tổng thuế phải nộp
+                </p>
 
-              <p className='mt-2 text-3xl font-black text-red-700'>
-                {formatMoney(totalTax)}
-              </p>
-            </div>
+                <p className='mt-2 text-3xl font-black text-red-700'>
+                  {formatMoney(totalTax)}
+                </p>
+              </div>
+            ) : (
+              <div className='mt-5 rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-5'>
+                <div className='flex items-center justify-between'>
+                  <p className='text-sm font-bold text-gray-500'>
+                    Tổng thuế dự kiến
+                  </p>
+                  <span className='inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500'>
+                    <Clock size={11} /> Chờ tính
+                  </span>
+                </div>
+
+                <div className='mt-3 flex items-baseline'>
+                  <span className='inline-flex items-center rounded-xl bg-slate-100 px-3.5 py-1.5 text-sm font-bold text-slate-600 shadow-2xs'>
+                    Chưa tính toán
+                  </span>
+                </div>
+
+                <p className='mt-2.5 text-xs text-gray-400'>
+                  Nhấn nút &ldquo;Tính thuế&rdquo; bên dưới để hệ thống tính toán số thuế chính thức.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -510,7 +543,7 @@ export default function TaxCalculationPage() {
 
           <p className='text-sm leading-6 text-blue-800'>
             Số thuế chính thức sẽ
-            được backend tính từ dữ
+            được hệ thống tính từ dữ
             liệu doanh thu và quy tắc
             thuế áp dụng cho kỳ này.
           </p>

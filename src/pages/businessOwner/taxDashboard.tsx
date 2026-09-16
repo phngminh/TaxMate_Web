@@ -906,7 +906,7 @@ export default function TaxDashboard() {
                       ? 'Không quá 1 tỷ'
                       : annualConclusion.targetRevenueBracket === 'Over1BTo3B'
                         ? 'Trên 1 đến 3 tỷ'
-                        : 'Trên 3 đến 50 tỷ'
+                        : 'Trên 3 tỷ đến 50 tỷ'
                   }
                 </h2>
                 <p className='mt-2 text-sm leading-6 text-emerald-900'>

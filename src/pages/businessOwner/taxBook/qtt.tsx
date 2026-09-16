@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Check, Download, Plus, RefreshCw, Save, Send, Trash2 } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useSearchParams } from 'react-router-dom'
@@ -113,39 +113,29 @@ export default function QttPage() {
   const [working, setWorking] = useState(false)
   const [exporting, setExporting] = useState(false)
 
-  useEffect(() => {
-    setPreview(null)
-    setCalculation(null)
-    setDeclaration(null)
-    setRefundAmount(0)
-    setRefundAccountId('')
-    setOffsets([])
-    setTknBridge(null)
-  }, [currentBusiness?.id, year, fromTkn])
+  const hydrateDeclaration = useCallback((next: QttDeclaration) => {
+    setDeclaration(next)
+    setRefundAmount(next.indicators.indicator22)
+    setRefundAccountId(next.refundAccount?.paymentAccountId ?? '')
+    setOffsets(next.offsetItems.map((item) => ({
+      id: crypto.randomUUID(),
+      mode: item.sourceObligationId ? 'internal' : 'external',
+      obligationId: item.sourceObligationId ?? '',
+      taxCode: item.taxCode,
+      taxpayerName: item.taxpayerName,
+      obligationIdentifier: item.obligationIdentifier,
+      budgetContent: item.budgetContent,
+      chapterCode: item.chapterCode ?? '',
+      subsectionCode: item.subsectionCode ?? '',
+      collectingAuthority: item.collectingAuthority ?? '',
+      administrativeAreaCode: item.administrativeAreaCode ?? '',
+      dueDate: item.dueDate?.slice(0, 10) ?? '',
+      outstandingAmount: item.outstandingAmount,
+      offsetAmount: item.offsetAmount
+    })))
+  }, [])
 
-  const hydrateDeclaration = (next: QttDeclaration) => {
-      setDeclaration(next)
-      setRefundAmount(next.indicators.indicator22)
-      setRefundAccountId(next.refundAccount?.paymentAccountId ?? '')
-      setOffsets(next.offsetItems.map((item) => ({
-        id: crypto.randomUUID(),
-        mode: item.sourceObligationId ? 'internal' : 'external',
-        obligationId: item.sourceObligationId ?? '',
-        taxCode: item.taxCode,
-        taxpayerName: item.taxpayerName,
-        obligationIdentifier: item.obligationIdentifier,
-        budgetContent: item.budgetContent,
-        chapterCode: item.chapterCode ?? '',
-        subsectionCode: item.subsectionCode ?? '',
-        collectingAuthority: item.collectingAuthority ?? '',
-        administrativeAreaCode: item.administrativeAreaCode ?? '',
-        dueDate: item.dueDate?.slice(0, 10) ?? '',
-        outstandingAmount: item.outstandingAmount,
-        offsetAmount: item.offsetAmount
-      })))
-  }
-
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!currentBusiness) return
     try {
       setLoading(true)
@@ -175,7 +165,18 @@ export default function QttPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentBusiness, year, fromTkn, hydrateDeclaration])
+
+  useEffect(() => {
+    setPreview(null)
+    setCalculation(null)
+    setDeclaration(null)
+    setRefundAmount(0)
+    setRefundAccountId('')
+    setOffsets([])
+    setTknBridge(null)
+    void load()
+  }, [load])
 
   const prepareDeclaration = async () => {
     if (!currentBusiness) return
@@ -372,22 +373,28 @@ export default function QttPage() {
           </label>
           <button onClick={load} disabled={!currentBusiness || loading}
             className='inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'>
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Xem dữ liệu
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            {loading ? 'Đang tải...' : 'Tải lại'}
           </button>
         </div>
       </div>
 
       {fromTkn && (
         <div className='rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm leading-6 text-violet-800'>
-          Bạn đang tiếp tục từ hồ sơ 01/TKN-CNKD. Hãy bấm <strong>Xem dữ liệu</strong>, tạo hồ sơ quyết toán rồi phân bổ toàn bộ số thuế TNCN nộp thừa vào các nghĩa vụ cần bù trừ.
+          Bạn đang tiếp tục từ hồ sơ 01/TKN-CNKD. Hãy tạo hồ sơ quyết toán rồi phân bổ toàn bộ số thuế TNCN nộp thừa vào các nghĩa vụ cần bù trừ.
           {tknBridge?.selectedChoice === 'Offset' && (
             <p className='mt-2 font-semibold text-emerald-700'>Lựa chọn bù trừ từ thông báo doanh thu đã được lưu.</p>
           )}
         </div>
       )}
 
-      {!preview ? (
-        <div className='rounded-xl border border-dashed bg-white p-12 text-center text-gray-500'>Chọn năm rồi bấm “Xem dữ liệu”.</div>
+      {loading && !preview ? (
+        <div className='flex items-center justify-center rounded-xl border border-dashed bg-white p-12 text-gray-500'>
+          <RefreshCw size={18} className='mr-2 animate-spin text-violet-600' />
+          Đang tải dữ liệu quyết toán năm {year}...
+        </div>
+      ) : !preview ? (
+        <div className='rounded-xl border border-dashed bg-white p-12 text-center text-gray-500'>Không có dữ liệu quyết toán năm {year}. Hãy bấm “Tải lại”.</div>
       ) : (
         <>
           {(preview.hardBlockers.length > 0 || preview.warnings.length > 0) && (

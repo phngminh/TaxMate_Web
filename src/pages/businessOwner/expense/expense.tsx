@@ -31,8 +31,13 @@ interface ExpenseRecord {
   imageUrl?: string
 }
 
+const isPurchaseCategory = (category: ExpenseCategory) => {
+  const name = (category.categoryName || '').toLowerCase()
+  return name.includes('nhập hàng') || name.includes('nhap hang')
+}
+
 const supportedExpenseCategories = (categories: ExpenseCategory[]) =>
-  categories.filter((category) => category.s2cGroupCode !== 'Labor')
+  categories.filter((category) => category.s2cGroupCode !== 'Labor' && !isPurchaseCategory(category))
 
 const expenseCategoryOptionLabel = (category: ExpenseCategory) => {
   if (category.s2cGroupCode === 'PurchasedServices') return `${category.categoryName} — Dự kiến vào S2c: Dịch vụ mua ngoài`
@@ -1115,7 +1120,7 @@ export default function Expense() {
                   >
                     <option value='' disabled>-- Chọn loại --</option>
                     {(editingRecord.type === 'expense'
-                      ? expenseCategories.filter((category) => category.s2cGroupCode !== 'Labor' || category.expenseCategoryId === editingRecord.categoryId)
+                      ? expenseCategories.filter((category) => (category.s2cGroupCode !== 'Labor' && !isPurchaseCategory(category)) || category.expenseCategoryId === editingRecord.categoryId)
                       : incomeCategories).map(c => (
                       <option key={editingRecord.type === 'expense' ? (c as ExpenseCategory).expenseCategoryId : (c as IncomeCategory).incomeCategoryId} value={editingRecord.type === 'expense' ? (c as ExpenseCategory).expenseCategoryId : (c as IncomeCategory).incomeCategoryId}>
                         {editingRecord.type === 'expense' ? expenseCategoryOptionLabel(c as ExpenseCategory) : c.categoryName}

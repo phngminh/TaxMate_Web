@@ -22,7 +22,7 @@ interface Props {
 const bracketLabels: Record<RevenueBracket, string> = {
   AtOrBelow1B: 'Không quá 1 tỷ',
   Over1BTo3B: 'Trên 1 đến 3 tỷ',
-  Over3BTo50B: 'Trên 3 đến 50 tỷ'
+  Over3BTo50B: 'Trên 3 tỷ đến 50 tỷ'
 }
 
 function errorMessage(error: unknown) {

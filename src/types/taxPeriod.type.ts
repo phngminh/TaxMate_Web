@@ -46,6 +46,17 @@ export interface TaxPeriodSummary {
   paidDate: string | null
 }
 
+export interface TaxPeriodBusinessBreakdown {
+  businessId: string
+  businessName: string
+  transactionCount: number
+  paidTransactionCount: number
+  unpaidTransactionCount: number
+  missingInvoiceCount: number
+  expenseCount: number
+  revenue: number
+}
+
 export interface TaxPeriodDetail
   extends TaxPeriodSummary {
   salesRevenue: number
@@ -68,6 +79,7 @@ export interface TaxPeriodDetail
   closedAt: string | null
   calculatedAt: string | null
   submittedAt: string | null
+  businessBreakdowns?: TaxPeriodBusinessBreakdown[]
 }
 
 export interface TaxPeriodPreviewWarning {
@@ -99,6 +111,7 @@ export interface TaxPeriodPreview {
   canClose: boolean
 
   warnings: TaxPeriodPreviewWarning[]
+  businessBreakdowns?: TaxPeriodBusinessBreakdown[]
 }
 
 export interface CloseTaxPeriodResponse {
