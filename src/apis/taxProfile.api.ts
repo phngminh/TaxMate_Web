@@ -35,6 +35,7 @@ export async function confirmAnnualRevenueConclusion(
     { params: { year } }
   )
 
+  notifyTaxProfileChanged()
   return response.data.data
 }
 

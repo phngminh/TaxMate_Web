@@ -1,9 +1,31 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Check, Download, Plus, RefreshCw, Save, Send, Trash2 } from 'lucide-react'
+import {
+  AlertTriangle,
+  Calendar,
+  Check,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  ExternalLink,
+  FileText,
+  Package,
+  Plus,
+  RefreshCw,
+  Save,
+  Search,
+  Send,
+  ShieldCheck,
+  Sparkles,
+  Trash2
+} from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from 'react-toastify'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { taxPeriodPreviewPath } from '../../../utils/taxPeriodRoute'
 import {
   calculateQtt,
+  confirmS2cEvidenceReview,
   getQttDeclaration,
   confirmQttDeclaration,
   createQttDeclaration,
@@ -135,7 +157,7 @@ export default function QttPage() {
     })))
   }, [])
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (isManual = false) => {
     if (!currentBusiness) return
     try {
       setLoading(true)
@@ -159,6 +181,9 @@ export default function QttPage() {
         setCalculation(await getQttCalculationPreview(currentBusiness.id, year))
       } else {
         setCalculation(null)
+      }
+      if (isManual) {
+        toast.success(`Đã cập nhật dữ liệu quyết toán năm ${year}!`)
       }
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Không thể tải dữ liệu quyết toán')
@@ -371,10 +396,15 @@ export default function QttPage() {
             <input className='mt-1 block w-28 rounded-lg border px-3 py-2' type='number' value={year}
               onChange={(event) => setYear(Number(event.target.value))} />
           </label>
-          <button onClick={load} disabled={!currentBusiness || loading}
-            className='inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'>
+          <button
+            type='button'
+            onClick={() => load(true)}
+            disabled={!currentBusiness || loading}
+            className='inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-violet-700 active:scale-95 transition-all disabled:opacity-50 cursor-pointer'
+            title='Làm mới dữ liệu từ máy chủ'
+          >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-            {loading ? 'Đang tải...' : 'Tải lại'}
+            <span>{loading ? 'Đang tải lại...' : 'Tải lại'}</span>
           </button>
         </div>
       </div>
@@ -397,13 +427,13 @@ export default function QttPage() {
         <div className='rounded-xl border border-dashed bg-white p-12 text-center text-gray-500'>Không có dữ liệu quyết toán năm {year}. Hãy bấm “Tải lại”.</div>
       ) : (
         <>
-          {(preview.hardBlockers.length > 0 || preview.warnings.length > 0) && (
-            <div className='space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900'>
-              {[...preview.hardBlockers, ...preview.warnings].map((item, index) => (
-                <p key={`${item.code}-${index}`}>• {item.message}</p>
-              ))}
-            </div>
-          )}
+          <QttReadinessPanel
+            businessId={currentBusiness?.id ?? ''}
+            hardBlockers={preview.hardBlockers}
+            warnings={preview.warnings}
+            year={year}
+            onReload={load}
+          />
 
           {calculation && (
             <div className='space-y-4'>
@@ -525,26 +555,43 @@ export default function QttPage() {
             </div>
           )}
 
-          <div className='flex flex-wrap gap-3'>
-            <button onClick={declaration ? load : prepareDeclaration} disabled={working}
-              className='rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'>
-              {declaration ? 'Tải lại hồ sơ' : 'Tính và tạo hồ sơ'}
+          <div className='flex flex-wrap items-center gap-3'>
+            <button
+              type='button'
+              onClick={declaration ? () => void load(true) : prepareDeclaration}
+              disabled={working || (!declaration && !preview?.canClose)}
+              className='rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-bold text-white shadow-md disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all'
+            >
+              {declaration
+                ? 'Tải lại hồ sơ'
+                : !preview?.canClose
+                  ? 'Chưa đủ điều kiện tính quyết toán'
+                  : 'Tính và tạo hồ sơ quyết toán'}
             </button>
+            {!declaration && !preview?.canClose && (
+              <span className='text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg'>
+                {preview?.hardBlockers && preview.hardBlockers.length > 0
+                  ? '⚠️ Cần hoàn tất đóng đủ 4 Quý trong năm trên trang Thuế trước khi tính quyết toán.'
+                  : preview?.warnings.some((w) => w.code === 'EvidenceReviewRequired')
+                    ? '⚠️ Cần vào Sổ S2c và bấm "Xác nhận đã rà soát" chi phí cho các Quý trước khi tính quyết toán.'
+                    : '⚠️ Cần hoàn tất các điều kiện bắt buộc trước khi tính quyết toán.'}
+              </span>
+            )}
             {declaration?.status === 'Draft' && (
               <button onClick={confirm} disabled={working}
-                className='inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'>
+                className='inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-emerald-700 disabled:opacity-50 transition-all'>
                 <Check size={16} /> Xác nhận và khóa
               </button>
             )}
             {declaration && declaration.status !== 'Draft' && (
               <button onClick={download} disabled={exporting}
-                className='inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'>
+                className='inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-violet-700 disabled:opacity-50 transition-all'>
                 <Download size={16} /> Tải Word
               </button>
             )}
             {declaration?.status === 'Generated' && (
               <button onClick={submitDeclaration} disabled={working}
-                className='inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 hover:bg-blue-700 transition-colors'>
+                className='inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-blue-700 disabled:opacity-50 transition-all'>
                 <Send size={16} /> Đánh dấu đã nộp bên ngoài
               </button>
             )}
@@ -685,4 +732,671 @@ function statusLabel(status: QttDeclaration['status']) {
   if (status === 'Draft') return 'Nháp'
   if (status === 'Generated') return 'Đã xác nhận'
   return 'Đã nộp'
+}
+
+function formatIssueMessage(raw: string) {
+  return raw.replace(/(PC|PNK)-([a-f0-9]{4})[a-f0-9]{12}([a-f0-9]{4})/gi, '$1-$2...$3')
+}
+
+function QttReadinessPanel({
+  businessId,
+  hardBlockers,
+  warnings,
+  year,
+  onReload
+}: {
+  businessId: string
+  hardBlockers: QttPreview['hardBlockers']
+  warnings: QttPreview['warnings']
+  year: number
+  onReload: (isManual?: boolean) => Promise<void>
+}) {
+  const { businesses, setCurrentBusiness } = useBusiness()
+  const navigate = useNavigate()
+  const [reviewingAll, setReviewingAll] = useState(false)
+  const [reviewingQuarter, setReviewingQuarter] = useState<number | null>(null)
+  const [activeTab, setActiveTab] = useState<'all' | 'expenses' | 'inventory' | null>(null)
+  const [searchFilter, setSearchFilter] = useState('')
+
+  // 1. Phân loại Hard Blockers
+  const quarterBlockers = useMemo(
+    () => hardBlockers.filter((x) => x.code.startsWith('Quarter')),
+    [hardBlockers]
+  )
+
+  const quarterMap = useMemo(() => {
+    const map: Record<number, typeof quarterBlockers> = { 1: [], 2: [], 3: [], 4: [] }
+    for (const issue of quarterBlockers) {
+      const match = issue.code.match(/Quarter(\d)NotClosed/)
+      if (match) {
+        const q = Number(match[1])
+        if (map[q]) map[q].push(issue)
+      } else {
+        for (let q = 1; q <= 4; q++) {
+          if (issue.message.includes(`Quý ${q}`)) {
+            map[q].push(issue)
+            break
+          }
+        }
+      }
+    }
+    return map
+  }, [quarterBlockers])
+
+  const otherBlockers = useMemo(
+    () => hardBlockers.filter((x) => !x.code.startsWith('Quarter')),
+    [hardBlockers]
+  )
+
+  // 2. Phân loại Warnings (Cảnh báo mềm)
+  const evidenceIssues = useMemo(
+    () => warnings.filter((x) => x.code === 'EvidenceReviewRequired'),
+    [warnings]
+  )
+
+  const expenseIssues = useMemo(
+    () => warnings.filter((x) => x.code === 'MissingExpenseEvidence' || x.code === 'ExpenseNotMappedToS2c'),
+    [warnings]
+  )
+
+  const inventoryIssues = useMemo(
+    () =>
+      warnings.filter(
+        (x) =>
+          x.code === 'MissingInventoryPurchaseEvidence' ||
+          x.code.startsWith('S2d') ||
+          x.code.toLowerCase().includes('inventory')
+      ),
+    [warnings]
+  )
+
+  const otherWarnings = useMemo(
+    () =>
+      warnings.filter(
+        (x) =>
+          x.code !== 'EvidenceReviewRequired' &&
+          x.code !== 'MissingExpenseEvidence' &&
+          x.code !== 'ExpenseNotMappedToS2c' &&
+          x.code !== 'MissingInventoryPurchaseEvidence' &&
+          !x.code.startsWith('S2d') &&
+          !x.code.toLowerCase().includes('inventory')
+      ),
+    [warnings]
+  )
+
+  const allQuartersClosed = quarterBlockers.length === 0
+  const canClose = hardBlockers.length === 0
+  const totalRiskIssues = expenseIssues.length + inventoryIssues.length + otherWarnings.length
+  const allClear = hardBlockers.length === 0 && warnings.length === 0
+
+  const unclosedQuarterCount = useMemo(
+    () => Object.values(quarterMap).filter((v) => v.length > 0).length,
+    [quarterMap]
+  )
+
+  const unreviewedQuarters = useMemo(() => {
+    const set = new Set<number>()
+    evidenceIssues.forEach((issue) => {
+      if (issue.message.includes('01/01/')) set.add(1)
+      else if (issue.message.includes('01/04/')) set.add(2)
+      else if (issue.message.includes('01/07/')) set.add(3)
+      else if (issue.message.includes('01/10/')) set.add(4)
+      else {
+        const match = issue.message.match(/Quý\s*(\d)/i)
+        if (match) set.add(Number(match[1]))
+      }
+    })
+    if (set.size === 0 && evidenceIssues.length > 0) return [1, 2, 3, 4]
+    return Array.from(set).sort((a, b) => a - b)
+  }, [evidenceIssues])
+
+  const goToQuarter = (taxPeriodId: string | null, targetBusinessId: string | null) => {
+    if (targetBusinessId) {
+      const target = businesses.find((b) => b.id === targetBusinessId)
+      if (target) setCurrentBusiness(target)
+    }
+    const path = taxPeriodId
+      ? `${taxPeriodPreviewPath(taxPeriodId)}?returnTo=qtt&year=${year}`
+      : `/business-owner/tax?year=${year}`
+    navigate(path)
+  }
+
+  const handleReviewAll = async () => {
+    if (!businessId) return
+    try {
+      setReviewingAll(true)
+      const quarters = unreviewedQuarters.length > 0 ? unreviewedQuarters : [1, 2, 3, 4]
+      await Promise.all(quarters.map((q) => confirmS2cEvidenceReview(businessId, year, q)))
+      toast.success(`Đã xác nhận rà soát chi phí cả năm ${year} thành công!`)
+      await onReload()
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Không thể xác nhận rà soát')
+    } finally {
+      setReviewingAll(false)
+    }
+  }
+
+  const handleReviewQuarter = async (q: number) => {
+    if (!businessId) return
+    try {
+      setReviewingQuarter(q)
+      await confirmS2cEvidenceReview(businessId, year, q)
+      toast.success(`Đã xác nhận rà soát chi phí Quý ${q}/${year}!`)
+      await onReload()
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || `Không thể xác nhận rà soát Quý ${q}`)
+    } finally {
+      setReviewingQuarter(null)
+    }
+  }
+
+  // Filter list for drawer
+  const drawerIssues = useMemo(() => {
+    const list: Array<{
+      issue: QttPreview['warnings'][number]
+      type: 'expense' | 'inventory' | 'other'
+      typeLabel: string
+      badgeColor: string
+      bookLink: string
+    }> = []
+
+    if (activeTab === 'all' || activeTab === 'expenses') {
+      list.push(
+        ...expenseIssues.map((issue) => ({
+          issue,
+          type: 'expense' as const,
+          typeLabel: 'Chi phí S2c',
+          badgeColor: 'bg-blue-100 text-blue-800 border-blue-200',
+          bookLink: `/business-owner/tax-books/s2c?year=${year}`
+        }))
+      )
+    }
+
+    if (activeTab === 'all' || activeTab === 'inventory') {
+      list.push(
+        ...inventoryIssues.map((issue) => ({
+          issue,
+          type: 'inventory' as const,
+          typeLabel: 'Nhập mua S2d',
+          badgeColor: 'bg-orange-100 text-orange-800 border-orange-200',
+          bookLink: `/business-owner/tax-books/s2c?year=${year}`
+        }))
+      )
+    }
+
+    if (activeTab === 'all') {
+      list.push(
+        ...otherWarnings.map((issue) => ({
+          issue,
+          type: 'other' as const,
+          typeLabel: 'Cảnh báo khác',
+          badgeColor: 'bg-slate-100 text-slate-700 border-slate-200',
+          bookLink: `/business-owner/tax?year=${year}`
+        }))
+      )
+    }
+
+    if (!searchFilter.trim()) return list
+    const q = searchFilter.toLowerCase()
+    return list.filter(
+      (item) =>
+        item.issue.message.toLowerCase().includes(q) ||
+        item.issue.code.toLowerCase().includes(q)
+    )
+  }, [activeTab, expenseIssues, inventoryIssues, otherWarnings, searchFilter, year])
+
+  return (
+    <div className='space-y-4'>
+      {/* ── BENTO 1: HERO STATUS BANNER ── */}
+      {allClear ? (
+        <div className='flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-white to-emerald-50/50 p-5 shadow-xs backdrop-blur-md'>
+          <div className='flex items-center gap-3.5'>
+            <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm ring-4 ring-emerald-100'>
+              <CheckCircle2 className='h-5 w-5' />
+            </div>
+            <div>
+              <div className='flex items-center gap-2'>
+                <h2 className='text-sm font-bold text-emerald-950'>Hồ sơ đầy đủ điều kiện quyết toán năm {year}</h2>
+                <span className='rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800'>
+                  Hoàn tất 4 Quý & Đầy đủ chứng từ
+                </span>
+              </div>
+              <p className='text-xs text-emerald-800/80 mt-0.5'>
+                Tất cả kỳ khai thuế đã chốt, chi phí và giá vốn đều đầy đủ hóa đơn/chứng từ hợp lệ theo Thông tư 88.
+              </p>
+            </div>
+          </div>
+          <Link
+            to={`/business-owner/tax?year=${year}`}
+            className='inline-flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-900 bg-white/80 border border-emerald-200 px-3 py-1.5 rounded-xl shadow-2xs hover:bg-white transition-all'
+          >
+            <span>Trang Thuế</span>
+            <ExternalLink className='h-3 w-3' />
+          </Link>
+        </div>
+      ) : canClose ? (
+        <div className='flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/80 via-white to-emerald-50/40 p-5 shadow-xs backdrop-blur-md'>
+          <div className='flex items-center gap-3.5'>
+            <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm ring-4 ring-emerald-100'>
+              <CheckCircle2 className='h-5 w-5' />
+            </div>
+            <div>
+              <div className='flex items-center gap-2'>
+                <h2 className='text-sm font-bold text-emerald-950'>Đã đủ điều kiện tính quyết toán năm {year}</h2>
+                <span className='inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800'>
+                  <Check className='h-3 w-3 stroke-[3]' /> 4/4 Quý đã đóng
+                </span>
+              </div>
+              <p className='text-xs text-emerald-800/80 mt-0.5'>
+                Hồ sơ đã thỏa mãn điều kiện pháp lý để tính toán số thuế. Bạn có thể bấm <strong>"Tính và tạo hồ sơ quyết toán"</strong> bên dưới.
+              </p>
+            </div>
+          </div>
+          <div className='flex items-center gap-2'>
+            <Link
+              to={`/business-owner/tax-books/s2c?year=${year}`}
+              className='inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition-all'
+            >
+              <FileText className='h-3.5 w-3.5 text-slate-500' />
+              <span>Sổ chi phí S2c</span>
+              <ExternalLink className='h-3 w-3 text-slate-400' />
+            </Link>
+            <Link
+              to={`/business-owner/tax?year=${year}`}
+              className='inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition-all'
+            >
+              <Calendar className='h-3.5 w-3.5 text-slate-500' />
+              <span>Trang Thuế</span>
+              <ExternalLink className='h-3 w-3 text-slate-400' />
+            </Link>
+          </div>
+        </div>
+      ) : (
+        /* BLOCK HARD BLOCKERS: Quý chưa đóng kỳ */
+        <div className='rounded-3xl border border-red-200/90 bg-gradient-to-br from-red-50/80 via-white to-red-50/40 p-5 shadow-xs backdrop-blur-md'>
+          <div className='flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-red-100'>
+            <div className='flex items-center gap-3'>
+              <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-white shadow-xs ring-4 ring-red-100'>
+                <AlertTriangle className='h-5 w-5' />
+              </div>
+              <div>
+                <div className='flex items-center gap-2'>
+                  <h2 className='text-sm font-bold text-slate-900'>Kê khai thuế năm {year}</h2>
+                  <span className='rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-bold text-red-900'>
+                    Còn {unclosedQuarterCount} Quý chưa hoàn tất
+                  </span>
+                </div>
+                <p className='text-xs text-slate-600 mt-0.5'>
+                  Luật Quản lý thuế yêu cầu đóng kỳ đầy đủ 4 Quý của tất cả cơ sở kinh doanh trước khi lập hồ sơ quyết toán năm.
+                </p>
+              </div>
+            </div>
+            <Link
+              to={`/business-owner/tax?year=${year}`}
+              className='inline-flex items-center gap-1 text-xs font-bold text-red-700 hover:text-red-900 bg-white border border-red-200 px-3 py-1.5 rounded-xl shadow-2xs hover:bg-red-50 transition-all'
+            >
+              <span>Tổng quan Thuế</span>
+              <ExternalLink className='h-3 w-3' />
+            </Link>
+          </div>
+
+          {/* 4 Quarter Rows */}
+          <div className='mt-3 space-y-2'>
+            {[1, 2, 3, 4].map((q) => {
+              const issues = quarterMap[q]
+              const isClosed = issues.length === 0
+
+              if (isClosed) {
+                return (
+                  <div key={q} className='flex items-center gap-3 rounded-2xl bg-emerald-50/60 border border-emerald-100 px-4 py-2.5'>
+                    <Check className='h-4 w-4 text-emerald-600 shrink-0 stroke-[2.5]' />
+                    <span className='text-sm font-semibold text-emerald-950'>Quý {q}</span>
+                    <span className='ml-auto text-xs font-semibold text-emerald-700 bg-emerald-100/80 px-2.5 py-0.5 rounded-full'>
+                      Đã đóng kỳ
+                    </span>
+                  </div>
+                )
+              }
+
+              return (
+                <div key={q} className='rounded-2xl border border-red-200 bg-white p-3 shadow-2xs'>
+                  <div className='flex items-center justify-between mb-2'>
+                    <div className='flex items-center gap-2'>
+                      <span className='h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0' />
+                      <span className='text-sm font-bold text-slate-900'>Quý {q}</span>
+                    </div>
+                    <span className='text-xs font-bold text-red-700 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full'>
+                      Chưa đóng kỳ
+                    </span>
+                  </div>
+                  <div className='space-y-1.5 pl-4 border-l-2 border-red-100 ml-1'>
+                    {issues.map((issue, idx) => {
+                      const bizName = issue.message.replace(`Quý ${q} — `, '')
+                      return (
+                        <div
+                          key={issue.sourceId ?? issue.businessId ?? idx}
+                          className='flex items-center justify-between gap-3'
+                        >
+                          <span className='text-xs text-slate-700 truncate flex-1'>{bizName}</span>
+                          <button
+                            type='button'
+                            onClick={() => goToQuarter(issue.sourceId ?? null, issue.businessId ?? null)}
+                            className='shrink-0 inline-flex items-center gap-1 rounded-xl bg-red-600 px-3 py-1 text-xs font-bold text-white hover:bg-red-700 active:scale-95 transition-all shadow-2xs cursor-pointer'
+                          >
+                            <span>Chốt Quý {q}</span>
+                            <ExternalLink className='h-3 w-3' />
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ── BENTO 2: S2C EVIDENCE REVIEW (Inline 1-click action) ── */}
+      {evidenceIssues.length > 0 && (
+        <div className='flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-amber-200 bg-gradient-to-r from-amber-50/90 via-white to-amber-50/40 p-5 shadow-xs'>
+          <div className='flex items-center gap-3'>
+            <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-xs'>
+              <Sparkles className='h-5 w-5' />
+            </div>
+            <div>
+              <div className='flex items-center gap-2'>
+                <h3 className='text-sm font-bold text-amber-950'>Xác nhận rà soát chi phí S2c</h3>
+                <span className='rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-bold text-amber-900'>
+                  Bắt buộc (TT 88)
+                </span>
+              </div>
+              <p className='text-xs text-amber-800 mt-0.5'>
+                {evidenceIssues.length} kỳ chi phí chưa xác nhận rà soát. Bạn có thể xác nhận ngay tại đây mà không cần rời trang.
+              </p>
+            </div>
+          </div>
+
+          <div className='flex items-center gap-2'>
+            <Link
+              to={`/business-owner/tax-books/s2c?year=${year}`}
+              className='inline-flex items-center gap-1 rounded-xl border border-amber-300 bg-white px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-50 transition-all'
+            >
+              <span>Mở S2c</span>
+              <ExternalLink className='h-3 w-3 text-amber-700' />
+            </Link>
+            <button
+              type='button'
+              disabled={reviewingAll}
+              onClick={handleReviewAll}
+              className='inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700 shadow-sm active:scale-95 disabled:opacity-50 transition-all cursor-pointer'
+            >
+              <Sparkles className={`h-3.5 w-3.5 ${reviewingAll ? 'animate-spin' : ''}`} />
+              <span>{reviewingAll ? 'Đang xác nhận...' : '✨ Xác nhận cả 4 Quý'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── BENTO 3: LỖI DỮ LIỆU CHẶN CỨNG (Cross-book errors) ── */}
+      {otherBlockers.length > 0 && (
+        <div className='rounded-3xl border border-red-200 bg-red-50/50 p-5 space-y-2'>
+          <p className='text-xs font-bold uppercase tracking-wider text-red-800'>Lỗi dữ liệu cần xử lý</p>
+          <div className='space-y-1.5'>
+            {otherBlockers.map((b, i) => (
+              <div key={i} className='flex items-start gap-2 text-xs text-red-800'>
+                <span className='mt-1 h-1.5 w-1.5 rounded-full bg-red-500 shrink-0' />
+                <span>{formatIssueMessage(b.message)}</span>
+              </div>
+            ))}
+          </div>
+          <div className='pt-2 flex items-center gap-2'>
+            <Link
+              to={`/business-owner/tax-books/s2c?year=${year}`}
+              className='inline-flex items-center gap-1 text-xs font-bold text-red-700 hover:text-red-900 underline underline-offset-2'
+            >
+              Mở Sổ chi phí S2c <ExternalLink className='h-3 w-3' />
+            </Link>
+          </div>
+        </div>
+      )}
+
+      {/* ── BENTO 4: RÀ SOÁT CHỨNG TỪ & RỦI RO THANH KIỂM TRA (APPLE BENTO CARDS + DRAWER) ── */}
+      {totalRiskIssues > 0 && (
+        <div className='rounded-3xl border border-slate-200/90 bg-gradient-to-br from-slate-50/70 via-white to-slate-50/30 p-5 shadow-xs'>
+          {/* Header */}
+          <div className='flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-slate-100'>
+            <div>
+              <div className='flex items-center gap-2'>
+                <h3 className='text-sm font-bold text-slate-900'>Rà soát chứng từ & Rủi ro thanh kiểm tra</h3>
+                <span className='rounded-full bg-slate-100 border border-slate-200 px-2.5 py-0.5 text-xs font-bold text-slate-700'>
+                  {totalRiskIssues} mục cần lưu ý
+                </span>
+              </div>
+              <p className='text-xs text-slate-500 mt-0.5'>
+                Các khoản chi hoặc phiếu nhập thiếu hóa đơn/ảnh chứng từ <strong>vẫn được tạm tính thuế</strong>, nhưng có rủi ro bị cơ quan thuế loại trừ khi thanh tra.
+              </p>
+            </div>
+            <Link
+              to={`/business-owner/tax-books/s2c?year=${year}`}
+              className='inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 shadow-2xs transition-all'
+            >
+              <FileText className='h-3.5 w-3.5 text-slate-500' />
+              <span>Sổ chi phí S2c</span>
+              <ExternalLink className='h-3 w-3 text-slate-400' />
+            </Link>
+          </div>
+
+          {/* 2 Bento Cards */}
+          <div className='mt-4 grid grid-cols-1 gap-3.5 sm:grid-cols-2'>
+            {/* Card 1: Chi phí hoạt động S2c */}
+            <div className='flex flex-col justify-between rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/40 via-white to-white p-4 shadow-2xs hover:border-blue-200 transition-all'>
+              <div>
+                <div className='flex items-center justify-between'>
+                  <div className='flex items-center gap-2.5'>
+                    <div className='flex h-8 w-8 items-center justify-center rounded-xl bg-blue-100 text-blue-800'>
+                      <FileText className='h-4 w-4' />
+                    </div>
+                    <div>
+                      <h4 className='text-xs font-bold uppercase tracking-wider text-slate-800'>
+                        Chi phí hoạt động (S2c)
+                      </h4>
+                      <p className='text-[11px] text-slate-500'>Dịch vụ, điện nước, mặt bằng...</p>
+                    </div>
+                  </div>
+                  <span className='rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-900'>
+                    {expenseIssues.length} khoản chi
+                  </span>
+                </div>
+                <p className='mt-2.5 text-xs text-slate-600 leading-relaxed'>
+                  Các khoản chi chưa đính kèm ảnh phiếu chi/hóa đơn dịch vụ. Cơ quan thuế có thể loại khỏi chi phí hợp lý khi thanh tra nếu không có chứng từ chứng minh.
+                </p>
+              </div>
+
+              <div className='mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between'>
+                <button
+                  type='button'
+                  onClick={() => setActiveTab(activeTab === 'expenses' ? null : 'expenses')}
+                  className='inline-flex items-center gap-1 text-xs font-bold text-blue-800 hover:text-blue-950 transition-colors cursor-pointer'
+                >
+                  <span>{activeTab === 'expenses' ? 'Thu gọn' : `Xem danh sách (${expenseIssues.length})`}</span>
+                  {activeTab === 'expenses' ? <ChevronUp className='h-3.5 w-3.5' /> : <ChevronDown className='h-3.5 w-3.5' />}
+                </button>
+                <Link
+                  to={`/business-owner/tax-books/s2c?year=${year}`}
+                  className='inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs hover:bg-slate-50'
+                >
+                  <span>Bổ sung trên S2c</span>
+                  <ExternalLink className='h-3 w-3' />
+                </Link>
+              </div>
+            </div>
+
+            {/* Card 2: Mua nguyên vật liệu S2d */}
+            <div className='flex flex-col justify-between rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50/40 via-white to-white p-4 shadow-2xs hover:border-orange-200 transition-all'>
+              <div>
+                <div className='flex items-center justify-between'>
+                  <div className='flex items-center gap-2.5'>
+                    <div className='flex h-8 w-8 items-center justify-center rounded-xl bg-orange-100 text-orange-800'>
+                      <Package className='h-4 w-4' />
+                    </div>
+                    <div>
+                      <h4 className='text-xs font-bold uppercase tracking-wider text-slate-800'>
+                        Mua nguyên vật liệu (S2d)
+                      </h4>
+                      <p className='text-[11px] text-slate-500'>Giá vốn hàng nhập xuất dùng</p>
+                    </div>
+                  </div>
+                  <span className='rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-bold text-orange-900'>
+                    {inventoryIssues.length} phiếu nhập
+                  </span>
+                </div>
+                <p className='mt-2.5 text-xs text-slate-600 leading-relaxed'>
+                  Các phiếu nhập hàng tính giá vốn xuất dùng chưa đính kèm hóa đơn mua hàng hợp lệ trên Sổ S2c.
+                </p>
+              </div>
+
+              <div className='mt-3.5 pt-3 border-t border-slate-100 flex items-center justify-between'>
+                <button
+                  type='button'
+                  onClick={() => setActiveTab(activeTab === 'inventory' ? null : 'inventory')}
+                  className='inline-flex items-center gap-1 text-xs font-bold text-orange-800 hover:text-orange-950 transition-colors cursor-pointer'
+                >
+                  <span>{activeTab === 'inventory' ? 'Thu gọn' : `Xem danh sách (${inventoryIssues.length})`}</span>
+                  {activeTab === 'inventory' ? <ChevronUp className='h-3.5 w-3.5' /> : <ChevronDown className='h-3.5 w-3.5' />}
+                </button>
+                <Link
+                  to={`/business-owner/tax-books/s2c?year=${year}`}
+                  className='inline-flex items-center gap-1 text-xs font-bold text-slate-600 hover:text-slate-900 bg-white border border-slate-200 px-2.5 py-1 rounded-lg shadow-2xs hover:bg-slate-50'
+                >
+                  <span>Bổ sung trên S2c</span>
+                  <ExternalLink className='h-3 w-3' />
+                </Link>
+              </div>
+            </div>
+          </div>
+
+          {/* Interactive Animated Drawer */}
+          <AnimatePresence>
+            {activeTab && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                className='mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm'
+              >
+                {/* Segmented Controls & Search Bar */}
+                <div className='flex flex-wrap items-center justify-between gap-2.5 border-b border-slate-100 pb-3 mb-3'>
+                  {/* Tabs */}
+                  <div className='inline-flex items-center rounded-xl bg-slate-100 p-1'>
+                    <button
+                      type='button'
+                      onClick={() => setActiveTab('all')}
+                      className={`rounded-lg px-3 py-1 text-xs font-bold transition-all cursor-pointer ${
+                        activeTab === 'all'
+                          ? 'bg-white text-slate-900 shadow-2xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      Tất cả ({totalRiskIssues})
+                    </button>
+                    <button
+                      type='button'
+                      onClick={() => setActiveTab('expenses')}
+                      className={`rounded-lg px-3 py-1 text-xs font-bold transition-all cursor-pointer ${
+                        activeTab === 'expenses'
+                          ? 'bg-white text-blue-900 shadow-2xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      Chi phí S2c ({expenseIssues.length})
+                    </button>
+                    <button
+                      type='button'
+                      onClick={() => setActiveTab('inventory')}
+                      className={`rounded-lg px-3 py-1 text-xs font-bold transition-all cursor-pointer ${
+                        activeTab === 'inventory'
+                          ? 'bg-white text-orange-900 shadow-2xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      Nhập mua S2d ({inventoryIssues.length})
+                    </button>
+                  </div>
+
+                  {/* Search & Close */}
+                  <div className='flex items-center gap-2'>
+                    <div className='relative'>
+                      <Search className='absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400' />
+                      <input
+                        type='text'
+                        value={searchFilter}
+                        onChange={(e) => setSearchFilter(e.target.value)}
+                        placeholder='Lọc mã PC-, PNK-...'
+                        className='h-8 w-44 rounded-lg border border-slate-200 bg-slate-50/50 pl-8 pr-2.5 text-xs text-slate-800 placeholder-slate-400 focus:border-violet-500 focus:bg-white focus:outline-none'
+                      />
+                    </div>
+                    <button
+                      type='button'
+                      onClick={() => setActiveTab(null)}
+                      className='rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-400 hover:bg-slate-100 hover:text-slate-700 cursor-pointer'
+                    >
+                      Đóng ✕
+                    </button>
+                  </div>
+                </div>
+
+                {/* List Items with Direct CTA Links */}
+                <div className='max-h-72 space-y-2 overflow-y-auto pr-1'>
+                  {drawerIssues.length === 0 ? (
+                    <div className='py-6 text-center text-xs text-slate-400'>
+                      Không tìm thấy mục nào phù hợp với từ khóa.
+                    </div>
+                  ) : (
+                    drawerIssues.map((item, index) => (
+                      <div
+                        key={`${item.issue.code}-${item.issue.sourceId ?? index}`}
+                        className='flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 text-xs hover:bg-slate-100/70 transition-colors'
+                      >
+                        <div className='flex items-center gap-2.5 min-w-0 flex-1'>
+                          <span
+                            className={`shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-bold ${item.badgeColor}`}
+                          >
+                            {item.typeLabel}
+                          </span>
+                          <span className='text-slate-800 font-medium truncate'>
+                            {formatIssueMessage(item.issue.message)}
+                          </span>
+                        </div>
+                        <Link
+                          to={item.bookLink}
+                          className='shrink-0 inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-slate-700 border border-slate-200 shadow-2xs hover:bg-slate-50 hover:text-slate-900 transition-all'
+                        >
+                          <span>Bổ sung trên S2c</span>
+                          <ExternalLink className='h-3 w-3 text-slate-400' />
+                        </Link>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Drawer Footer Tip */}
+                <div className='mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500'>
+                  <span>💡 Bấm "Bổ sung trên S2c" để chuyển sang sổ kế toán và tải ảnh chứng từ hóa đơn lên hệ thống.</span>
+                  <Link
+                    to={`/business-owner/tax-books/s2c?year=${year}`}
+                    className='font-semibold text-violet-700 hover:text-violet-900 inline-flex items-center gap-1'
+                  >
+                    <span>Mở toàn bộ Sổ S2c</span>
+                    <ExternalLink className='h-3 w-3' />
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+    </div>
+  )
 }

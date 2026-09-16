@@ -8,6 +8,7 @@ import {
   ImagePlus,
   Loader2,
   RefreshCw,
+  Sparkles,
   UploadCloud,
   X,
 } from 'lucide-react'
@@ -268,16 +269,32 @@ export default function S2cBookPage() {
     }
   }
 
+  const [confirmingAll, setConfirmingAll] = useState(false)
+
   const confirmReview = async () => {
     if (!currentBusiness || !book) return
     try {
       setConfirmingReview(true)
       setBook(await confirmS2cEvidenceReview(currentBusiness.id, year, quarter))
-      toast.success('Đã lưu xác nhận rà soát chứng từ')
+      toast.success(`Đã lưu xác nhận rà soát chứng từ Quý ${quarter}`)
     } catch {
       toast.error('Không thể lưu xác nhận rà soát')
     } finally {
       setConfirmingReview(false)
+    }
+  }
+
+  const confirmAllQuarters = async () => {
+    if (!currentBusiness) return
+    try {
+      setConfirmingAll(true)
+      await Promise.all([1, 2, 3, 4].map((q) => confirmS2cEvidenceReview(currentBusiness.id, year, q)))
+      setBook(await getS2cPreview(currentBusiness.id, year, quarter))
+      toast.success(`Đã xác nhận rà soát chi phí cả năm ${year} (4 Quý) thành công!`)
+    } catch {
+      toast.error('Không thể lưu xác nhận rà soát cả năm')
+    } finally {
+      setConfirmingAll(false)
     }
   }
 
@@ -304,12 +321,25 @@ export default function S2cBookPage() {
             <input className='mt-1 block w-28 rounded-lg border px-3 py-2' type='number' value={year}
               onChange={(event) => setYear(Number(event.target.value))} />
           </label>
-          <label className='text-sm text-gray-600'>Quý
-            <select className='mt-1 block w-24 rounded-lg border px-3 py-2' value={quarter}
-              onChange={(event) => setQuarter(Number(event.target.value))}>
-              {[1, 2, 3, 4].map((value) => <option key={value} value={value}>Quý {value}</option>)}
-            </select>
-          </label>
+          <div>
+            <span className='text-xs font-bold uppercase tracking-wider text-gray-500 mb-1 block'>Kỳ kê khai Quý</span>
+            <div className='flex items-center gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200/80'>
+              {[1, 2, 3, 4].map((q) => (
+                <button
+                  key={q}
+                  type='button'
+                  onClick={() => setQuarter(q)}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                    quarter === q
+                      ? 'bg-white text-slate-900 shadow-xs ring-1 ring-slate-900/10'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Quý {q}
+                </button>
+              ))}
+            </div>
+          </div>
           <button onClick={load} disabled={!currentBusiness || loading}
             className='flex items-center gap-2 rounded-lg bg-[#9b0000] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 cursor-pointer'>
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
@@ -317,9 +347,15 @@ export default function S2cBookPage() {
           </button>
           <button onClick={confirmReview}
             disabled={!book || hasHardBlocker || confirmingReview}
-            className='flex items-center gap-2 rounded-lg border border-emerald-700 px-4 py-2.5 text-sm font-semibold text-emerald-700 disabled:opacity-50 cursor-pointer'>
+            className='flex items-center gap-2 rounded-lg border border-emerald-700 px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50 cursor-pointer transition-all'>
             <Check size={16} />
-            {confirmingReview ? 'Đang lưu...' : 'Xác nhận đã rà soát'}
+            {confirmingReview ? 'Đang lưu...' : `Xác nhận Quý ${quarter}`}
+          </button>
+          <button onClick={confirmAllQuarters}
+            disabled={!book || confirmingAll}
+            className='flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50 cursor-pointer transition-all shadow-xs'>
+            <Sparkles size={16} className={confirmingAll ? 'animate-spin' : ''} />
+            {confirmingAll ? 'Đang duyệt cả năm...' : '✨ Xác nhận cả 4 Quý'}
           </button>
           <button onClick={download}
             disabled={!book || hasHardBlocker || (hasEvidenceWarnings && !book.evidenceReviewedAt) || exporting}
