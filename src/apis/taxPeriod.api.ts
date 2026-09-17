@@ -92,3 +92,13 @@ export async function calculateTaxPeriod(
 
   return response.data.data
 }
+
+export async function cancelTaxPeriodDrafts(
+  taxPeriodId: string
+): Promise<number> {
+  const response = await http.post<ApiResponse<number>>(
+    `/tax-periods/${taxPeriodId}/cancel-drafts`
+  )
+
+  return response.data.data
+}
