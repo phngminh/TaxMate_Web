@@ -170,7 +170,7 @@ export interface CalculateTaxPeriodResponse {
   totalExemptionAmount: number
   totalTaxPayableAmount: number
 
-  status: 'Calculated'
+  status: string
   calculatedAt: string
 
   lines: TaxCalculationLine[]

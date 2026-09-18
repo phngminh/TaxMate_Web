@@ -92,6 +92,14 @@ export const exportQttDeclaration = async (businessId: string, declarationId: st
   return response.data
 }
 
+export const exportQttPreview = async (businessId: string, year: number) => {
+  const response = await http.get<Blob>(
+    `/businesses/${businessId}/tax-books/qtt/export-preview`,
+    { params: { year }, responseType: 'blob' }
+  )
+  return response.data
+}
+
 export const exportS1a = async (businessId: string, year: number, month?: number) => {
   const params: Record<string, any> = { year }
   if (month) {

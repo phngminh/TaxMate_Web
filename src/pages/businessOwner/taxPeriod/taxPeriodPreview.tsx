@@ -1,11 +1,13 @@
 import {
   AlertTriangle,
   ArrowLeft,
+  Calculator,
   CheckCircle2,
   CircleAlert,
   ExternalLink,
   LockKeyhole,
-  ReceiptText
+  ReceiptText,
+  Trash2
 } from 'lucide-react'
 import {
   useEffect,
@@ -18,19 +20,23 @@ import {
 import { toast } from 'react-toastify'
 
 import {
+  cancelTaxPeriodDrafts,
   closeTaxPeriod,
   getTaxPeriodById,
+  getTaxPeriodCalculationPreview,
   getTaxPeriodPreview
 } from '../../../apis/taxPeriod.api'
 
 import path from '../../../constants/path'
 
 import type {
+  CalculateTaxPeriodResponse,
   TaxPeriodDetail,
   TaxPeriodPreview
 } from '../../../types/taxPeriod.type'
 
 import {
+  taxPeriodCalculationPath,
   taxPeriodDetailPath
 } from '../../../utils/taxPeriodRoute'
 
@@ -86,6 +92,7 @@ function ConfirmDialog({
   description,
   confirmLabel,
   isProcessing,
+  confirmVariant = 'danger',
   onConfirm,
   onCancel
 }: {
@@ -94,6 +101,7 @@ function ConfirmDialog({
   description: string
   confirmLabel: string
   isProcessing?: boolean
+  confirmVariant?: 'danger' | 'warning'
   onConfirm: () => void
   onCancel: () => void
 }) {
@@ -112,7 +120,7 @@ function ConfirmDialog({
         className='w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl'
       >
         <div className='flex items-start gap-4'>
-          <div className='flex size-11 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-600'>
+          <div className={`flex size-11 shrink-0 items-center justify-center rounded-full ${confirmVariant === 'warning' ? 'bg-amber-50 text-amber-600' : 'bg-red-50 text-red-600'}`}>
             <AlertTriangle size={22} />
           </div>
 
@@ -147,7 +155,7 @@ function ConfirmDialog({
             type='button'
             disabled={isProcessing}
             onClick={onConfirm}
-            className='h-11 min-w-32 rounded-xl bg-red-600 px-5 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300'
+            className={`h-11 min-w-32 rounded-xl px-5 text-sm font-bold text-white transition disabled:cursor-not-allowed disabled:bg-gray-300 ${confirmVariant === 'warning' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-red-600 hover:bg-red-700'}`}
           >
             {isProcessing ? 'Đang xử lý...' : confirmLabel}
           </button>
@@ -181,6 +189,11 @@ export default function TaxPeriodPreviewPage() {
     )
 
   const [
+    calcPreview,
+    setCalcPreview
+  ] = useState<CalculateTaxPeriodResponse | null>(null)
+
+  const [
     isLoading,
     setIsLoading
   ] = useState(true)
@@ -200,6 +213,16 @@ export default function TaxPeriodPreviewPage() {
     setErrorMessage
   ] = useState<string | null>(null)
 
+  const [
+    isCancellingDrafts,
+    setIsCancellingDrafts
+  ] = useState(false)
+
+  const [
+    isCancelDraftsConfirmOpen,
+    setIsCancelDraftsConfirmOpen
+  ] = useState(false)
+
   useEffect(() => {
     let active = true
 
@@ -218,20 +241,25 @@ export default function TaxPeriodPreviewPage() {
 
         const [
           periodResult,
-          previewResult
+          previewResult,
+          calcResult
         ] = await Promise.all([
           getTaxPeriodById(
             taxPeriodId
           ),
           getTaxPeriodPreview(
             taxPeriodId
-          )
+          ),
+          getTaxPeriodCalculationPreview(
+            taxPeriodId
+          ).catch(() => null)
         ])
 
         if (!active) return
 
         setTaxPeriod(periodResult)
         setPreview(previewResult)
+        setCalcPreview(calcResult)
       } catch (error) {
         console.error(
           '[TaxPeriodPreview] Failed:',
@@ -327,6 +355,31 @@ export default function TaxPeriodPreviewPage() {
       )
     } finally {
       setIsClosing(false)
+    }
+  }
+
+  async function handleConfirmCancelDrafts() {
+    if (!taxPeriodId) return
+
+    try {
+      setIsCancellingDrafts(true)
+      const count = await cancelTaxPeriodDrafts(taxPeriodId)
+      toast.success(`Đã hủy thành công ${count} đơn hàng nháp trong kỳ.`)
+      setIsCancelDraftsConfirmOpen(false)
+
+      const [periodResult, previewResult] = await Promise.all([
+        getTaxPeriodById(taxPeriodId),
+        getTaxPeriodPreview(taxPeriodId)
+      ])
+      setTaxPeriod(periodResult)
+      setPreview(previewResult)
+    } catch (error: any) {
+      console.error('[TaxPeriodPreview] Cancel drafts failed:', error)
+      toast.error(
+        error?.response?.data?.message || 'Không thể hủy các đơn hàng nháp.'
+      )
+    } finally {
+      setIsCancellingDrafts(false)
     }
   }
 
@@ -497,6 +550,75 @@ export default function TaxPeriodPreviewPage() {
           </div>
         </div>
 
+        {calcPreview && (
+          <div className='mt-6 rounded-2xl bg-white p-6 shadow-sm border border-slate-100'>
+            <div className='flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4'>
+              <div className='flex items-center gap-3'>
+                <div className='flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700'>
+                  <ReceiptText className='h-5 w-5' />
+                </div>
+                <div>
+                  <h2 className='text-lg font-black text-slate-900'>
+                    Ước tính thuế phải nộp (Tạm tính)
+                  </h2>
+                  <p className='text-xs text-slate-500'>
+                    Dự kiến số thuế GTGT và TNCN phải nộp dựa trên các giao dịch hoàn tất
+                  </p>
+                </div>
+              </div>
+              <div className='flex flex-wrap items-center gap-2.5'>
+                <span className='rounded-full bg-violet-50 border border-violet-200 px-3 py-1 text-xs font-bold text-violet-700'>
+                  {calcPreview.status === 'Preview' ? 'Số liệu ước tính (Kỳ đang mở)' : 'Đã chốt tính thuế'}
+                </span>
+                <button
+                  type='button'
+                  onClick={() => navigate(`${taxPeriodCalculationPath(taxPeriodId!)}?mode=preview`)}
+                  className='inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-white px-2.5 py-1 text-xs font-bold text-violet-700 hover:bg-violet-50 transition'
+                >
+                  <Calculator size={14} /> Chi tiết bảng tính thuế →
+                </button>
+              </div>
+            </div>
+
+            <div className='mt-5 grid gap-4 sm:grid-cols-3'>
+              <div className='rounded-xl bg-slate-50 p-4 border border-slate-100'>
+                <span className='text-xs font-semibold text-slate-500'>Thuế GTGT tạm tính</span>
+                <p className='mt-1 text-xl font-black text-slate-900'>{formatMoney(calcPreview.totalVatTaxAmount)}</p>
+              </div>
+              <div className='rounded-xl bg-slate-50 p-4 border border-slate-100'>
+                <span className='text-xs font-semibold text-slate-500'>Thuế TNCN tạm tính</span>
+                <p className='mt-1 text-xl font-black text-slate-900'>{formatMoney(calcPreview.totalPersonalIncomeTaxAmount)}</p>
+              </div>
+              <div className='rounded-xl bg-violet-50/70 p-4 border border-violet-100'>
+                <span className='text-xs font-bold text-violet-700'>Tổng thuế tạm tính phải nộp</span>
+                <p className='mt-1 text-xl font-black text-violet-900'>{formatMoney(calcPreview.totalTaxPayableAmount)}</p>
+              </div>
+            </div>
+
+            {calcPreview.lines.length > 0 && (
+              <div className='mt-5 overflow-hidden rounded-xl border border-slate-100'>
+                <div className='bg-slate-50 px-4 py-2 text-xs font-bold text-slate-600 uppercase tracking-wider'>
+                  Chi tiết thuế theo ngành nghề kinh doanh
+                </div>
+                <div className='divide-y divide-slate-100'>
+                  {calcPreview.lines.map((line) => (
+                    <div key={line.id} className='flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm'>
+                      <div>
+                        <p className='font-bold text-slate-900'>{line.businessActivityName}</p>
+                        <p className='text-xs text-slate-400'>Mã: {line.businessActivityCode} · Doanh thu: {formatMoney(line.totalRevenue)}</p>
+                      </div>
+                      <div className='text-right'>
+                        <p className='font-bold text-slate-900'>Thuế: {formatMoney(line.vatTaxAmount + line.personalIncomeTaxAmount)}</p>
+                        <p className='text-xs text-slate-400'>GTGT {line.vatTaxRate}%: {formatMoney(line.vatTaxAmount)} · TNCN {line.personalIncomeTaxRate}%: {formatMoney(line.personalIncomeTaxAmount)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className='mt-6 rounded-2xl bg-white p-6 shadow-sm'>
           <div className='flex items-center gap-3'>
             {hasWarning ? (
@@ -569,11 +691,11 @@ export default function TaxPeriodPreviewPage() {
               label='Chưa thanh toán'
               value={preview.unpaidTransactionCount}
               warning={preview.unpaidTransactionCount > 0}
-              danger={preview.unpaidTransactionCount > 0}
               actionText={preview.unpaidTransactionCount > 0 ? 'Xử lý ngay' : undefined}
               onClick={() => {
                 const p = new URLSearchParams()
                 p.set('status', 'Unpaid')
+                if (taxPeriodId) p.set('taxPeriodId', taxPeriodId)
                 if (taxPeriod?.periodStartDate) p.set('startDate', taxPeriod.periodStartDate)
                 if (taxPeriod?.periodEndDate) p.set('endDate', taxPeriod.periodEndDate)
                 navigate(`/business-owner/orders?${p.toString()}`)
@@ -587,6 +709,7 @@ export default function TaxPeriodPreviewPage() {
                   const p = new URLSearchParams()
                   p.set('businessId', b.businessId)
                   p.set('status', 'Unpaid')
+                  if (taxPeriodId) p.set('taxPeriodId', taxPeriodId)
                   if (taxPeriod?.periodStartDate) p.set('startDate', taxPeriod.periodStartDate)
                   if (taxPeriod?.periodEndDate) p.set('endDate', taxPeriod.periodEndDate)
                   navigate(`/business-owner/orders?${p.toString()}`)
@@ -611,7 +734,6 @@ export default function TaxPeriodPreviewPage() {
               label='Chưa xuất HĐĐT'
               value={preview.missingInvoiceCount}
               warning={preview.missingInvoiceCount > 0}
-              danger={preview.missingInvoiceCount > 0}
               actionText={preview.missingInvoiceCount > 0 ? 'Xuất HĐ ngay' : undefined}
               onClick={() => {
                 const p = new URLSearchParams()
@@ -648,16 +770,30 @@ export default function TaxPeriodPreviewPage() {
                     key={
                       warning.code
                     }
-                    className='flex gap-2 text-sm text-amber-800'
+                    className='flex flex-wrap items-center justify-between gap-2 text-sm text-amber-800'
                   >
-                    <AlertTriangle
-                      size={18}
-                      className='mt-0.5 shrink-0'
-                    />
+                    <div className='flex items-center gap-2'>
+                      <AlertTriangle
+                        size={18}
+                        className='shrink-0'
+                      />
 
-                    <span>
-                      {warning.message}
-                    </span>
+                      <span>
+                        {warning.message}
+                      </span>
+                    </div>
+
+                    {warning.code === 'UNPAID_TRANSACTIONS' && preview.unpaidTransactionCount > 0 && (
+                      <button
+                        type='button'
+                        disabled={isCancellingDrafts}
+                        onClick={() => setIsCancelDraftsConfirmOpen(true)}
+                        className='inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-amber-600 transition cursor-pointer disabled:opacity-50 shrink-0'
+                      >
+                        <Trash2 size={13} />
+                        {isCancellingDrafts ? 'Đang hủy...' : `Hủy nhanh ${preview.unpaidTransactionCount} đơn nháp`}
+                      </button>
+                    )}
                   </div>
                 )
               )}
@@ -690,6 +826,19 @@ export default function TaxPeriodPreviewPage() {
             className='h-12 rounded-xl border border-red-600 bg-white px-6 text-sm font-bold text-red-600 hover:bg-red-50'
           >
             Xem / sửa giao dịch
+          </button>
+
+          <button
+            type='button'
+            onClick={() =>
+              navigate(
+                `${taxPeriodCalculationPath(taxPeriodId!)}?mode=preview`
+              )
+            }
+            className='h-12 rounded-xl border border-violet-600 bg-violet-50 px-5 text-sm font-bold text-violet-700 hover:bg-violet-100 flex items-center gap-2 transition'
+          >
+            <Calculator size={18} />
+            Xem trước bước tính thuế
           </button>
 
           <button
@@ -734,6 +883,19 @@ export default function TaxPeriodPreviewPage() {
         }
         onConfirm={() => {
           void confirmClosePeriod()
+        }}
+      />
+
+      <ConfirmDialog
+        open={isCancelDraftsConfirmOpen}
+        title='Hủy toàn bộ đơn nháp trong kỳ?'
+        description={`Bạn có chắc chắn muốn hủy tất cả ${preview?.unpaidTransactionCount || 0} đơn hàng nháp dở dang của tất cả các cơ sở trong kỳ thuế này không? Thao tác này sẽ chuyển các đơn nháp sang trạng thái "Đã hủy" để đưa số chưa thanh toán về 0.`}
+        confirmLabel='Xác nhận hủy đơn nháp'
+        confirmVariant='warning'
+        isProcessing={isCancellingDrafts}
+        onCancel={() => setIsCancelDraftsConfirmOpen(false)}
+        onConfirm={() => {
+          void handleConfirmCancelDrafts()
         }}
       />
     </div>
@@ -828,9 +990,11 @@ function CountCard({
                 className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold transition select-none ${
                   isItemZero
                     ? 'bg-gray-50/90 text-gray-400 border border-gray-200/70 cursor-default'
-                    : b.count > 0 && (danger || warning)
+                    : b.count > 0 && danger
                       ? 'bg-red-100 text-red-800 hover:bg-red-200 hover:scale-105 cursor-pointer'
-                      : 'bg-white text-gray-700 hover:bg-gray-200 border border-gray-200 hover:scale-105 cursor-pointer'
+                      : b.count > 0 && warning
+                        ? 'bg-amber-100 text-amber-800 hover:bg-amber-200 hover:scale-105 cursor-pointer'
+                        : 'bg-white text-gray-700 hover:bg-gray-200 border border-gray-200 hover:scale-105 cursor-pointer'
                 }`}
                 title={isItemZero ? 'Không có đơn nào' : `Xem đơn của ${b.businessName}`}
               >

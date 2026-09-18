@@ -19,6 +19,16 @@ export async function getTknTaxPeriodPreview(
   return response.data.data
 }
 
+export async function getTknTaxPeriodCalculationPreview(
+  taxPeriodId: string
+): Promise<TknTaxCalculationResponse> {
+  const response = await http.get<
+    ApiResponse<TknTaxCalculationResponse>
+  >(`/tkn-tax-periods/${taxPeriodId}/calculation-preview`)
+
+  return response.data.data
+}
+
 export async function getTknQttNextStep(
   taxPeriodId: string
 ): Promise<TknQttNextStep> {

@@ -69,6 +69,8 @@ export default function S2cBookPage() {
   const { currentBusiness } = useBusiness()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const qttReturnParams = new URLSearchParams({ year: searchParams.get('year') ?? String(new Date().getFullYear()) })
+  if (searchParams.get('fromTkn')) qttReturnParams.set('fromTkn', searchParams.get('fromTkn')!)
   const now = new Date()
   const yearFromUrl = Number(searchParams.get('year'))
   const quarterFromUrl = Number(searchParams.get('quarter'))
@@ -303,6 +305,8 @@ export default function S2cBookPage() {
 
   return (
     <div className='mx-auto max-w-7xl p-6'>
+      {searchParams.get('returnTo') === 'qtt' && <button className='mb-4 text-sm underline underline-offset-4'
+        onClick={() => navigate(`/business-owner/tax-books/qtt?${qttReturnParams}`)}>Quay lại quyết toán năm</button>}
       <div className='mb-5 flex flex-wrap items-end justify-between gap-4'>
         <div>
           <div className='flex flex-wrap items-center gap-2.5'>

@@ -98,6 +98,27 @@ export async function exportTaxDeclarationDocument(
   }
 }
 
+export async function exportTaxPeriodPreviewDocument(
+  taxPeriodId: string
+): Promise<ExportedTaxDeclarationDocument> {
+  const response = await http.get<Blob>(
+    `/tax-declarations/preview/${taxPeriodId}/export`,
+    {
+      responseType: 'blob'
+    }
+  )
+
+  return {
+    blob: response.data,
+    fileName:
+      getFileNameFromContentDisposition(
+        response.headers[
+          'content-disposition'
+        ]
+      )
+  }
+}
+
 export async function submitTaxDeclaration(
   declarationId: string
 ): Promise<TaxDeclaration> {

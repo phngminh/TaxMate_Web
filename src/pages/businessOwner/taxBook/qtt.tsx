@@ -6,9 +6,12 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  DollarSign,
   Download,
   ExternalLink,
+  FileCheck2,
   FileText,
+  Info,
   Package,
   Plus,
   RefreshCw,
@@ -30,6 +33,7 @@ import {
   confirmQttDeclaration,
   createQttDeclaration,
   exportQttDeclaration,
+  exportQttPreview,
   getQttCalculationPreview,
   getQttOffsetObligations,
   getQttPreview,
@@ -54,6 +58,8 @@ import type {
 import LegalBadge from '../../../components/owner/tax/LegalBadge'
 import Tip from '../../../components/owner/tax/Tip'
 import type { TknQttNextStep } from '../../../types/tknTaxPeriod.type'
+
+import { sameTaxFigures } from './qttWorkflow'
 
 const money = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
 
@@ -134,6 +140,8 @@ export default function QttPage() {
   const [loading, setLoading] = useState(false)
   const [working, setWorking] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [showSubmitModal, setShowSubmitModal] = useState(false)
+  const [isPreviewMode, setIsPreviewMode] = useState(false)
 
   const hydrateDeclaration = useCallback((next: QttDeclaration) => {
     setDeclaration(next)
@@ -159,17 +167,21 @@ export default function QttPage() {
 
   const load = useCallback(async (isManual = false) => {
     if (!currentBusiness) return
+    const currentBusinessId = currentBusiness.id
+    const currentYear = year
     try {
       setLoading(true)
       const [nextPreview, accountResponse, nextObligations, nextTknBridge, saved] = await Promise.all([
-        getQttPreview(currentBusiness.id, year),
-        getPaymentAccounts(currentBusiness.id),
-        getQttOffsetObligations(currentBusiness.id),
+        getQttPreview(currentBusinessId, currentYear),
+        getPaymentAccounts(currentBusinessId),
+        getQttOffsetObligations(currentBusinessId),
         fromTkn ? getTknQttNextStep(fromTkn) : Promise.resolve(null),
-        getQttDeclaration(currentBusiness.id, year)
+        getQttDeclaration(currentBusinessId, currentYear)
       ])
-      if (nextTknBridge && nextTknBridge.taxYear !== year) {
-        throw new Error('TKN_YEAR_MISMATCH')
+      if (currentBusiness.id !== currentBusinessId || year !== currentYear) return
+      if (nextTknBridge && nextTknBridge.taxYear !== currentYear) {
+        toast.error(`Kỳ thông báo doanh thu thuộc năm ${nextTknBridge.taxYear}, không khớp với năm quyết toán ${currentYear}`)
+        return
       }
       setDeclaration(null)
       if (saved) hydrateDeclaration(saved)
@@ -177,8 +189,12 @@ export default function QttPage() {
       setTknBridge(nextTknBridge)
       setAccounts((accountResponse.data ?? []).filter((x) => x.accountType === 'Bank' && x.isActive))
       setObligations(nextObligations)
-      if (nextPreview.canClose && !saved) {
-        setCalculation(await getQttCalculationPreview(currentBusiness.id, year))
+      if (!saved) {
+        try {
+          setCalculation(await getQttCalculationPreview(currentBusinessId, currentYear))
+        } catch {
+          setCalculation(null)
+        }
       } else {
         setCalculation(null)
       }
@@ -196,6 +212,7 @@ export default function QttPage() {
     setPreview(null)
     setCalculation(null)
     setDeclaration(null)
+    setIsPreviewMode(false)
     setRefundAmount(0)
     setRefundAccountId('')
     setOffsets([])
@@ -203,11 +220,39 @@ export default function QttPage() {
     void load()
   }, [load])
 
+  const handlePreviewDeclaration = () => {
+    if (!calculation) return
+    const previewDecl: QttDeclaration = {
+      declarationId: 'preview-qtt-declaration',
+      taxPeriodId: preview?.quarters?.[0]?.taxPeriodId || 'preview-annual-id',
+      calculationId: 'preview-calc-id',
+      declarationCode: 'PREVIEW-02QTT-DEMO',
+      version: 1,
+      draftRevision: 1,
+      status: 'Draft',
+      taxpayerName: preview?.taxpayerName || currentBusiness?.businessName || 'Hộ kinh doanh mẫu',
+      taxCode: preview?.taxCode || '0123456789',
+      taxpayerAddress: preview?.taxpayerAddress || currentBusiness?.address || 'Địa chỉ kinh doanh',
+      indicators: calculation.indicators,
+      inventoryTotals: calculation.inventoryTotals,
+      refundAccount: null,
+      offsetItems: []
+    }
+    setDeclaration(previewDecl)
+    setIsPreviewMode(true)
+    toast.info('Đã mở chế độ xem trước hồ sơ quyết toán Mẫu 02/QTT.')
+  }
+
   const prepareDeclaration = async () => {
     if (!currentBusiness) return
     try {
       setWorking(true)
       const calculated = await calculateQtt(currentBusiness.id, year)
+      if (calculation && !sameTaxFigures(calculation.indicators, calculated.calculation.indicators)) {
+        setCalculation(calculated.calculation)
+        toast.warn('Số liệu tính thuế vừa thay đổi so với bản xem trước. Hãy kiểm tra lại trước khi tạo hồ sơ.')
+        return
+      }
       setCalculation(calculated.calculation)
       const next = await createQttDeclaration(currentBusiness.id, year)
       hydrateDeclaration(next)
@@ -224,6 +269,10 @@ export default function QttPage() {
     [offsets]
   )
   const overpaid = declaration?.indicators.indicator20 ?? calculation?.indicators.indicator20 ?? 0
+  const carryForward = useMemo(() => {
+    const parsedRefund = Number(refundAmount) || 0
+    return overpaid - parsedRefund - offsetAmount
+  }, [overpaid, refundAmount, offsetAmount])
 
   const changeOffset = (id: string, patch: Partial<OffsetDraft>) => {
     setOffsets((current) => current.map((item) => item.id === id ? { ...item, ...patch } : item))
@@ -240,32 +289,69 @@ export default function QttPage() {
 
   const saveAllocation = async () => {
     if (!currentBusiness || !declaration || declaration.status !== 'Draft') return
-    if (refundAmount + offsetAmount > overpaid) {
-      toast.error('Tổng tiền hoàn và bù trừ vượt số đã nộp thừa')
+    const parsedRefund = Number(refundAmount) || 0
+    if (!Number.isSafeInteger(parsedRefund) || parsedRefund < 0) {
+      toast.error('Số tiền đề nghị hoàn phải là số nguyên không âm')
       return
     }
-    if (refundAmount > 0 && !refundAccountId) {
+    if (parsedRefund + offsetAmount > overpaid) {
+      toast.error(`Tổng tiền hoàn và bù trừ vượt quá số nộp thừa (${money.format(overpaid)} đ)`)
+      return
+    }
+    if (parsedRefund > 0 && !refundAccountId) {
       toast.error('Hãy chọn tài khoản ngân hàng nhận hoàn')
+      return
+    }
+    for (const item of offsets) {
+      const amt = Number(item.offsetAmount) || 0
+      const outstanding = Number(item.outstandingAmount) || 0
+      if (!Number.isSafeInteger(amt) || amt <= 0) {
+        toast.error('Số tiền bù trừ phải là số nguyên dương')
+        return
+      }
+      if (amt > outstanding) {
+        toast.error('Số tiền bù trừ không được vượt quá số còn nợ')
+        return
+      }
+      if (item.mode === 'internal' && !item.obligationId) {
+        toast.error('Vui lòng chọn nghĩa vụ thuế trong danh sách bù trừ')
+        return
+      }
+      if (item.mode === 'external') {
+        if (!item.taxCode?.trim() || !item.taxpayerName?.trim() || !item.obligationIdentifier?.trim() || !item.budgetContent?.trim()) {
+          toast.error('Vui lòng điền đủ thông tin khoản thuế ngoài danh sách')
+          return
+        }
+      }
+    }
+    const internalIds = offsets.filter((x) => x.mode === 'internal' && x.obligationId).map((x) => x.obligationId)
+    if (new Set(internalIds).size !== internalIds.length) {
+      toast.error('Một khoản thuế chỉ được chọn bù trừ một lần')
       return
     }
 
     if (fromTkn) {
       if (!tknBridge || tknBridge.taxYear !== year) {
-        toast.error('Hãy tải lại dữ liệu thông báo doanh thu trước khi bù trừ')
+        toast.error('Hãy tải lại dữ liệu thông báo doanh thu trước khi xử lý')
         return
       }
-      if (!tknBridge.choices.includes('Offset') || !tknBridge.canCreateQttDraft) {
-        toast.error('Kỳ thông báo này hiện không đủ điều kiện thực hiện bù trừ')
+      const canRefund = tknBridge.choices.includes('Refund')
+      const canOffset = tknBridge.choices.includes('Offset')
+      if (!tknBridge.canCreateQttDraft) {
+        toast.error('Kỳ thông báo này hiện không đủ điều kiện thực hiện quyết toán')
         return
       }
-      if (refundAmount !== 0) {
-        toast.error('Luồng bù trừ từ thông báo doanh thu không đồng thời đề nghị hoàn')
+      if (refundAmount > 0 && !canRefund) {
+        toast.error('Kỳ thông báo này không hỗ trợ lựa chọn hoàn tiền')
+        return
+      }
+      if (offsetAmount > 0 && !canOffset) {
+        toast.error('Kỳ thông báo này không hỗ trợ lựa chọn bù trừ')
         return
       }
       if (
         overpaid <= 0 ||
-        offsetAmount !== overpaid ||
-        offsetAmount !== tknBridge.incomeBasedPitPaid
+        refundAmount + offsetAmount !== overpaid
       ) {
         toast.error('Hãy phân bổ đủ toàn bộ số thuế TNCN nộp thừa')
         return
@@ -292,13 +378,21 @@ export default function QttPage() {
           offsetAmount: Number(item.offsetAmount) || 0
         })
 
+    if (isPreviewMode) {
+      toast.success(fromTkn
+        ? 'Đã lưu bù trừ toàn bộ số thuế TNCN nộp thừa'
+        : 'Đã lưu cách xử lý tiền nộp thừa')
+      return declaration
+    }
+
     try {
       setWorking(true)
       const next = fromTkn
         ? await (async () => {
+            const bridgeChoice = refundAmount > 0 && offsetAmount === 0 ? 'Refund' : 'Offset'
             const bridge = await applyTknQttNextStep(fromTkn, {
-              choice: 'Offset',
-              refundPaymentAccountId: null,
+              choice: bridgeChoice,
+              refundPaymentAccountId: refundAccountId || null,
               offsetItems: items
             })
             setTknBridge(bridge)
@@ -315,8 +409,10 @@ export default function QttPage() {
       toast.success(fromTkn
         ? 'Đã lưu bù trừ toàn bộ số thuế TNCN nộp thừa'
         : 'Đã lưu cách xử lý tiền nộp thừa')
+      return next
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Không thể lưu cách xử lý tiền nộp thừa')
+      return null
     } finally {
       setWorking(false)
     }
@@ -324,12 +420,39 @@ export default function QttPage() {
 
   const confirm = async () => {
     if (!currentBusiness || !declaration || declaration.status !== 'Draft') return
+
+    if (isPreviewMode) {
+      setWorking(true)
+      setTimeout(() => {
+        setWorking(false)
+        setDeclaration((prev) => (prev ? { ...prev, status: 'Generated' } : prev))
+        toast.success('Đã hoàn tất trải nghiệm xác nhận và khóa hồ sơ quyết toán.')
+      }, 500)
+      return
+    }
+
+    // Tự động kiểm tra và lưu phân bổ tiền nộp thừa nếu có trước khi khóa
+    let currentDecl = declaration
+    if (overpaid > 0) {
+      if (refundAmount + offsetAmount > overpaid) {
+        toast.error('Tổng tiền hoàn và bù trừ vượt số đã nộp thừa')
+        return
+      }
+      if (refundAmount > 0 && !refundAccountId) {
+        toast.error('Hãy chọn tài khoản ngân hàng nhận hoàn tiền')
+        return
+      }
+      const saved = await saveAllocation()
+      if (!saved) return
+      currentDecl = saved
+    }
+
     try {
       setWorking(true)
       const next = await confirmQttDeclaration(
         currentBusiness.id,
-        declaration.declarationId,
-        declaration.draftRevision
+        currentDecl.declarationId,
+        currentDecl.draftRevision
       )
       setDeclaration(next)
       toast.success('Đã xác nhận và khóa hồ sơ quyết toán')
@@ -344,15 +467,22 @@ export default function QttPage() {
     if (!currentBusiness || !declaration || declaration.status === 'Draft') return
     try {
       setExporting(true)
-      const blob = await exportQttDeclaration(currentBusiness.id, declaration.declarationId)
+      const blob = isPreviewMode
+        ? await exportQttPreview(currentBusiness.id, year)
+        : await exportQttDeclaration(currentBusiness.id, declaration.declarationId)
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
       anchor.href = url
-      anchor.download = `02-CNKD-TNCN-QTT_${declaration.taxCode}_${year}.docx`
+      anchor.download = isPreviewMode
+        ? `02-CNKD-TNCN-QTT_XEM-TRUOC_${year}.docx`
+        : `02-CNKD-TNCN-QTT_${declaration.taxCode}_${year}.docx`
       document.body.appendChild(anchor)
       anchor.click()
       anchor.remove()
       URL.revokeObjectURL(url)
+      toast.success(isPreviewMode
+        ? 'Đã tải tệp hồ sơ quyết toán xem trước (.docx).'
+        : 'Đã tải tệp tờ khai về máy. Lưu ý: Tải tờ khai không đồng nghĩa với việc đã hoàn thành nộp hồ sơ hoặc nộp tiền thuế cho cơ quan thuế.', { autoClose: 7000 })
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Không thể xuất tờ khai quyết toán')
     } finally {
@@ -360,14 +490,27 @@ export default function QttPage() {
     }
   }
 
-  const submitDeclaration = async () => {
+  const submitDeclaration = () => {
     if (!currentBusiness || !declaration || declaration.status !== 'Generated') return
-    if (!window.confirm('Bạn có chắc chắn muốn đánh dấu tờ khai quyết toán đã nộp bên ngoài không?')) return
+    setShowSubmitModal(true)
+  }
+
+  const executeSubmitDeclaration = async () => {
+    if (!declaration || declaration.status !== 'Generated') return
+    if (isPreviewMode) {
+      setWorking(true)
+      setTimeout(() => {
+        setWorking(false)
+        setDeclaration((prev) => (prev ? { ...prev, status: 'Submitted' } : prev))
+        toast.success('Đã hoàn tất trải nghiệm nộp hồ sơ quyết toán.')
+      }, 500)
+      return
+    }
     try {
       setWorking(true)
       await submitTaxDeclaration(declaration.declarationId)
       setDeclaration((prev) => (prev ? { ...prev, status: 'Submitted' } : prev))
-      toast.success('Đã đánh dấu tờ khai quyết toán nộp thành công!')
+      toast.success('Đã ghi nhận tờ khai quyết toán đã nộp cơ quan thuế thành công!')
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Không thể đánh dấu nộp tờ khai')
     } finally {
@@ -431,12 +574,119 @@ export default function QttPage() {
             businessId={currentBusiness?.id ?? ''}
             hardBlockers={preview.hardBlockers}
             warnings={preview.warnings}
+            evidenceReviewPeriods={preview.evidenceReviewPeriods}
             year={year}
             onReload={load}
           />
 
+          {/* HAI TRẠNG THÁI TÁCH BIỆT: NGHĨA VỤ TIỀN THUẾ VS TIẾN ĐỘ HỒ SƠ */}
+          {(declaration || calculation) && (
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-xs'>
+              {/* Cột 1: Nghĩa vụ tiền thuế TNCN */}
+              <div className='flex items-start gap-3.5 border-b md:border-b-0 md:border-r border-slate-100 pb-4 md:pb-0 md:pr-4'>
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+                  (declaration?.indicators.indicator19 ?? calculation?.indicators.indicator19 ?? 0) > 0
+                    ? 'bg-amber-100 text-amber-700'
+                    : (declaration?.indicators.indicator20 ?? calculation?.indicators.indicator20 ?? 0) > 0
+                      ? 'bg-sky-100 text-sky-700'
+                      : 'bg-emerald-100 text-emerald-700'
+                }`}>
+                  <DollarSign className='h-5 w-5' />
+                </div>
+                <div className='space-y-1 min-w-0 flex-1'>
+                  <div className='flex items-center gap-2'>
+                    <span className='text-xs font-bold uppercase tracking-wider text-slate-500'>Nghĩa vụ tiền thuế TNCN</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                      (declaration?.indicators.indicator19 ?? calculation?.indicators.indicator19 ?? 0) > 0
+                        ? 'bg-amber-100 text-amber-800'
+                        : (declaration?.indicators.indicator20 ?? calculation?.indicators.indicator20 ?? 0) > 0
+                          ? 'bg-sky-100 text-sky-800'
+                          : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {(declaration?.indicators.indicator19 ?? calculation?.indicators.indicator19 ?? 0) > 0
+                        ? 'Cần nộp thêm'
+                        : (declaration?.indicators.indicator20 ?? calculation?.indicators.indicator20 ?? 0) > 0
+                          ? 'Nộp thừa'
+                          : 'Không cần nộp thêm'}
+                    </span>
+                  </div>
+                  <p className='text-lg font-black text-slate-900'>
+                    {(declaration?.indicators.indicator19 ?? calculation?.indicators.indicator19 ?? 0) > 0
+                      ? `${money.format(declaration?.indicators.indicator19 ?? calculation!.indicators.indicator19)} đ`
+                      : (declaration?.indicators.indicator20 ?? calculation?.indicators.indicator20 ?? 0) > 0
+                        ? `${money.format(declaration?.indicators.indicator20 ?? calculation!.indicators.indicator20)} đ`
+                        : '0 đ'}
+                  </p>
+                  <p className='text-xs text-slate-500 leading-relaxed'>
+                    {(declaration?.indicators.indicator19 ?? calculation?.indicators.indicator19 ?? 0) > 0
+                      ? 'Cần nộp vào Kho bạc Nhà nước trước hạn 31/03 năm tiếp theo.'
+                      : (declaration?.indicators.indicator20 ?? calculation?.indicators.indicator20 ?? 0) > 0
+                        ? 'Có thể đề nghị hoàn về ngân hàng, bù trừ nợ thuế, hoặc chuyển trừ kỳ sau.'
+                        : 'Hộ kinh doanh không phải nộp thêm thuế TNCN và không có số thuế nộp thừa.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Cột 2: Tình trạng nộp hồ sơ cơ quan thuế */}
+              <div className='flex items-start gap-3.5'>
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${
+                  declaration?.status === 'Submitted'
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : declaration?.status === 'Generated'
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'bg-slate-100 text-slate-600'
+                }`}>
+                  <FileCheck2 className='h-5 w-5' />
+                </div>
+                <div className='space-y-1 min-w-0 flex-1'>
+                  <div className='flex items-center gap-2'>
+                    <span className='text-xs font-bold uppercase tracking-wider text-slate-500'>Hồ sơ với Cơ quan thuế</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
+                      declaration?.status === 'Submitted'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : declaration?.status === 'Generated'
+                          ? 'bg-indigo-100 text-indigo-800'
+                          : 'bg-slate-100 text-slate-700'
+                    }`}>
+                      {declaration?.status === 'Submitted'
+                        ? 'Đã nộp cơ quan thuế'
+                        : declaration?.status === 'Generated'
+                          ? 'Đã khóa · Chưa gửi nộp'
+                          : declaration
+                            ? 'Hồ sơ nháp'
+                            : 'Chưa tạo hồ sơ'}
+                    </span>
+                  </div>
+                  <p className='text-sm font-bold text-slate-900'>
+                    {declaration?.status === 'Submitted'
+                      ? 'Đã hoàn thành nộp tờ khai'
+                      : declaration?.status === 'Generated'
+                        ? 'Cần nộp tờ khai Word (.docx) đến Cơ quan thuế'
+                        : 'Chưa nộp tờ khai quyết toán năm'}
+                  </p>
+                  <p className='text-xs text-slate-500 leading-relaxed'>
+                    {declaration?.status === 'Submitted'
+                      ? 'Hồ sơ đã được ghi nhận nộp thành công.'
+                      : 'Lưu ý: Tải file Word về máy không đồng nghĩa đã hoàn tất nghĩa vụ nộp hồ sơ hay tiền thuế.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {calculation && (
             <div className='space-y-4'>
+              {!preview?.canClose && (
+                <div className='rounded-xl border border-amber-200 bg-amber-50/80 p-4 text-amber-900 flex items-start gap-3 shadow-2xs'>
+                  <AlertTriangle className='h-5 w-5 text-amber-600 shrink-0 mt-0.5' />
+                  <div>
+                    <p className='font-bold text-sm'>Bảng tính thuế tạm tính theo doanh thu thực tế lũy kế (Chế độ xem trước)</p>
+                    <p className='text-xs text-amber-700 mt-1 leading-relaxed'>
+                      Bạn đang xem trước bảng tính thuế TNCN năm {year}. Để chốt sổ và nộp hồ sơ quyết toán chính thức, vui lòng hoàn tất đóng kỳ và rà soát chứng từ của 4 quý theo danh sách kiểm tra bên trên.
+                    </p>
+                  </div>
+                </div>
+              )}
               {/* QTT-FE-01: 4 Thẻ kiểm tra dữ liệu nguồn */}
               <div className='rounded-xl border border-gray-200 bg-white p-4'>
                 <h3 className='text-xs font-bold uppercase tracking-wider text-gray-500 mb-3'>
@@ -547,8 +797,8 @@ export default function QttPage() {
                 <div className='rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 flex items-center gap-3'>
                   <div className='h-3 w-3 rounded-full bg-emerald-500 shrink-0' />
                   <div>
-                    <span className='font-bold'>Không phát sinh nghĩa vụ thuế: </span>
-                    <span>Hộ kinh doanh không phải nộp thêm thuế TNCN ([19] = 0 đ) và không có số thuế nộp thừa trong năm ([20] = 0 đ).</span>
+                    <span className='font-bold'>Không phát sinh nghĩa vụ nộp thêm thuế: </span>
+                    <span>Hộ kinh doanh không phải nộp thêm thuế TNCN ([19] = 0 đ) và không có số thuế nộp thừa trong năm ([20] = 0 đ). Lưu ý: Bạn vẫn cần hoàn tất và nộp hồ sơ quyết toán năm đến cơ quan thuế.</span>
                   </div>
                 </div>
               )}
@@ -556,18 +806,31 @@ export default function QttPage() {
           )}
 
           <div className='flex flex-wrap items-center gap-3'>
-            <button
-              type='button'
-              onClick={declaration ? () => void load(true) : prepareDeclaration}
-              disabled={working || (!declaration && !preview?.canClose)}
-              className='rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-bold text-white shadow-md disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all'
-            >
-              {declaration
-                ? 'Tải lại hồ sơ'
-                : !preview?.canClose
-                  ? 'Chưa đủ điều kiện tính quyết toán'
-                  : 'Tính và tạo hồ sơ quyết toán'}
-            </button>
+            {!isPreviewMode && (
+              <button
+                type='button'
+                onClick={declaration ? () => void load(true) : prepareDeclaration}
+                disabled={working || (!declaration && !preview?.canClose)}
+                className='rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-bold text-white shadow-md disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all'
+              >
+                {declaration
+                  ? 'Tải lại hồ sơ'
+                  : !preview?.canClose
+                    ? 'Chưa đủ điều kiện tính quyết toán'
+                    : 'Tính và tạo hồ sơ quyết toán'}
+              </button>
+            )}
+
+            {!declaration && !preview?.canClose && calculation && (
+              <button
+                type='button'
+                onClick={handlePreviewDeclaration}
+                className='inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-violet-700 transition-all cursor-pointer'
+              >
+                <FileText size={16} /> Xem trước hồ sơ quyết toán 02/QTT →
+              </button>
+            )}
+
             {!declaration && !preview?.canClose && (
               <span className='text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg'>
                 {preview?.hardBlockers && preview.hardBlockers.length > 0
@@ -578,15 +841,15 @@ export default function QttPage() {
               </span>
             )}
             {declaration?.status === 'Draft' && (
-              <button onClick={confirm} disabled={working}
-                className='inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-emerald-700 disabled:opacity-50 transition-all'>
+              <button onClick={confirm} disabled={working || (overpaid > 0 && carryForward < 0)}
+                className='inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-emerald-700 disabled:opacity-50 transition-all cursor-pointer'>
                 <Check size={16} /> Xác nhận và khóa
               </button>
             )}
-            {declaration && declaration.status !== 'Draft' && (
+            {declaration && (declaration.status !== 'Draft' || isPreviewMode) && (
               <button onClick={download} disabled={exporting}
-                className='inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-violet-700 disabled:opacity-50 transition-all'>
-                <Download size={16} /> Tải Word
+                className='inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-violet-700 disabled:opacity-50 transition-all cursor-pointer'>
+                <Download size={16} /> {isPreviewMode ? 'Tải Word xem trước (.docx)' : 'Tải Word (.docx)'}
               </button>
             )}
             {declaration?.status === 'Generated' && (
@@ -595,10 +858,54 @@ export default function QttPage() {
                 <Send size={16} /> Đánh dấu đã nộp bên ngoài
               </button>
             )}
+            {declaration?.status === 'Submitted' && (
+              <span className='inline-flex items-center gap-1.5 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-2 text-xs font-bold text-emerald-700'>
+                <CheckCircle2 size={16} className='text-emerald-600' /> Đã nộp cho cơ quan thuế
+              </span>
+            )}
+
+            {isPreviewMode && (
+              <button
+                type='button'
+                onClick={() => {
+                  setDeclaration(null)
+                  setIsPreviewMode(false)
+                }}
+                className='inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all cursor-pointer'
+              >
+                Thoát xem trước
+              </button>
+            )}
           </div>
 
           {declaration && (
             <div className='space-y-5'>
+              {isPreviewMode && (
+                <div className='flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-violet-400 bg-gradient-to-r from-violet-100/90 via-purple-50 to-indigo-50 p-4.5 shadow-sm'>
+                  <div className='flex items-start gap-3.5'>
+                    <div className='flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm mt-0.5'>
+                      <Sparkles className='size-5' />
+                    </div>
+                    <div>
+                      <div className='flex items-center gap-2'>
+                        <span className='rounded-md bg-violet-700 px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-white'>
+                          Chế độ xem thử nghiệm
+                        </span>
+                        <span className='text-xs font-bold text-violet-900'>Mẫu 02/CNKD-TNCN-QTT</span>
+                      </div>
+                      <p className='mt-1 text-xs sm:text-sm font-medium text-violet-800 leading-relaxed'>
+                        Biểu mẫu hồ sơ quyết toán được tạo để bạn xem trước cách bố trí các chỉ tiêu và phân bổ nghĩa vụ thuế. Mọi thao tác đều an toàn và không ảnh hưởng số liệu thật.
+                      </p>
+                    </div>
+                  </div>
+                  <div className='shrink-0'>
+                    <span className='inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-violet-200 px-3 py-1 text-xs font-bold text-violet-800 shadow-2xs'>
+                      <span className='size-2 rounded-full bg-violet-500 animate-pulse' />
+                      Môi trường an toàn
+                    </span>
+                  </div>
+                </div>
+              )}
               <div className='rounded-xl border bg-white p-4'>
                 <div className='flex flex-wrap justify-between gap-2'>
                   <div><span className='text-sm text-gray-500'>Mã hồ sơ</span><p className='font-semibold'>{declaration.declarationCode}</p></div>
@@ -655,15 +962,161 @@ export default function QttPage() {
                       onChange={(patch) => changeOffset(item.id, patch)} onSelect={(value) => selectObligation(item.id, value)}
                       onRemove={() => setOffsets((current) => current.filter((x) => x.id !== item.id))} />
                   ))}
+                  {/* BẢNG TÓM TẮT PHÂN BỔ TIỀN NỘP THỪA THEO THỜI GIAN THỰC [20] = [22] + [23] + [24] */}
+                  <div className='rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3'>
+                    <div className='flex items-center justify-between border-b border-slate-200 pb-2'>
+                      <span className='text-xs font-bold uppercase tracking-wider text-slate-700'>
+                        Tóm tắt phân bổ số thuế nộp thừa [20]:
+                      </span>
+                      <span className='text-sm font-black text-slate-900'>{money.format(overpaid)} đ</span>
+                    </div>
+
+                    <div className='grid gap-2.5 sm:grid-cols-3 text-xs'>
+                      <div className='rounded-lg bg-white p-3 border border-slate-200 shadow-2xs'>
+                        <div className='text-slate-500 flex items-center justify-between'>
+                          <span>1. Đề nghị hoàn [22]</span>
+                          <Tip content='Số tiền đề nghị Kho bạc/Cơ quan thuế hoàn trực tiếp về tài khoản ngân hàng.' side='top'>
+                            <span className='text-[10px] text-slate-400 cursor-help'>ⓘ</span>
+                          </Tip>
+                        </div>
+                        <p className='text-base font-bold text-slate-900 mt-1'>{money.format(Number(refundAmount) || 0)} đ</p>
+                        {Number(refundAmount) > 0 && (
+                          <p className='text-[11px] text-slate-500 mt-1 truncate'>
+                            TK: {accounts.find((a) => a.paymentAccountId === refundAccountId)?.accountNumber || 'Chưa chọn tài khoản'}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className='rounded-lg bg-white p-3 border border-slate-200 shadow-2xs'>
+                        <div className='text-slate-500 flex items-center justify-between'>
+                          <span>2. Đề nghị bù trừ [23]</span>
+                          <Tip content='Số tiền đề nghị trừ vào các khoản nợ thuế TNCN, GTGT, Lệ phí môn bài khác.' side='top'>
+                            <span className='text-[10px] text-slate-400 cursor-help'>ⓘ</span>
+                          </Tip>
+                        </div>
+                        <p className='text-base font-bold text-slate-900 mt-1'>{money.format(offsetAmount)} đ</p>
+                        <p className='text-[11px] text-slate-500 mt-1'>
+                          {offsets.length} khoản nợ thuế được chọn
+                        </p>
+                      </div>
+
+                      <div className={`rounded-lg p-3 border shadow-2xs ${
+                        carryForward < 0
+                          ? 'bg-red-50 border-red-200'
+                          : 'bg-white border-slate-200'
+                      }`}>
+                        <div className='text-slate-500 flex items-center justify-between'>
+                          <span>3. Chuyển kỳ sau [24]</span>
+                          <Tip content='Số tiền còn lại sau khi trừ hoàn và bù trừ: [24] = [20] - [22] - [23]. Sẽ tự động giảm trừ vào số thuế phải nộp của năm tiếp theo.' side='top'>
+                            <span className='text-[10px] text-slate-400 cursor-help'>ⓘ</span>
+                          </Tip>
+                        </div>
+                        <p className={`text-base font-bold mt-1 ${carryForward < 0 ? 'text-red-600' : 'text-slate-900'}`}>
+                          {money.format(carryForward)} đ
+                        </p>
+                        <p className={`text-[11px] mt-1 ${carryForward < 0 ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>
+                          {carryForward < 0 ? 'Vượt quá số nộp thừa!' : '[20] - [22] - [23]'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {carryForward < 0 ? (
+                      <div className='flex items-center gap-2 rounded-lg bg-red-100 border border-red-200 p-2.5 text-xs text-red-800'>
+                        <AlertTriangle size={16} className='shrink-0 text-red-600' />
+                        <span>
+                          <strong>Cảnh báo:</strong> Tổng tiền hoàn ({money.format(Number(refundAmount) || 0)} đ) và bù trừ ({money.format(offsetAmount)} đ) đang vượt quá số nộp thừa ({money.format(overpaid)} đ) là <strong>{money.format(Math.abs(carryForward))} đ</strong>. Vui lòng giảm bớt tiền hoàn hoặc tiền bù trừ.
+                        </span>
+                      </div>
+                    ) : carryForward > 0 ? (
+                      <div className='flex items-center gap-2 rounded-lg bg-blue-50 border border-blue-100 p-2 text-xs text-blue-800'>
+                        <Info size={15} className='text-blue-600 shrink-0' />
+                        <span>
+                          Số tiền còn lại <strong>{money.format(carryForward)} đ</strong> sẽ tự động được ghi nhận chuyển sang giảm trừ nghĩa vụ thuế TNCN năm sau [24].
+                        </span>
+                      </div>
+                    ) : (
+                      <div className='flex items-center gap-2 rounded-lg bg-emerald-50 border border-emerald-100 p-2 text-xs text-emerald-800'>
+                        <CheckCircle2 size={15} className='shrink-0 text-emerald-600' />
+                        <span>Bạn đã phân bổ trọn vẹn 100% số thuế nộp thừa [20].</span>
+                      </div>
+                    )}
+                  </div>
+
                   {declaration.status === 'Draft' && (
-                    <button onClick={saveAllocation} disabled={working}
-                      className='inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50'><Save size={16} /> {fromTkn ? 'Hoàn tất bù trừ' : 'Lưu phân bổ'}</button>
+                    <button onClick={saveAllocation} disabled={working || carryForward < 0}
+                      className='inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 cursor-pointer'><Save size={16} /> {fromTkn ? 'Hoàn tất bù trừ' : 'Lưu phân bổ'}</button>
                   )}
                 </div>
               )}
             </div>
           )}
         </>
+      )}
+
+      {/* MODAL XÁC NHẬN ĐÁNH DẤU ĐÃ NỘP TỜ KHAI */}
+      {showSubmitModal && (
+        <div className='fixed inset-0 bg-black/50 backdrop-blur-xs z-60 flex items-center justify-center p-4 animate-in fade-in duration-150'>
+          <div className='bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden p-6 text-center select-none'>
+            <div className={`size-14 rounded-full flex items-center justify-center mx-auto mb-3 ${
+              isPreviewMode ? 'bg-violet-100 text-violet-600' : 'bg-blue-100 text-blue-600'
+            }`}>
+              {isPreviewMode ? <Sparkles size={26} /> : <Send size={26} />}
+            </div>
+            <h3 className='text-slate-900 font-extrabold text-base mb-1.5'>
+              {isPreviewMode
+                ? 'Xác nhận gửi thử nghiệm hồ sơ quyết toán?'
+                : 'Xác nhận đã nộp tờ khai quyết toán?'}
+            </h3>
+            <div className='text-slate-600 text-xs leading-relaxed mb-6 bg-slate-50 p-3.5 rounded-xl border border-slate-200 text-left'>
+              {isPreviewMode ? (
+                <>
+                  <p>Đây là thao tác gửi thử nghiệm để bạn làm quen với quy trình quyết toán năm (Mẫu 02/CNKD-TNCN-QTT).</p>
+                  <p className='mt-2 text-violet-900 font-medium'>
+                    <strong className='text-violet-950 font-bold'>Môi trường an toàn:</strong> Dữ liệu thực tế và kỳ thuế của bạn hoàn toàn an toàn, thao tác này chỉ mô phỏng trạng thái Đã nộp trên màn hình.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>Bạn xác nhận đã nộp tờ khai này đến cơ quan thuế (qua Cổng thông tin điện tử Tổng cục Thuế hoặc trực tiếp tại Chi cục Thuế)?</p>
+                  <p className='mt-2'>
+                    <strong className='text-slate-800'>Lưu ý quan trọng:</strong> Thao tác này chỉ ghi nhận trạng thái nộp hồ sơ trên TaxMate, không thay thế việc nộp tiền thuế nếu bạn còn số thuế phải nộp.
+                  </p>
+                </>
+              )}
+            </div>
+            <div className='flex gap-3'>
+              <button
+                type='button'
+                onClick={() => setShowSubmitModal(false)}
+                disabled={working}
+                className='flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-xl transition cursor-pointer'
+              >
+                Quay lại
+              </button>
+              <button
+                type='button'
+                onClick={() => {
+                  setShowSubmitModal(false)
+                  void executeSubmitDeclaration()
+                }}
+                disabled={working}
+                className={`flex-1 py-2.5 text-white text-xs font-bold rounded-xl transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer ${
+                  isPreviewMode
+                    ? 'bg-violet-600 hover:bg-violet-700'
+                    : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {working
+                  ? isPreviewMode
+                    ? 'Đang gửi thử...'
+                    : 'Đang ghi nhận...'
+                  : isPreviewMode
+                    ? 'Xác nhận gửi thử'
+                    : 'Xác nhận đã nộp'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -742,12 +1195,14 @@ function QttReadinessPanel({
   businessId,
   hardBlockers,
   warnings,
+  evidenceReviewPeriods = [],
   year,
   onReload
 }: {
   businessId: string
   hardBlockers: QttPreview['hardBlockers']
   warnings: QttPreview['warnings']
+  evidenceReviewPeriods?: QttPreview['evidenceReviewPeriods']
   year: number
   onReload: (isManual?: boolean) => Promise<void>
 }) {
@@ -862,11 +1317,15 @@ function QttReadinessPanel({
   }
 
   const handleReviewAll = async () => {
-    if (!businessId) return
     try {
       setReviewingAll(true)
-      const quarters = unreviewedQuarters.length > 0 ? unreviewedQuarters : [1, 2, 3, 4]
-      await Promise.all(quarters.map((q) => confirmS2cEvidenceReview(businessId, year, q)))
+      const pending = (evidenceReviewPeriods || []).filter((p) => p.required && !p.reviewed)
+      if (pending.length > 0) {
+        await Promise.all(pending.map((p) => confirmS2cEvidenceReview(p.businessId, year, p.quarter)))
+      } else if (businessId) {
+        const quarters = unreviewedQuarters.length > 0 ? unreviewedQuarters : [1, 2, 3, 4]
+        await Promise.all(quarters.map((q) => confirmS2cEvidenceReview(businessId, year, q)))
+      }
       toast.success(`Đã xác nhận rà soát chi phí cả năm ${year} thành công!`)
       await onReload()
     } catch (error: any) {
@@ -877,10 +1336,14 @@ function QttReadinessPanel({
   }
 
   const handleReviewQuarter = async (q: number) => {
-    if (!businessId) return
     try {
       setReviewingQuarter(q)
-      await confirmS2cEvidenceReview(businessId, year, q)
+      const targetPeriods = (evidenceReviewPeriods || []).filter((p) => p.quarter === q && p.required && !p.reviewed)
+      if (targetPeriods.length > 0) {
+        await Promise.all(targetPeriods.map((p) => confirmS2cEvidenceReview(p.businessId, year, p.quarter)))
+      } else if (businessId) {
+        await confirmS2cEvidenceReview(businessId, year, q)
+      }
       toast.success(`Đã xác nhận rà soát chi phí Quý ${q}/${year}!`)
       await onReload()
     } catch (error: any) {

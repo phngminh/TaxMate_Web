@@ -248,15 +248,24 @@ export default function Expense() {
     }
   }
 
+  const getDateRange = (year: number, quarter: number) => {
+    if (quarter === 1) return { fromDate: `${year}-01-01T00:00:00`, toDate: `${year}-03-31T23:59:59` }
+    if (quarter === 2) return { fromDate: `${year}-04-01T00:00:00`, toDate: `${year}-06-30T23:59:59` }
+    if (quarter === 3) return { fromDate: `${year}-07-01T00:00:00`, toDate: `${year}-09-30T23:59:59` }
+    if (quarter === 4) return { fromDate: `${year}-10-01T00:00:00`, toDate: `${year}-12-31T23:59:59` }
+    return { fromDate: `${year}-01-01T00:00:00`, toDate: `${year}-12-31T23:59:59` }
+  }
+
   const fetchData = async () => {
     if (!businessId) {
       console.warn('No businessId found in context, skipping fetch')
       return
     }
     try {
+      const { fromDate, toDate } = getDateRange(selectedYear, selectedQuarter)
       const [exps, incs, expCats, incCats, accounts] = await Promise.all([
-        getAllExpenses(businessId),
-        getAllIncomes(businessId),
+        getAllExpenses(businessId, 1, 5000, undefined, undefined, undefined, fromDate, toDate),
+        getAllIncomes(businessId, 1, 5000, undefined, undefined, undefined, fromDate, toDate),
         getExpenseCategories(businessId),
         getIncomeCategories(businessId),
         getMoneyAccounts(businessId)
@@ -331,7 +340,7 @@ export default function Expense() {
 
   useEffect(() => {
     fetchData()
-  }, [businessId])
+  }, [businessId, selectedYear, selectedQuarter])
 
   useEffect(() => {
     const autoOpen = searchParams.get('autoOpen') === 'true'

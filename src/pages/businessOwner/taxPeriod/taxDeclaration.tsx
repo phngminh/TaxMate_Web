@@ -5,7 +5,8 @@ import {
   Download,
   FileText,
   PlusCircle,
-  Send
+  Send,
+  Sparkles
 } from 'lucide-react'
 import {
   useEffect,
@@ -13,27 +14,37 @@ import {
 } from 'react'
 import {
   useNavigate,
-  useParams
+  useParams,
+  useSearchParams
 } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
 import {
   createTaxDeclaration,
   exportTaxDeclarationDocument,
+  exportTaxPeriodPreviewDocument,
   getTaxDeclarationByTaxPeriod,
   submitTaxDeclaration
 } from '../../../apis/taxDeclaration.api'
 import { getPaymentAccounts } from '../../../apis/paymentAccount.api'
 
 import {
-  getTaxPeriodById
+  getTaxPeriodById,
+  getTaxPeriodCalculationPreview
 } from '../../../apis/taxPeriod.api'
 import {
   applyTknQttNextStep,
-  getTknQttNextStep
+  getTknQttNextStep,
+  getTknTaxPeriodCalculationPreview
 } from '../../../apis/tknTaxPeriod.api'
 
+import { useBusiness } from '../../../contexts/BusinessContext'
 import path from '../../../constants/path'
+import {
+  taxPeriodCalculationPath,
+  taxPeriodPreviewPath,
+  tknTaxPeriodPreviewPath
+} from '../../../utils/taxPeriodRoute'
 
 import type {
   TaxDeclaration
@@ -192,6 +203,9 @@ function ConfirmDialog({
 
 export default function TaxDeclarationPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isPreviewMode = searchParams.get('mode') === 'preview'
+  const { currentBusiness, businesses } = useBusiness()
 
   const { taxPeriodId } = useParams<{
     taxPeriodId: string
@@ -328,18 +342,140 @@ export default function TaxDeclarationPage() {
 
           getTaxDeclarationByTaxPeriod(
             taxPeriodId
-          )
+          ).catch(() => null)
         ])
 
         if (!active) return
 
         setTaxPeriod(periodResult)
-        setDeclaration(
-          declarationResult
-        )
-        await loadTknNextStep(
-          periodResult
-        )
+
+        if (declarationResult) {
+          setDeclaration(declarationResult)
+          await loadTknNextStep(periodResult)
+        } else if (isPreviewMode) {
+          const activeBiz =
+            currentBusiness ||
+            businesses.find(
+              (b) => b.id === periodResult.businessId
+            ) ||
+            businesses[0]
+          const bizName =
+            activeBiz?.businessName || 'Hộ kinh doanh mẫu'
+          const bizTaxCode = '0123456789'
+          const bizAddress =
+            activeBiz?.address || 'Địa chỉ kinh doanh'
+
+          if (periodResult.periodType === 'Tkn') {
+            const tknCalc =
+              await getTknTaxPeriodCalculationPreview(
+                taxPeriodId
+              ).catch(() => null)
+            if (!active) return
+
+            const rev =
+              tknCalc?.totalRevenue ?? periodResult.totalRevenue
+
+            setDeclaration({
+              id: 'preview-tkn-declaration',
+              taxPeriodId: periodResult.id,
+              taxCalculationId: 'preview-calc-id',
+              formCode: '01/TKN-CNKD',
+              declarationCode: 'PREVIEW-TKN-DEMO',
+              version: 1,
+              declarationType: 'Initial',
+              supplementNumber: null,
+              status: 'Draft',
+              taxpayerName: bizName,
+              taxCode: bizTaxCode,
+              taxpayerAddress: bizAddress,
+              totalRevenue: rev,
+              totalVatTaxAmount: 0,
+              totalPersonalIncomeTaxAmount: 0,
+              vatExemptionAmount: 0,
+              personalIncomeTaxExemptionAmount: 0,
+              vatPayableAmount: 0,
+              personalIncomeTaxPayableAmount: 0,
+              totalTaxPayableAmount: 0,
+              generatedAt: new Date().toISOString(),
+              submittedAt: null,
+              lines: []
+            })
+          } else {
+            const calc =
+              await getTaxPeriodCalculationPreview(
+                taxPeriodId
+              ).catch(() => null)
+            if (!active) return
+
+            const totalRev =
+              calc?.totalRevenue ?? periodResult.totalRevenue
+            const vatTax =
+              calc?.totalVatTaxAmount ?? periodResult.vatTaxAmount
+            const pitTax =
+              calc?.totalPersonalIncomeTaxAmount ??
+              periodResult.personalIncomeTaxAmount
+            const totalTax =
+              calc?.totalTaxPayableAmount ??
+              vatTax + pitTax
+
+            setDeclaration({
+              id: 'preview-declaration',
+              taxPeriodId: periodResult.id,
+              taxCalculationId:
+                calc?.taxCalculationId || 'preview-calc-id',
+              formCode: '01/CNKD',
+              declarationCode: 'PREVIEW-01CNKD-DEMO',
+              version: 1,
+              declarationType: 'Initial',
+              supplementNumber: null,
+              status: 'Draft',
+              taxpayerName: bizName,
+              taxCode: bizTaxCode,
+              taxpayerAddress: bizAddress,
+              totalRevenue: totalRev,
+              totalVatTaxAmount: vatTax,
+              totalPersonalIncomeTaxAmount: pitTax,
+              vatExemptionAmount:
+                calc?.totalExemptionAmount ?? 0,
+              personalIncomeTaxExemptionAmount: 0,
+              vatPayableAmount: vatTax,
+              personalIncomeTaxPayableAmount: pitTax,
+              totalTaxPayableAmount: totalTax,
+              generatedAt: new Date().toISOString(),
+              submittedAt: null,
+              lines: (calc?.lines ?? []).map((line) => ({
+                id: line.id,
+                businessCategoryId: line.businessCategoryId,
+                sectionCode: line.sectionCode,
+                indicatorCode: line.indicatorCode,
+                businessActivityCode:
+                  line.businessActivityCode,
+                businessActivityName:
+                  line.businessActivityName,
+                totalRevenue: line.totalRevenue,
+                vatTaxableRevenue: line.vatTaxableRevenue,
+                zeroRatedVatRevenue:
+                  line.zeroRatedVatRevenue,
+                vatTaxRate: line.vatTaxRate,
+                vatTaxAmount: line.vatTaxAmount,
+                personalIncomeTaxableRevenue:
+                  line.personalIncomeTaxableRevenue,
+                personalIncomeTaxDeductibleRevenue:
+                  line.personalIncomeTaxDeductibleRevenue,
+                personalIncomeTaxRate:
+                  line.personalIncomeTaxRate,
+                personalIncomeTaxAmount:
+                  line.personalIncomeTaxAmount,
+                vatNonTaxableRevenue:
+                  line.vatNonTaxableRevenue,
+                personalIncomeTaxRevenue:
+                  line.personalIncomeTaxRevenue
+              }))
+            })
+          }
+        } else {
+          setDeclaration(null)
+        }
       } catch (error) {
         console.error(
           '[TaxDeclaration] Load failed:',
@@ -363,7 +499,7 @@ export default function TaxDeclarationPage() {
     return () => {
       active = false
     }
-  }, [taxPeriodId])
+  }, [taxPeriodId, isPreviewMode, currentBusiness, businesses])
 
   async function handleCreate() {
     if (
@@ -415,24 +551,26 @@ export default function TaxDeclarationPage() {
   }
 
   async function handleExport() {
-    if (!declaration?.id) {
+    if (!taxPeriodId) {
+      toast.warning('Không tìm thấy mã kỳ thuế.')
       return
     }
 
     try {
       setIsExporting(true)
 
-      const result =
-        await exportTaxDeclarationDocument(
-          declaration.id
-        )
+      const result = isPreviewMode
+        ? await exportTaxPeriodPreviewDocument(taxPeriodId)
+        : await exportTaxDeclarationDocument(declaration!.id)
 
       const url =
         URL.createObjectURL(
           result.blob
         )
 
-      const fallbackName = `${declaration.formCode || '01-CNKD'}_${taxPeriod?.periodType === 'Quarterly' ? `Q${taxPeriod.quarter}` : `Thang${taxPeriod?.month || ''}`}_${taxPeriod?.year || new Date().getFullYear()}.docx`
+      const fallbackName = isPreviewMode
+        ? `${isTkn ? '01-TKN-CNKD' : '01-CNKD'}_XEM-TRUOC_${taxPeriod?.year || new Date().getFullYear()}.docx`
+        : `${declaration?.formCode || '01-CNKD'}_${taxPeriod?.periodType === 'Quarterly' ? `Q${taxPeriod?.quarter}` : `Thang${taxPeriod?.month || ''}`}_${taxPeriod?.year || new Date().getFullYear()}.docx`
 
       const anchor =
         document.createElement('a')
@@ -454,7 +592,9 @@ export default function TaxDeclarationPage() {
       URL.revokeObjectURL(url)
 
       toast.success(
-        'Xuất tờ khai thành công.'
+        isPreviewMode
+          ? 'Đã tải tệp tờ khai xem trước (.docx).'
+          : 'Xuất tờ khai thành công.'
       )
     } catch (error) {
       console.error(
@@ -492,6 +632,27 @@ export default function TaxDeclarationPage() {
   }
 
   async function confirmSubmit() {
+    if (isPreviewMode) {
+      setIsSubmitting(true)
+      setTimeout(() => {
+        setIsSubmitting(false)
+        setIsSubmitConfirmOpen(false)
+        if (declaration) {
+          setDeclaration({
+            ...declaration,
+            status: 'Submitted',
+            submittedAt: new Date().toISOString()
+          })
+        }
+        toast.success(
+          taxPeriod?.periodType === 'Tkn'
+            ? 'Đã hoàn tất trải nghiệm gửi thông báo doanh thu.'
+            : 'Đã hoàn tất trải nghiệm gửi tờ khai.'
+        )
+      }, 500)
+      return
+    }
+
     if (!declaration?.id) {
       return
     }
@@ -624,13 +785,21 @@ export default function TaxDeclarationPage() {
       <div className='mx-auto max-w-6xl'>
         <button
           type='button'
-          onClick={() =>
-            isTkn ? navigate(path.BUSINESS_OWNER_TAX) : navigate(-1)
-          }
+          onClick={() => {
+            if (isPreviewMode) {
+              if (isTkn) {
+                navigate(tknTaxPeriodPreviewPath(taxPeriodId!))
+              } else {
+                navigate(`${taxPeriodCalculationPath(taxPeriodId!)}?mode=preview`)
+              }
+            } else {
+              isTkn ? navigate(path.BUSINESS_OWNER_TAX) : navigate(-1)
+            }
+          }}
           className='mb-5 flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-red-600'
         >
           <ArrowLeft size={18} />
-          {isTkn ? 'Quay lại tổng quan thuế' : 'Quay lại'}
+          {isPreviewMode ? 'Quay lại bước tính toán' : (isTkn ? 'Quay lại tổng quan thuế' : 'Quay lại')}
         </button>
 
         <div className='rounded-2xl bg-white p-6 shadow-sm'>
@@ -686,10 +855,16 @@ export default function TaxDeclarationPage() {
                     className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
                       declaration.status === 'Submitted'
                         ? 'bg-green-100 text-green-700'
-                        : 'bg-amber-100 text-amber-700'
+                        : isPreviewMode
+                          ? 'bg-violet-100 text-violet-800'
+                          : 'bg-amber-100 text-amber-700'
                     }`}
                   >
-                    {declaration.status === 'Submitted' ? 'Đã gửi' : 'Bản nháp'}
+                    {declaration.status === 'Submitted'
+                      ? 'Đã gửi'
+                      : isPreviewMode
+                        ? 'Bản xem trước'
+                        : 'Bản nháp'}
                   </span>
                 </div>
 
@@ -700,6 +875,33 @@ export default function TaxDeclarationPage() {
             )}
           </div>
         </div>
+
+        {isPreviewMode && (
+          <div className='mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-violet-400 bg-gradient-to-r from-violet-100/90 via-purple-50 to-indigo-50 p-4.5 shadow-sm'>
+            <div className='flex items-start gap-3.5'>
+              <div className='flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm mt-0.5'>
+                <Sparkles className='size-5' />
+              </div>
+              <div>
+                <div className='flex items-center gap-2'>
+                  <span className='rounded-md bg-violet-700 px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-white'>
+                    Chế độ xem thử nghiệm
+                  </span>
+                  <span className='text-xs font-bold text-violet-900'>Mô phỏng quy trình</span>
+                </div>
+                <p className='mt-1 text-xs sm:text-sm font-medium text-violet-800 leading-relaxed'>
+                  Biểu mẫu được tạo để bạn trải nghiệm và làm quen toàn bộ quy trình trước khi thực hiện chính thức. Thao tác thử nghiệm hoàn toàn không ảnh hưởng đến số liệu kinh doanh.
+                </p>
+              </div>
+            </div>
+            <div className='shrink-0'>
+              <span className='inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-violet-200 px-3 py-1 text-xs font-bold text-violet-800 shadow-2xs'>
+                <span className='size-2 rounded-full bg-violet-500 animate-pulse' />
+                Môi trường an toàn
+              </span>
+            </div>
+          </div>
+        )}
 
         {!declaration ? (
           <div className='mt-6 rounded-2xl bg-white p-10 text-center shadow-sm'>
@@ -965,32 +1167,51 @@ export default function TaxDeclarationPage() {
                     : 'Xuất tờ khai DOCX'}
               </button>
 
-              {declaration.status ===
-              'Submitted' ? (
-                <div className='flex h-12 items-center gap-2 rounded-xl bg-green-100 px-7 text-sm font-bold text-green-700'>
-                  <CheckCircle2 size={18} />
-
-                  {isTkn
-                    ? 'Thông báo doanh thu đã được gửi'
-                    : 'Tờ khai đã được gửi'}
-                </div>
+              {declaration.status === 'Submitted' ? (
+                <>
+                  <div className='flex h-12 items-center gap-2 rounded-xl bg-green-100 px-7 text-sm font-bold text-green-700'>
+                    <CheckCircle2 size={18} />
+                    {isTkn
+                      ? 'Thông báo doanh thu đã được gửi'
+                      : 'Tờ khai đã được gửi'}
+                  </div>
+                  {isPreviewMode && (
+                    <button
+                      type='button'
+                      onClick={() => navigate(path.BUSINESS_OWNER_TAX)}
+                      className='flex h-12 items-center gap-2 rounded-xl bg-slate-900 px-7 text-sm font-bold text-white hover:bg-black transition'
+                    >
+                      Hoàn tất xem trước
+                    </button>
+                  )}
+                </>
               ) : (
-                <button
-                  type='button'
-                  disabled={isSubmitting}
-                  onClick={() => {
-                    void handleSubmit()
-                  }}
-                  className='flex h-12 items-center gap-2 rounded-xl bg-red-600 px-7 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300'
-                >
-                  <Send size={18} />
-
-                  {isSubmitting
-                    ? 'Đang gửi...'
-                    : isTkn
-                      ? 'Đánh dấu đã gửi thông báo'
-                      : 'Gửi tờ khai'}
-                </button>
+                <>
+                  <button
+                    type='button'
+                    disabled={isSubmitting}
+                    onClick={() => {
+                      void handleSubmit()
+                    }}
+                    className='flex h-12 items-center gap-2 rounded-xl bg-red-600 px-7 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300'
+                  >
+                    <Send size={18} />
+                    {isSubmitting
+                      ? 'Đang gửi...'
+                      : isTkn
+                        ? 'Đánh dấu đã gửi thông báo'
+                        : 'Gửi tờ khai'}
+                  </button>
+                  {isPreviewMode && (
+                    <button
+                      type='button'
+                      onClick={() => navigate(path.BUSINESS_OWNER_TAX)}
+                      className='flex h-12 items-center gap-2 rounded-xl border border-gray-300 bg-white px-6 text-sm font-bold text-gray-700 hover:bg-gray-50 transition'
+                    >
+                      Thoát xem trước
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
@@ -1202,15 +1423,29 @@ export default function TaxDeclarationPage() {
 
       <ConfirmDialog
         open={isSubmitConfirmOpen}
-        title={isTkn
-          ? 'Xác nhận đã gửi thông báo doanh thu'
-          : 'Xác nhận gửi tờ khai'}
-        description={isTkn
-          ? 'Sau khi xác nhận, hồ sơ 01/TKN-CNKD sẽ chuyển sang trạng thái Đã gửi. Vui lòng kiểm tra kỹ bản tải về trước khi tiếp tục.'
-          : 'Sau khi gửi, tờ khai sẽ chuyển sang trạng thái Đã gửi. Vui lòng kiểm tra kỹ thông tin trước khi tiếp tục.'}
-        confirmLabel={isTkn
-          ? 'Xác nhận đã gửi'
-          : 'Gửi tờ khai'}
+        title={
+          isPreviewMode
+            ? isTkn
+              ? 'Xác nhận gửi thử nghiệm (Thông báo doanh thu)'
+              : 'Xác nhận gửi thử nghiệm (Tờ khai thuế)'
+            : isTkn
+              ? 'Xác nhận đã gửi thông báo doanh thu'
+              : 'Xác nhận gửi tờ khai'
+        }
+        description={
+          isPreviewMode
+            ? 'Đây là thao tác gửi thử nghiệm để bạn làm quen với quy trình. Hệ thống sẽ mô phỏng trạng thái Đã gửi trên màn hình, dữ liệu thực tế và kỳ thuế của bạn hoàn toàn an toàn.'
+            : isTkn
+              ? 'Sau khi xác nhận, hồ sơ 01/TKN-CNKD sẽ chuyển sang trạng thái Đã gửi. Vui lòng kiểm tra kỹ bản tải về trước khi tiếp tục.'
+              : 'Sau khi gửi, tờ khai sẽ chuyển sang trạng thái Đã gửi. Vui lòng kiểm tra kỹ thông tin trước khi tiếp tục.'
+        }
+        confirmLabel={
+          isPreviewMode
+            ? 'Xác nhận gửi thử'
+            : isTkn
+              ? 'Xác nhận đã gửi'
+              : 'Gửi tờ khai'
+        }
         isProcessing={isSubmitting}
         onCancel={() =>
           setIsSubmitConfirmOpen(false)

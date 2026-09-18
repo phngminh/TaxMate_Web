@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
-import { Eye, Search, Box, X, Scan, RotateCcw, Loader2, PlayCircle, Trash2, CheckCircle, Store } from 'lucide-react'
+import { Eye, Search, Box, X, Scan, RotateCcw, Loader2, PlayCircle, Trash2, CheckCircle, Store, AlertTriangle } from 'lucide-react'
 import { toast } from 'react-toastify'
 import { useBusiness } from '../../contexts/BusinessContext'
-import { getOrders, getOrderById, cancelOrder, confirmPayment } from '../../apis/order.api'
+import { getOrders, getOrderById, cancelOrder, confirmPayment, cancelAllDrafts } from '../../apis/order.api'
+import { cancelTaxPeriodDrafts } from '../../apis/taxPeriod.api'
 import type { Order, OrderDetail } from '../../types/order.type'
 import path from '../../constants/path'
 import http from '../../utils/http'
@@ -51,9 +52,12 @@ export default function OrderPage() {
   const [targetCancelOrderId, setTargetCancelOrderId] = useState<string | null>(null)
   const [cancellingOrder, setCancellingOrder] = useState(false)
   const [confirmingPayment, setConfirmingPayment] = useState(false)
+  const [showConfirmCancelAllDraftsModal, setShowConfirmCancelAllDraftsModal] = useState(false)
+  const [cancellingAllDrafts, setCancellingAllDrafts] = useState(false)
 
   // Pagination & URL params
   const [searchParams, setSearchParams] = useSearchParams()
+  const taxPeriodIdFromUrl = searchParams.get('taxPeriodId')
   const orderCodeFromUrl = searchParams.get('orderCode') || searchParams.get('search') || ''
   const statusFromUrl = searchParams.get('status') || 'all'
   const hasInvoiceFromUrl = searchParams.get('hasInvoice') || 'all'
@@ -255,6 +259,25 @@ export default function OrderPage() {
       }
     } finally {
       setCancellingOrder(false)
+    }
+  }
+
+  const handleCancelAllDrafts = async () => {
+    try {
+      setCancellingAllDrafts(true)
+      if (taxPeriodIdFromUrl) {
+        const count = await cancelTaxPeriodDrafts(taxPeriodIdFromUrl)
+        toast.success(`Đã hủy thành công ${count} đơn hàng nháp trong kỳ.`)
+      } else if (businessId) {
+        await cancelAllDrafts(businessId)
+        toast.success('Đã hủy toàn bộ đơn hàng nháp.')
+      }
+      setShowConfirmCancelAllDraftsModal(false)
+      fetchOrders()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Không thể hủy đơn hàng nháp.')
+    } finally {
+      setCancellingAllDrafts(false)
     }
   }
 
@@ -606,14 +629,26 @@ export default function OrderPage() {
             />
           </div>
 
-          {/* Reset Filters */}
+          {/* Reset Filters / Batch Actions */}
           {(searchQuery || statusFilter !== 'all' || hasInvoiceFilter !== 'all' || paymentFilter !== 'all' || timeFilter !== 'Tháng này' || startDateFromUrl || endDateFromUrl) && (
-            <button
-              onClick={handleResetFilters}
-              className='mt-auto flex items-center justify-center gap-2 border border-dashed border-[#D32F2F] hover:bg-[#fef2f2] text-[#D32F2F] text-[13px] font-bold py-2.5 rounded-[8px] transition-colors cursor-pointer'
-            >
-              <RotateCcw size={14} /> Xoá bộ lọc
-            </button>
+            <div className='mt-auto flex flex-col gap-2'>
+              {(statusFilter === 'Unpaid' || statusFilter === 'Draft' || Boolean(taxPeriodIdFromUrl) || orders.some(o => o.status === 'Draft')) && (
+                <button
+                  type='button'
+                  onClick={() => setShowConfirmCancelAllDraftsModal(true)}
+                  className='flex items-center justify-center gap-2 border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800 text-[13px] font-bold py-2.5 rounded-[8px] transition-colors cursor-pointer'
+                >
+                  <Trash2 size={14} className='text-amber-600' />
+                  {taxPeriodIdFromUrl ? 'Hủy các đơn nháp trong kỳ' : 'Hủy tất cả đơn nháp'}
+                </button>
+              )}
+              <button
+                onClick={handleResetFilters}
+                className='flex items-center justify-center gap-2 border border-dashed border-[#D32F2F] hover:bg-[#fef2f2] text-[#D32F2F] text-[13px] font-bold py-2.5 rounded-[8px] transition-colors cursor-pointer'
+              >
+                <RotateCcw size={14} /> Xoá bộ lọc
+              </button>
+            </div>
           )}
         </div>
 
@@ -721,11 +756,21 @@ export default function OrderPage() {
                   </button>
                 </span>
               )}
+              {(statusFilter === 'Unpaid' || statusFilter === 'Draft' || Boolean(taxPeriodIdFromUrl) || orders.some(o => o.status === 'Draft')) && (
+                <button
+                  type='button'
+                  onClick={() => setShowConfirmCancelAllDraftsModal(true)}
+                  className='ml-auto inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-500 px-3 py-1 text-xs font-bold text-white shadow-2xs hover:bg-amber-600 transition cursor-pointer'
+                >
+                  <Trash2 size={12} />
+                  {taxPeriodIdFromUrl ? 'Hủy các đơn nháp trong kỳ' : 'Hủy tất cả đơn nháp'}
+                </button>
+              )}
               <button
                 onClick={handleResetFilters}
-                className='ml-auto text-xs font-bold text-red-600 hover:underline cursor-pointer'
+                className={`${(statusFilter === 'Unpaid' || statusFilter === 'Draft' || Boolean(taxPeriodIdFromUrl) || orders.some(o => o.status === 'Draft')) ? 'ml-2' : 'ml-auto'} text-xs font-bold text-gray-500 hover:text-red-600 hover:underline cursor-pointer`}
               >
-                Xóa tất cả
+                Xóa bộ lọc
               </button>
             </div>
           )}
@@ -1036,10 +1081,14 @@ export default function OrderPage() {
               <Trash2 size={24} />
             </div>
             <h3 className='text-slate-900 font-extrabold text-[16px] mb-1.5'>
-              Hủy đơn hàng này?
+              {(orders.find(o => o.transactionId === targetCancelOrderId) || selectedOrder)?.status === 'Draft'
+                ? 'Hủy đơn nháp này?'
+                : 'Hủy đơn hàng này?'}
             </h3>
             <p className='text-slate-600 text-xs font-semibold leading-relaxed mb-6 bg-slate-50 p-3 rounded-lg border border-slate-200'>
-              “Tôi đã xác nhận khách chưa chuyển khoản”
+              {(orders.find(o => o.transactionId === targetCancelOrderId) || selectedOrder)?.status === 'Draft'
+                ? 'Đơn nháp sẽ được chuyển sang trạng thái "Đã hủy" và không tính vào doanh thu.'
+                : '“Tôi đã xác nhận khách chưa chuyển khoản”'}
             </p>
             <div className='flex gap-3'>
               <button
@@ -1057,6 +1106,44 @@ export default function OrderPage() {
                 className='flex-1 py-2.5 bg-red-600 hover:bg-red-700 disabled:bg-gray-300 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer'
               >
                 {cancellingOrder && <Loader2 size={13} className='animate-spin' />}
+                Xác nhận hủy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL XÁC NHẬN HỦY TẤT CẢ ĐƠN NHÁP */}
+      {showConfirmCancelAllDraftsModal && (
+        <div className='fixed inset-0 bg-black/50 backdrop-blur-xs z-60 flex items-center justify-center p-4 animate-in fade-in duration-150'>
+          <div className='bg-white rounded-[16px] shadow-2xl max-w-sm w-full overflow-hidden animate-in zoom-in-95 duration-150 p-6 text-center select-none'>
+            <div className='bg-amber-100 text-amber-600 size-14 rounded-full flex items-center justify-center mx-auto mb-3'>
+              <AlertTriangle size={26} />
+            </div>
+            <h3 className='text-slate-900 font-extrabold text-[16px] mb-1.5'>
+              {taxPeriodIdFromUrl ? 'Hủy đơn nháp trong kỳ thuế?' : 'Hủy tất cả đơn hàng nháp?'}
+            </h3>
+            <p className='text-slate-600 text-xs font-semibold leading-relaxed mb-6 bg-slate-50 p-3 rounded-lg border border-slate-200'>
+              {taxPeriodIdFromUrl
+                ? 'Toàn bộ đơn hàng nháp của các cơ sở trong kỳ thuế này sẽ được chuyển sang trạng thái "Đã hủy" để đưa số chưa thanh toán về 0.'
+                : 'Các đơn hàng ở trạng thái Đơn nháp sẽ được chuyển sang trạng thái "Đã hủy" và không tính vào doanh thu.'}
+            </p>
+            <div className='flex gap-3'>
+              <button
+                type='button'
+                onClick={() => setShowConfirmCancelAllDraftsModal(false)}
+                disabled={cancellingAllDrafts}
+                className='flex-1 py-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer'
+              >
+                Quay lại
+              </button>
+              <button
+                type='button'
+                onClick={handleCancelAllDrafts}
+                disabled={cancellingAllDrafts}
+                className='flex-1 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-300 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer'
+              >
+                {cancellingAllDrafts && <Loader2 size={13} className='animate-spin' />}
                 Xác nhận hủy
               </button>
             </div>
