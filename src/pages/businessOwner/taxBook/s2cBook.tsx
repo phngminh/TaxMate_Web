@@ -65,8 +65,130 @@ interface EvidenceTarget {
   categoryName?: string
 }
 
+interface QuarterSummary {
+  quarter: number
+  isReviewed: boolean
+  totalExpenses: number
+  verifiedExpenses: number
+  progressPct: number
+  hasBlocker: boolean
+  missingExpensesCount: number
+}
+
+interface LiquidProgressCapsuleProps {
+  progressPct: number
+  verifiedCount: number
+  totalCount: number
+  isReviewed: boolean
+}
+
+function LiquidProgressCapsule({
+  progressPct,
+  verifiedCount,
+  totalCount,
+  isReviewed,
+}: LiquidProgressCapsuleProps) {
+  const isFull = progressPct >= 100
+  const hasExpenses = totalCount > 0
+
+  return (
+    <div
+      className={`relative h-[38px] min-w-[130px] overflow-hidden rounded-xl border px-3 py-1.5 transition-all select-none shadow-2xs ${
+        isReviewed
+          ? 'border-emerald-300/80 bg-emerald-50/50 text-emerald-950'
+          : isFull
+          ? 'border-emerald-200/90 bg-emerald-50/40 text-emerald-900'
+          : 'border-slate-200/90 bg-slate-50/60 text-slate-800'
+      }`}
+      title={`Tiến độ chứng từ Quý: ${verifiedCount}/${totalCount} (${progressPct}%)`}
+    >
+      <style>{`
+        @keyframes liquid-wave-cycle {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        @keyframes liquid-wave-cycle-rev {
+          0% { transform: translateX(-50%); }
+          100% { transform: translateX(0); }
+        }
+        .anim-liquid-wave-1 {
+          animation: liquid-wave-cycle 6s linear infinite;
+        }
+        .anim-liquid-wave-2 {
+          animation: liquid-wave-cycle-rev 4.2s linear infinite;
+        }
+      `}</style>
+
+      {/* ── Liquid Water Body ── */}
+      {hasExpenses && (
+        <div
+          className='pointer-events-none absolute inset-x-0 bottom-0 transition-all duration-700 ease-out'
+          style={{ height: `${Math.min(100, Math.max(0, progressPct))}%` }}
+        >
+          {/* Top Sine Waves */}
+          {!isFull && progressPct > 0 && (
+            <div className='absolute -top-2 left-0 w-full overflow-hidden h-2.5 pointer-events-none opacity-80'>
+              <svg
+                className='anim-liquid-wave-1 absolute -top-0.5 left-0 w-[200%] h-full fill-emerald-500/25'
+                viewBox='0 0 400 20'
+                preserveAspectRatio='none'
+              >
+                <path d='M 0 10 Q 50 0, 100 10 T 200 10 Q 250 0, 300 10 T 400 10 L 400 20 L 0 20 Z' />
+              </svg>
+              <svg
+                className='anim-liquid-wave-2 absolute -top-0.5 left-0 w-[200%] h-full fill-emerald-600/35'
+                viewBox='0 0 400 20'
+                preserveAspectRatio='none'
+              >
+                <path d='M 0 8 Q 50 16, 100 8 T 200 8 Q 250 16, 300 8 T 400 8 L 400 20 L 0 20 Z' />
+              </svg>
+            </div>
+          )}
+
+          {/* Liquid Base Gradient */}
+          <div
+            className={`h-full w-full ${
+              isReviewed
+                ? 'bg-gradient-to-t from-emerald-500/35 via-emerald-400/25 to-emerald-300/15'
+                : isFull
+                ? 'bg-gradient-to-t from-emerald-500/30 via-emerald-400/20 to-emerald-300/10'
+                : 'bg-gradient-to-t from-amber-500/20 via-emerald-500/25 to-emerald-400/15'
+            }`}
+          />
+        </div>
+      )}
+
+      {/* ── Glass Top Highlight ── */}
+      <div className='pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-xl bg-gradient-to-b from-white/40 to-transparent' />
+
+      {/* ── Foreground Label (Z-index above liquid) ── */}
+      <div className='relative z-10 flex h-full items-center justify-between gap-1.5 text-xs font-semibold'>
+        <div className='flex items-center gap-1 min-w-0'>
+          {isReviewed ? (
+            <Check className='h-3.5 w-3.5 shrink-0 text-emerald-600 stroke-[2.5]' />
+          ) : isFull ? (
+            <Sparkles className='h-3.5 w-3.5 shrink-0 text-emerald-600' />
+          ) : (
+            <span className='h-2 w-2 shrink-0 rounded-full bg-amber-500 animate-pulse' />
+          )}
+          <span className='truncate text-[11px] font-medium text-slate-600'>Hồ sơ</span>
+        </div>
+
+        <div className='flex items-baseline gap-1 shrink-0'>
+          <span className='tabular-nums text-xs font-bold text-slate-900'>{progressPct}%</span>
+          {hasExpenses && (
+            <span className='text-[10px] tabular-nums text-slate-500'>
+              ({verifiedCount}/{totalCount})
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function S2cBookPage() {
-  const { currentBusiness } = useBusiness()
+  const { businesses, currentBusiness, setCurrentBusiness } = useBusiness()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const qttReturnParams = new URLSearchParams({ year: searchParams.get('year') ?? String(new Date().getFullYear()) })
@@ -74,6 +196,7 @@ export default function S2cBookPage() {
   const now = new Date()
   const yearFromUrl = Number(searchParams.get('year'))
   const quarterFromUrl = Number(searchParams.get('quarter'))
+  const businessIdFromUrl = searchParams.get('businessId')
   const [year, setYear] = useState(
     Number.isInteger(yearFromUrl) && yearFromUrl >= 2024 && yearFromUrl <= 2030
       ? yearFromUrl
@@ -84,12 +207,24 @@ export default function S2cBookPage() {
       ? quarterFromUrl
       : Math.floor(now.getMonth() / 3) + 1
   )
+
+  useEffect(() => {
+    if (!businessIdFromUrl || businesses.length === 0) return
+    const target = businesses.find((b) => b.id === businessIdFromUrl)
+    if (target && target.id !== currentBusiness?.id) {
+      setCurrentBusiness(target)
+    }
+  }, [businessIdFromUrl, businesses, currentBusiness, setCurrentBusiness])
+
   const [book, setBook] = useState<S2cBook | null>(null)
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [confirmingReview, setConfirmingReview] = useState(false)
   const [expandedCodes, setExpandedCodes] = useState<Set<string>>(new Set())
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+  const [evidenceFilter, setEvidenceFilter] = useState<'all' | 'missing'>('all')
+  const [isWarningsOpen, setIsWarningsOpen] = useState(false)
+  const [quarterSummaries, setQuarterSummaries] = useState<Record<number, QuarterSummary>>({})
 
   // Quick Evidence Upload state
   const [evidenceTarget, setEvidenceTarget] = useState<EvidenceTarget | null>(null)
@@ -102,7 +237,27 @@ export default function S2cBookPage() {
     if (!currentBusiness) return
     try {
       setLoading(true)
-      setBook(await getS2cPreview(currentBusiness.id, year, quarter))
+      setBook(null)
+      setExpandedCodes(new Set())
+      setExpandedItems(new Set())
+      setEvidenceFilter('all')
+      setIsWarningsOpen(false)
+      const data = await getS2cPreview(currentBusiness.id, year, quarter)
+      setBook(data)
+      const total = data.lines.length
+      const verified = data.lines.filter((l) => l.hasEvidence).length
+      setQuarterSummaries((prev) => ({
+        ...prev,
+        [quarter]: {
+          quarter,
+          isReviewed: Boolean(data.evidenceReviewedAt),
+          totalExpenses: total,
+          verifiedExpenses: verified,
+          progressPct: total > 0 ? Math.round((verified / total) * 100) : 100,
+          hasBlocker: data.warnings.some((w) => !w.canOverride),
+          missingExpensesCount: total - verified,
+        },
+      }))
     } catch {
       toast.error('Không thể tải sổ chi phí S2c')
     } finally {
@@ -110,12 +265,76 @@ export default function S2cBookPage() {
     }
   }, [currentBusiness, year, quarter])
 
+  const fetchQuarterSummaries = useCallback(async () => {
+    if (!currentBusiness) return
+    try {
+      const quarters = [1, 2, 3, 4]
+      const results = await Promise.allSettled(
+        quarters.map((q) => getS2cPreview(currentBusiness.id, year, q))
+      )
+      const summaries: Record<number, QuarterSummary> = {}
+      results.forEach((res, idx) => {
+        const q = quarters[idx]
+        if (res.status === 'fulfilled' && res.value) {
+          const b = res.value
+          const total = b.lines.length
+          const verified = b.lines.filter((l) => l.hasEvidence).length
+          summaries[q] = {
+            quarter: q,
+            isReviewed: Boolean(b.evidenceReviewedAt),
+            totalExpenses: total,
+            verifiedExpenses: verified,
+            progressPct: total > 0 ? Math.round((verified / total) * 100) : 100,
+            hasBlocker: b.warnings.some((w) => !w.canOverride),
+            missingExpensesCount: total - verified,
+          }
+        }
+      })
+      setQuarterSummaries((prev) => ({ ...prev, ...summaries }))
+    } catch {
+      // Non-fatal summary fetch
+    }
+  }, [currentBusiness, year])
+
   useEffect(() => {
-    setBook(null)
-    setExpandedCodes(new Set())
-    setExpandedItems(new Set())
-    void load()
+    let isMounted = true
+    const timer = setTimeout(() => {
+      if (isMounted) {
+        void fetchQuarterSummaries()
+      }
+    }, 0)
+    return () => {
+      isMounted = false
+      clearTimeout(timer)
+    }
+  }, [fetchQuarterSummaries])
+
+  useEffect(() => {
+    let isMounted = true
+    const timer = setTimeout(() => {
+      if (isMounted) {
+        void load()
+      }
+    }, 0)
+    return () => {
+      isMounted = false
+      clearTimeout(timer)
+    }
   }, [load])
+
+  const isReviewed = Boolean(book?.evidenceReviewedAt)
+  const totalExpenses = book?.lines.length ?? 0
+  const verifiedExpenses = book?.lines.filter((l) => l.hasEvidence).length ?? 0
+  const missingExpensesCount = totalExpenses - verifiedExpenses
+  const progressPct = totalExpenses > 0 ? Math.round((verifiedExpenses / totalExpenses) * 100) : 100
+
+  const displayedLines = useMemo(() => {
+    if (!book) return []
+    if (evidenceFilter === 'missing') {
+      return book.lines.filter((l) => !l.hasEvidence)
+    }
+    return book.lines
+  }, [book, evidenceFilter])
 
   const expenseLineById = useMemo(() => {
     const map = new Map<string, S2cExpenseLine>()
@@ -140,14 +359,22 @@ export default function S2cBookPage() {
   const toggleCode = (code: string) =>
     setExpandedCodes((prev) => {
       const next = new Set(prev)
-      next.has(code) ? next.delete(code) : next.add(code)
+      if (next.has(code)) {
+        next.delete(code)
+      } else {
+        next.add(code)
+      }
       return next
     })
 
   const toggleItems = (code: string) =>
     setExpandedItems((prev) => {
       const next = new Set(prev)
-      next.has(code) ? next.delete(code) : next.add(code)
+      if (next.has(code)) {
+        next.delete(code)
+      } else {
+        next.add(code)
+      }
       return next
     })
 
@@ -241,8 +468,9 @@ export default function S2cBookPage() {
       toast.success('Bổ sung chứng từ thành công!')
       closeUploadModal()
       void load()
-    } catch (err: any) {
-      toast.error(err.message || 'Đã có lỗi xảy ra khi tải lên chứng từ')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Đã có lỗi xảy ra khi tải lên chứng từ'
+      toast.error(message)
     } finally {
       setIsSavingEvidence(false)
     }
@@ -277,7 +505,22 @@ export default function S2cBookPage() {
     if (!currentBusiness || !book) return
     try {
       setConfirmingReview(true)
-      setBook(await confirmS2cEvidenceReview(currentBusiness.id, year, quarter))
+      const updated = await confirmS2cEvidenceReview(currentBusiness.id, year, quarter)
+      setBook(updated)
+      setQuarterSummaries((prev) => ({
+        ...prev,
+        [quarter]: {
+          ...(prev[quarter] ?? {
+            quarter,
+            totalExpenses: updated.lines.length,
+            verifiedExpenses: updated.lines.filter((l) => l.hasEvidence).length,
+            progressPct: 100,
+            hasBlocker: false,
+            missingExpensesCount: 0,
+          }),
+          isReviewed: true,
+        },
+      }))
       toast.success(`Đã lưu xác nhận rà soát chứng từ Quý ${quarter}`)
     } catch {
       toast.error('Không thể lưu xác nhận rà soát')
@@ -292,6 +535,7 @@ export default function S2cBookPage() {
       setConfirmingAll(true)
       await Promise.all([1, 2, 3, 4].map((q) => confirmS2cEvidenceReview(currentBusiness.id, year, q)))
       setBook(await getS2cPreview(currentBusiness.id, year, quarter))
+      void fetchQuarterSummaries()
       toast.success(`Đã xác nhận rà soát chi phí cả năm ${year} (4 Quý) thành công!`)
     } catch {
       toast.error('Không thể lưu xác nhận rà soát cả năm')
@@ -305,8 +549,15 @@ export default function S2cBookPage() {
 
   return (
     <div className='mx-auto max-w-7xl p-6'>
-      {searchParams.get('returnTo') === 'qtt' && <button className='mb-4 text-sm underline underline-offset-4'
-        onClick={() => navigate(`/business-owner/tax-books/qtt?${qttReturnParams}`)}>Quay lại quyết toán năm</button>}
+      {searchParams.get('returnTo') === 'qtt' && (
+        <button
+          type='button'
+          className='mb-4 inline-flex items-center gap-1.5 text-xs font-bold text-amber-900 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-3 py-1.5 rounded-xl transition-all cursor-pointer'
+          onClick={() => navigate(`/business-owner/tax-books/qtt?${qttReturnParams.toString()}`)}
+        >
+          <span>← Quay lại quyết toán năm</span>
+        </button>
+      )}
       <div className='mb-5 flex flex-wrap items-end justify-between gap-4'>
         <div>
           <div className='flex flex-wrap items-center gap-2.5'>
@@ -328,22 +579,75 @@ export default function S2cBookPage() {
           <div>
             <span className='text-xs font-bold uppercase tracking-wider text-gray-500 mb-1 block'>Kỳ kê khai Quý</span>
             <div className='flex items-center gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200/80'>
-              {[1, 2, 3, 4].map((q) => (
-                <button
-                  key={q}
-                  type='button'
-                  onClick={() => setQuarter(q)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                    quarter === q
-                      ? 'bg-white text-slate-900 shadow-xs ring-1 ring-slate-900/10'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  Quý {q}
-                </button>
-              ))}
+              {[1, 2, 3, 4].map((q) => {
+                const qSummary = quarterSummaries[q]
+                const isActive = quarter === q
+                const qPct = qSummary?.progressPct ?? 0
+                const qReviewed = qSummary?.isReviewed ?? false
+                const qHasExpenses = (qSummary?.totalExpenses ?? 0) > 0
+                const qMissing = qSummary?.missingExpensesCount ?? 0
+
+                return (
+                  <button
+                    key={q}
+                    type='button'
+                    onClick={() => setQuarter(q)}
+                    className={`relative rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer overflow-hidden ${
+                      isActive
+                        ? 'bg-white text-slate-900 shadow-xs ring-1 ring-slate-900/10'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                    }`}
+                    title={
+                      qReviewed
+                        ? `Quý ${q}: Đã xác nhận rà soát`
+                        : qHasExpenses && qMissing > 0
+                        ? `Quý ${q}: Còn thiếu ${qMissing} chứng từ (${qPct}%)`
+                        : qHasExpenses
+                        ? `Quý ${q}: Đã đủ ${qSummary?.verifiedExpenses} chứng từ, chờ duyệt`
+                        : `Quý ${q}: Chưa có phát sinh`
+                    }
+                  >
+                    <div className='flex items-center gap-1.5 mb-1'>
+                      {qReviewed ? (
+                        <Check className='h-3 w-3 text-emerald-600 shrink-0 stroke-[2.5]' />
+                      ) : qHasExpenses && qMissing > 0 ? (
+                        <span className='h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0' />
+                      ) : qHasExpenses && qMissing === 0 ? (
+                        <span className='h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0' />
+                      ) : (
+                        <span className='h-1.5 w-1.5 rounded-full bg-slate-300 shrink-0' />
+                      )}
+
+                      <span>Quý {q}</span>
+
+                      {qReviewed ? (
+                        <span className='text-[10px] font-semibold text-emerald-700 hidden sm:inline'>Duyệt</span>
+                      ) : qHasExpenses && qMissing > 0 ? (
+                        <span className='text-[10px] font-medium text-amber-700 tabular-nums hidden sm:inline'>{qPct}%</span>
+                      ) : null}
+                    </div>
+
+                    {/* Hairline 2px bottom progress bar */}
+                    <div className='absolute inset-x-1 bottom-0.5 h-[2px] rounded-full bg-slate-200/70 overflow-hidden'>
+                      <div
+                        className={`h-full transition-all duration-500 ${
+                          qReviewed ? 'bg-emerald-600' : qPct === 100 ? 'bg-emerald-500' : 'bg-amber-500'
+                        }`}
+                        style={{ width: `${qHasExpenses ? qPct : 0}%` }}
+                      />
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
+
+          <LiquidProgressCapsule
+            progressPct={progressPct}
+            verifiedCount={verifiedExpenses}
+            totalCount={totalExpenses}
+            isReviewed={isReviewed}
+          />
           <button onClick={load} disabled={!currentBusiness || loading}
             className='flex items-center gap-2 rounded-lg bg-[#9b0000] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 cursor-pointer'>
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
@@ -359,7 +663,7 @@ export default function S2cBookPage() {
             disabled={!book || confirmingAll}
             className='flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50 cursor-pointer transition-all shadow-xs'>
             <Sparkles size={16} className={confirmingAll ? 'animate-spin' : ''} />
-            {confirmingAll ? 'Đang duyệt cả năm...' : '✨ Xác nhận cả 4 Quý'}
+            {confirmingAll ? 'Đang duyệt cả năm...' : '✨ Xác nhận 4 Quý (Cơ sở này)'}
           </button>
           <button onClick={download}
             disabled={!book || hasHardBlocker || (hasEvidenceWarnings && !book.evidenceReviewedAt) || exporting}
@@ -370,13 +674,190 @@ export default function S2cBookPage() {
         </div>
       </div>
 
-      {book?.evidenceReviewedAt ? (
-        <div className='mb-5 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800'>
-          Đã xác nhận rà soát lúc {new Date(book.evidenceReviewedAt).toLocaleString('vi-VN')}.
-        </div>
-      ) : null}
+      {isReviewed ? (
+        <div className='mb-5 rounded-xl border border-emerald-200/80 bg-emerald-50/60 p-3.5 text-[13px] text-emerald-950 transition-all'>
+          <div className='flex flex-wrap items-center justify-between gap-3'>
+            <div className='flex flex-wrap items-center gap-2.5 min-w-0'>
+              <Check className='h-4 w-4 text-emerald-600 shrink-0 stroke-[2.5]' />
+              <span className='font-semibold text-emerald-950'>
+                Đã xác nhận rà soát lúc {new Date(book!.evidenceReviewedAt!).toLocaleString('vi-VN')}
+              </span>
+              <span className='text-emerald-300 font-light'>·</span>
+              <span className='text-emerald-800 font-medium'>
+                {groupedWarnings.reduce((sum, g) => sum + g.items.length, 0)} chứng từ chưa đính kèm
+              </span>
+            </div>
 
-      {groupedWarnings.length > 0 && (
+            <div className='flex items-center gap-4 shrink-0'>
+              {/* Micro Progress Bar */}
+              <div className='hidden sm:flex items-center gap-2' title='Tiến độ đính kèm chứng từ chi phí'>
+                <div className='h-1.5 w-24 bg-emerald-200/60 rounded-full overflow-hidden'>
+                  <div
+                    className='h-full bg-emerald-600 rounded-full transition-all duration-300'
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+                <span className='tabular-nums text-[12px] font-medium text-emerald-800'>
+                  {verifiedExpenses}/{totalExpenses} ({progressPct}%)
+                </span>
+              </div>
+
+              {groupedWarnings.length > 0 && (
+                <button
+                  type='button'
+                  onClick={() => setIsWarningsOpen(!isWarningsOpen)}
+                  className='inline-flex items-center gap-1 text-[12.5px] font-medium text-emerald-800 hover:text-emerald-950 px-2.5 py-1 rounded-md hover:bg-emerald-100/60 transition-colors cursor-pointer'
+                >
+                  <span>{isWarningsOpen ? 'Thu gọn' : `Xem chi tiết (${groupedWarnings.reduce((sum, g) => sum + g.items.length, 0)})`}</span>
+                  <ChevronDown className={`h-3.5 w-3.5 text-emerald-700 transition-transform duration-200 ${isWarningsOpen ? 'rotate-180' : ''}`} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Collapsible Details */}
+          {isWarningsOpen && groupedWarnings.length > 0 && (
+            <div className='mt-3 border-t border-emerald-200/60 pt-3'>
+              <div className='divide-y divide-emerald-100 rounded-lg border border-emerald-100 bg-white/95 overflow-hidden'>
+                {groupedWarnings.map(({ code, items }) => {
+                  const meta = WARNING_META[code]
+                  const isOpen = expandedCodes.has(code)
+                  const showAll = expandedItems.has(code)
+                  const PREVIEW_LIMIT = 5
+                  const displayed = showAll ? items : items.slice(0, PREVIEW_LIMIT)
+                  const isExpenseGroup = code === 'MissingExpenseEvidence'
+
+                  return (
+                    <div key={code}>
+                      <div className='flex items-center justify-between px-3.5 py-2.5 hover:bg-slate-50/70 transition-colors'>
+                        <button
+                          type='button'
+                          onClick={() => toggleCode(code)}
+                          className='flex items-center gap-2 text-left cursor-pointer'
+                        >
+                          <span className='h-2 w-2 rounded-full bg-emerald-500 shrink-0' />
+                          <span className='text-[13px] font-medium text-slate-800'>{meta?.label ?? code}</span>
+                          <span className='rounded-full bg-slate-100 px-1.5 py-0.5 text-[11px] font-semibold text-slate-600'>
+                            {items.length}
+                          </span>
+                          <ChevronDown size={13} className={`text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isExpenseGroup && missingExpensesCount > 0 && (
+                          <button
+                            type='button'
+                            onClick={() => setEvidenceFilter(evidenceFilter === 'missing' ? 'all' : 'missing')}
+                            className='text-[12px] font-medium text-emerald-700 hover:text-emerald-900 hover:underline cursor-pointer'
+                          >
+                            {evidenceFilter === 'missing' ? 'Bỏ lọc bảng' : `Lọc ${items.length} khoản này vào bảng`}
+                          </button>
+                        )}
+                      </div>
+
+                      {isOpen && (
+                        <div className='border-t border-slate-100 bg-slate-50/50 px-4 py-2.5'>
+                          <ul className='space-y-1.5'>
+                            {displayed.map((item, i) => {
+                              const matchedLine = item.sourceId ? expenseLineById.get(item.sourceId) : undefined
+                              const isInventoryPurchase = code === 'MissingInventoryPurchaseEvidence'
+
+                              return (
+                                <li
+                                  key={`${code}-${item.sourceId ?? i}`}
+                                  className='flex flex-wrap items-center justify-between gap-2 text-xs text-slate-700 py-1.5 border-b border-slate-200/50 last:border-b-0'
+                                >
+                                  <div className='flex flex-wrap items-center gap-2'>
+                                    <span className='select-none text-emerald-600 font-bold'>›</span>
+
+                                    {matchedLine ? (
+                                      <>
+                                        <span className='font-semibold text-gray-900'>{matchedLine.expenseTitle}</span>
+                                        <span className='font-bold text-orange-700 tabular-nums'>
+                                          {money.format(matchedLine.amount)} đ
+                                        </span>
+                                        <span className='text-gray-500'>
+                                          ({new Date(matchedLine.expenseDate).toLocaleDateString('vi-VN')})
+                                        </span>
+                                        {matchedLine.categoryName && (
+                                          <span className='rounded bg-slate-200/70 px-1.5 py-0.5 text-[11px] text-slate-800 font-medium'>
+                                            {matchedLine.categoryName}
+                                          </span>
+                                        )}
+                                        <span className='font-mono text-[11px] text-gray-500'>
+                                          #{matchedLine.voucherNumber.slice(0, 10)}…
+                                        </span>
+                                      </>
+                                    ) : isInventoryPurchase ? (
+                                      <>
+                                        <span className='font-semibold text-gray-900'>Phiếu nhập kho tính giá xuất S2d</span>
+                                        {item.sourceId && (
+                                          <span className='font-mono text-[11px] text-gray-600'>
+                                            Mã phiếu: #{item.sourceId.slice(0, 8)}…
+                                          </span>
+                                        )}
+                                      </>
+                                    ) : (
+                                      <span className='text-gray-800'>{item.message}</span>
+                                    )}
+                                  </div>
+
+                                  <div>
+                                    {isInventoryPurchase ? (
+                                      <button
+                                        type='button'
+                                        onClick={() =>
+                                          navigate(
+                                            `/business-owner/purchase-expenses?id=${encodeURIComponent(item.sourceId ?? '')}&autoOpen=true`
+                                          )
+                                        }
+                                        className='inline-flex items-center gap-1 rounded bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 text-[11.5px] font-semibold text-slate-700 transition-colors cursor-pointer'
+                                        title='Đi tới danh sách phiếu nhập kho để bổ sung chứng từ'
+                                      >
+                                        <span>Xem phiếu nhập</span>
+                                        <ExternalLink size={12} />
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type='button'
+                                        onClick={() => {
+                                          if (matchedLine) {
+                                            openUploadModal(matchedLine)
+                                          } else if (item.sourceId) {
+                                            void openUploadModalById(item.sourceId)
+                                          }
+                                        }}
+                                        className='inline-flex items-center gap-1 rounded bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 text-[11.5px] font-semibold text-slate-700 transition-colors cursor-pointer'
+                                        title='Bổ sung ảnh chứng từ nhanh cho khoản chi này'
+                                      >
+                                        <ImagePlus size={12} className='text-slate-500' />
+                                        <span>Bổ sung chứng từ</span>
+                                      </button>
+                                    )}
+                                  </div>
+                                </li>
+                              )
+                            })}
+                          </ul>
+
+                          {items.length > PREVIEW_LIMIT && (
+                            <button
+                              type='button'
+                              onClick={() => toggleItems(code)}
+                              className='mt-2 text-xs font-medium text-emerald-800 hover:underline cursor-pointer'
+                            >
+                              {showAll ? '▲ Thu gọn' : `▼ Xem thêm ${items.length - PREVIEW_LIMIT} vấn đề`}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : groupedWarnings.length > 0 ? (
         <div className='mb-5 overflow-hidden rounded-xl border border-amber-300 bg-amber-50'>
           {/* Header */}
           <div className='flex items-center justify-between px-4 py-3'>
@@ -534,7 +1015,7 @@ export default function S2cBookPage() {
             })}
           </div>
         </div>
-      )}
+      ) : null}
 
       {book && book.excludedCashPaymentExpenseCount > 0 ? (
         <div className='mb-5 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950'>
@@ -590,6 +1071,25 @@ export default function S2cBookPage() {
             <div className='mt-2 text-xs text-sky-800'>TaxMate hiện chưa hỗ trợ chi phí nhân công; khoản này chưa được tổng hợp vào sổ S2c.</div>
           </div>
 
+          {/* Active Filter Bar */}
+          {evidenceFilter === 'missing' && (
+            <div className='flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50/80 px-3.5 py-2 text-xs text-amber-900'>
+              <div className='flex items-center gap-2'>
+                <span className='h-2 w-2 rounded-full bg-amber-500' />
+                <span>
+                  Đang lọc: <strong>{displayedLines.length} khoản chi</strong> chưa có tệp chứng từ
+                </span>
+              </div>
+              <button
+                type='button'
+                onClick={() => setEvidenceFilter('all')}
+                className='font-semibold text-amber-800 hover:text-amber-950 hover:underline cursor-pointer'
+              >
+                ✕ Bỏ lọc (Hiện tất cả {book.lines.length} khoản chi)
+              </button>
+            </div>
+          )}
+
           <div className='overflow-x-auto rounded-xl border bg-white'>
             <table className='min-w-full text-sm'>
               <thead className='bg-gray-50 text-gray-600'>
@@ -600,9 +1100,15 @@ export default function S2cBookPage() {
                 </tr>
               </thead>
               <tbody>
-                {book.lines.length === 0 ? (
-                  <tr><td colSpan={7} className='px-4 py-12 text-center text-gray-500'>Không có khoản chi được đưa vào S2c trong kỳ.</td></tr>
-                ) : book.lines.map((line) => (
+                {displayedLines.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className='px-4 py-12 text-center text-gray-500'>
+                      {evidenceFilter === 'missing'
+                        ? 'Tất cả các khoản chi trong kỳ này đều đã có tệp chứng từ đính kèm.'
+                        : 'Không có khoản chi được đưa vào S2c trong kỳ.'}
+                    </td>
+                  </tr>
+                ) : displayedLines.map((line) => (
                   <tr key={line.expenseId} className='border-t hover:bg-gray-50/70 transition-colors'>
                     <td className='whitespace-nowrap px-4 py-3'>{new Date(line.expenseDate).toLocaleDateString('vi-VN')}</td>
                     <td className='whitespace-nowrap px-4 py-3'>
@@ -629,6 +1135,16 @@ export default function S2cBookPage() {
                           <Check size={12} />
                           Có tệp chứng từ
                         </span>
+                      ) : isReviewed ? (
+                        <button
+                          type='button'
+                          onClick={() => openUploadModal(line)}
+                          className='inline-flex items-center gap-1 text-[12px] font-medium text-slate-500 hover:text-slate-800 hover:underline transition-colors cursor-pointer'
+                          title='Nhấn để tải lên ảnh hóa đơn / chứng từ cho khoản chi này'
+                        >
+                          <ImagePlus size={12} className='text-slate-400' />
+                          <span>Bổ sung chứng từ</span>
+                        </button>
                       ) : (
                         <button
                           onClick={() => openUploadModal(line)}

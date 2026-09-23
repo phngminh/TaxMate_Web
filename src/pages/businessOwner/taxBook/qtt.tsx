@@ -171,12 +171,13 @@ export default function QttPage() {
     const currentYear = year
     try {
       setLoading(true)
-      const [nextPreview, accountResponse, nextObligations, nextTknBridge, saved] = await Promise.all([
+      const [nextPreview, accountResponse, nextObligations, nextTknBridge, saved, nextCalc] = await Promise.all([
         getQttPreview(currentBusinessId, currentYear),
         getPaymentAccounts(currentBusinessId),
         getQttOffsetObligations(currentBusinessId),
         fromTkn ? getTknQttNextStep(fromTkn) : Promise.resolve(null),
-        getQttDeclaration(currentBusinessId, currentYear)
+        getQttDeclaration(currentBusinessId, currentYear),
+        getQttCalculationPreview(currentBusinessId, currentYear).catch(() => null)
       ])
       if (currentBusiness.id !== currentBusinessId || year !== currentYear) return
       if (nextTknBridge && nextTknBridge.taxYear !== currentYear) {
@@ -189,15 +190,7 @@ export default function QttPage() {
       setTknBridge(nextTknBridge)
       setAccounts((accountResponse.data ?? []).filter((x) => x.accountType === 'Bank' && x.isActive))
       setObligations(nextObligations)
-      if (!saved) {
-        try {
-          setCalculation(await getQttCalculationPreview(currentBusinessId, currentYear))
-        } catch {
-          setCalculation(null)
-        }
-      } else {
-        setCalculation(null)
-      }
+      setCalculation(saved ? null : nextCalc)
       if (isManual) {
         toast.success(`Đã cập nhật dữ liệu quyết toán năm ${year}!`)
       }
@@ -464,10 +457,11 @@ export default function QttPage() {
   }
 
   const download = async () => {
-    if (!currentBusiness || !declaration || declaration.status === 'Draft') return
+    if (!currentBusiness || !declaration) return
+    const usePreviewExport = isPreviewMode || declaration.status === 'Draft'
     try {
       setExporting(true)
-      const blob = isPreviewMode
+      const blob = usePreviewExport
         ? await exportQttPreview(currentBusiness.id, year)
         : await exportQttDeclaration(currentBusiness.id, declaration.declarationId)
       const url = URL.createObjectURL(blob)
@@ -536,7 +530,7 @@ export default function QttPage() {
         </div>
         <div className='flex items-end gap-3'>
           <label className='text-sm text-gray-600'>Năm
-            <input className='mt-1 block w-28 rounded-lg border px-3 py-2' type='number' value={year}
+            <input disabled={loading} className='mt-1 block w-28 rounded-lg border px-3 py-2 disabled:opacity-50' type='number' value={year}
               onChange={(event) => setYear(Number(event.target.value))} />
           </label>
           <button
@@ -569,7 +563,12 @@ export default function QttPage() {
       ) : !preview ? (
         <div className='rounded-xl border border-dashed bg-white p-12 text-center text-gray-500'>Không có dữ liệu quyết toán năm {year}. Hãy bấm “Tải lại”.</div>
       ) : (
-        <>
+        <div
+          aria-busy={loading}
+          className={`space-y-5 transition-opacity duration-150 ${
+            loading ? 'pointer-events-none opacity-60 select-none' : ''
+          }`}
+        >
           <QttReadinessPanel
             businessId={currentBusiness?.id ?? ''}
             hardBlockers={preview.hardBlockers}
@@ -810,7 +809,7 @@ export default function QttPage() {
               <button
                 type='button'
                 onClick={declaration ? () => void load(true) : prepareDeclaration}
-                disabled={working || (!declaration && !preview?.canClose)}
+                disabled={loading || working || (!declaration && !preview?.canClose)}
                 className='rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-bold text-white shadow-md disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed transition-all'
               >
                 {declaration
@@ -821,11 +820,12 @@ export default function QttPage() {
               </button>
             )}
 
-            {!declaration && !preview?.canClose && calculation && (
+            {!declaration && calculation && (
               <button
                 type='button'
                 onClick={handlePreviewDeclaration}
-                className='inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-violet-700 transition-all cursor-pointer'
+                disabled={loading || working}
+                className='inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-violet-700 disabled:opacity-50 transition-all cursor-pointer'
               >
                 <FileText size={16} /> Xem trước hồ sơ quyết toán 02/QTT →
               </button>
@@ -841,19 +841,19 @@ export default function QttPage() {
               </span>
             )}
             {declaration?.status === 'Draft' && (
-              <button onClick={confirm} disabled={working || (overpaid > 0 && carryForward < 0)}
+              <button onClick={confirm} disabled={loading || working || (overpaid > 0 && carryForward < 0)}
                 className='inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-emerald-700 disabled:opacity-50 transition-all cursor-pointer'>
                 <Check size={16} /> Xác nhận và khóa
               </button>
             )}
-            {declaration && (declaration.status !== 'Draft' || isPreviewMode) && (
-              <button onClick={download} disabled={exporting}
+            {declaration && (
+              <button onClick={download} disabled={loading || exporting}
                 className='inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-violet-700 disabled:opacity-50 transition-all cursor-pointer'>
-                <Download size={16} /> {isPreviewMode ? 'Tải Word xem trước (.docx)' : 'Tải Word (.docx)'}
+                <Download size={16} /> {isPreviewMode || declaration.status === 'Draft' ? 'Tải Word xem trước (.docx)' : 'Tải Word (.docx)'}
               </button>
             )}
             {declaration?.status === 'Generated' && (
-              <button onClick={submitDeclaration} disabled={working}
+              <button onClick={submitDeclaration} disabled={loading || working}
                 className='inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-md hover:bg-blue-700 disabled:opacity-50 transition-all'>
                 <Send size={16} /> Đánh dấu đã nộp bên ngoài
               </button>
@@ -867,11 +867,12 @@ export default function QttPage() {
             {isPreviewMode && (
               <button
                 type='button'
+                disabled={loading}
                 onClick={() => {
                   setDeclaration(null)
                   setIsPreviewMode(false)
                 }}
-                className='inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all cursor-pointer'
+                className='inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-all cursor-pointer'
               >
                 Thoát xem trước
               </button>
@@ -942,11 +943,11 @@ export default function QttPage() {
                   </div>
                   <div className='grid gap-4 md:grid-cols-2'>
                     <label className='text-sm text-gray-600'>Số đề nghị hoàn
-                      <input disabled={declaration.status !== 'Draft'} className='mt-1 block w-full rounded-lg border px-3 py-2' type='number' min={0} value={refundAmount}
+                      <input disabled={loading || declaration.status !== 'Draft'} className='mt-1 block w-full rounded-lg border px-3 py-2' type='number' min={0} value={refundAmount}
                         onChange={(event) => setRefundAmount(Number(event.target.value))} />
                     </label>
                     <label className='text-sm text-gray-600'>Tài khoản nhận hoàn
-                      <select disabled={declaration.status !== 'Draft'} className='mt-1 block w-full rounded-lg border px-3 py-2' value={refundAccountId}
+                      <select disabled={loading || declaration.status !== 'Draft'} className='mt-1 block w-full rounded-lg border px-3 py-2' value={refundAccountId}
                         onChange={(event) => setRefundAccountId(event.target.value)}>
                         <option value=''>Chọn tài khoản</option>
                         {accounts.map((account) => <option key={account.paymentAccountId} value={account.paymentAccountId}>{account.bankShortName || account.bankName} · {account.accountNumber}</option>)}
@@ -955,14 +956,14 @@ export default function QttPage() {
                   </div>
 
                   <div className='flex items-center justify-between'><div><h3 className='font-semibold'>Khoản đề nghị bù trừ</h3><p className='text-sm text-gray-500'>Tổng: {money.format(offsetAmount)} đ</p></div>
-                    {declaration.status === 'Draft' && <button onClick={() => setOffsets((current) => [...current, emptyOffset()])} className='inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-sm'><Plus size={15} /> Thêm khoản</button>}
+                    {declaration.status === 'Draft' && <button disabled={loading} onClick={() => setOffsets((current) => [...current, emptyOffset()])} className='inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-sm disabled:opacity-50'><Plus size={15} /> Thêm khoản</button>}
                   </div>
                   {offsets.map((item) => (
-                    <OffsetEditor key={item.id} item={item} obligations={obligations} disabled={declaration.status !== 'Draft'}
+                    <OffsetEditor key={item.id} item={item} obligations={obligations} disabled={loading || declaration.status !== 'Draft'}
                       onChange={(patch) => changeOffset(item.id, patch)} onSelect={(value) => selectObligation(item.id, value)}
                       onRemove={() => setOffsets((current) => current.filter((x) => x.id !== item.id))} />
                   ))}
-                  {/* BẢNG TÓM TẮT PHÂN BỔ TIỀN NỘP THỪA THEO THỜI GIAN THỰC [20] = [22] + [23] + [24] */}
+                  {/* BẢNG TÓM TÓM TẮT PHÂN BỔ TIỀN NỘP THỪA THEO THỜI GIAN THỰC [20] = [22] + [23] + [24] */}
                   <div className='rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3'>
                     <div className='flex items-center justify-between border-b border-slate-200 pb-2'>
                       <span className='text-xs font-bold uppercase tracking-wider text-slate-700'>
@@ -1043,14 +1044,14 @@ export default function QttPage() {
                   </div>
 
                   {declaration.status === 'Draft' && (
-                    <button onClick={saveAllocation} disabled={working || carryForward < 0}
+                    <button onClick={saveAllocation} disabled={loading || working || carryForward < 0}
                       className='inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50 cursor-pointer'><Save size={16} /> {fromTkn ? 'Hoàn tất bù trừ' : 'Lưu phân bổ'}</button>
                   )}
                 </div>
               )}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {/* MODAL XÁC NHẬN ĐÁNH DẤU ĐÃ NỘP TỜ KHAI */}
@@ -1316,6 +1317,35 @@ function QttReadinessPanel({
     navigate(path)
   }
 
+  const pendingEvidencePeriod = useMemo(
+    () => (evidenceReviewPeriods || []).find((p) => p.required && !p.reviewed),
+    [evidenceReviewPeriods]
+  )
+
+  const pendingBizName = useMemo(() => {
+    const targetId = pendingEvidencePeriod?.businessId || businessId
+    if (!targetId) return null
+    return businesses.find((b) => b.id === targetId)?.businessName || null
+  }, [businesses, pendingEvidencePeriod, businessId])
+
+  const handleOpenS2c = () => {
+    const targetBusinessId = pendingEvidencePeriod?.businessId || businessId
+    const targetQuarter = pendingEvidencePeriod?.quarter || unreviewedQuarters[0] || 1
+    if (targetBusinessId) {
+      const target = businesses.find((b) => b.id === targetBusinessId)
+      if (target) setCurrentBusiness(target)
+    }
+    const params = new URLSearchParams({
+      year: String(year),
+      quarter: String(targetQuarter),
+      returnTo: 'qtt'
+    })
+    if (targetBusinessId) {
+      params.set('businessId', targetBusinessId)
+    }
+    navigate(`/business-owner/tax-books/s2c?${params.toString()}`)
+  }
+
   const handleReviewAll = async () => {
     try {
       setReviewingAll(true)
@@ -1575,19 +1605,24 @@ function QttReadinessPanel({
                 </span>
               </div>
               <p className='text-xs text-amber-800 mt-0.5'>
-                {evidenceIssues.length} kỳ chi phí chưa xác nhận rà soát. Bạn có thể xác nhận ngay tại đây mà không cần rời trang.
+                {evidenceIssues.length} kỳ chi phí chưa xác nhận rà soát
+                {pendingEvidencePeriod
+                  ? ` (Quý ${pendingEvidencePeriod.quarter}${pendingBizName ? ` • ${pendingBizName}` : ''})`
+                  : ''}
+                . Bạn có thể xác nhận ngay tại đây mà không cần rời trang.
               </p>
             </div>
           </div>
 
           <div className='flex items-center gap-2'>
-            <Link
-              to={`/business-owner/tax-books/s2c?year=${year}`}
-              className='inline-flex items-center gap-1 rounded-xl border border-amber-300 bg-white px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-50 transition-all'
+            <button
+              type='button'
+              onClick={handleOpenS2c}
+              className='inline-flex items-center gap-1 rounded-xl border border-amber-300 bg-white px-3 py-1.5 text-xs font-bold text-amber-900 hover:bg-amber-50 transition-all cursor-pointer'
             >
               <span>Mở S2c</span>
               <ExternalLink className='h-3 w-3 text-amber-700' />
-            </Link>
+            </button>
             <button
               type='button'
               disabled={reviewingAll}
@@ -1595,7 +1630,7 @@ function QttReadinessPanel({
               className='inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700 shadow-sm active:scale-95 disabled:opacity-50 transition-all cursor-pointer'
             >
               <Sparkles className={`h-3.5 w-3.5 ${reviewingAll ? 'animate-spin' : ''}`} />
-              <span>{reviewingAll ? 'Đang xác nhận...' : '✨ Xác nhận cả 4 Quý'}</span>
+              <span>{reviewingAll ? 'Đang xác nhận...' : '✨ Xác nhận S2c cả năm'}</span>
             </button>
           </div>
         </div>

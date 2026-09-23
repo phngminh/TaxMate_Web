@@ -17,6 +17,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu'
+import { getOwnerTaxProfile } from '../../apis/taxProfile.api'
+import { useTaxProfileRevision } from '../../hooks/useTaxProfileRevision'
+import type { OwnerTaxProfile } from '../../types/taxProfile.type'
 import { getTaxDashboard } from '../../apis/taxDashboard.api'
 import { mapTaxDashboardApiToUi } from '../../utils/taxDashboardMapper'
 
@@ -84,6 +87,35 @@ export default function OwnerHeader() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, logout } = useAuth()
+
+  const profileRevision = useTaxProfileRevision()
+  const [taxProfile, setTaxProfile] = useState<OwnerTaxProfile | null>(null)
+
+  useEffect(() => {
+    if (!currentBusiness?.id) {
+      setTaxProfile(null)
+      return
+    }
+    let isMounted = true
+    getOwnerTaxProfile(currentBusiness.id)
+      .then((profile) => {
+        if (isMounted) setTaxProfile(profile)
+      })
+      .catch((err) => {
+        console.error('[OwnerHeader] Failed to load tax profile:', err)
+      })
+    return () => {
+      isMounted = false
+    }
+  }, [currentBusiness?.id, profileRevision])
+
+  const isIncomeBased =
+    taxProfile?.declaredRevenueBracket !== 'AtOrBelow1B' &&
+    taxProfile?.personalIncomeTaxMethod === 'IncomeBased'
+
+  const isRevenueBased =
+    taxProfile?.declaredRevenueBracket === 'Over1BTo3B' &&
+    taxProfile?.personalIncomeTaxMethod === 'RevenueBased'
 
   const [accumulatedRevenue, setAccumulatedRevenue] = useState(0)
   const [taxThresholdAmount, setTaxThresholdAmount] = useState(0)
@@ -557,7 +589,8 @@ export default function OwnerHeader() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <DropdownMenu open={bookOpen} onOpenChange={setBookOpen}>
+          {isIncomeBased && (
+            <DropdownMenu open={bookOpen} onOpenChange={setBookOpen}>
             <DropdownMenuTrigger>
               <div className='cursor-pointer'>
                 <NavItem
@@ -573,7 +606,7 @@ export default function OwnerHeader() {
               <DropdownMenuItem className='cursor-pointer rounded px-4 py-2.5 text-[15px]' onClick={() => navigate(path.BUSINESS_OWNER_S2C_BOOK)}>
                 S2c — Sổ chi phí
               </DropdownMenuItem>
-              {!isServiceStore && (
+              {!isServiceStore && currentBusiness?.isStockTrackingEnabled !== false && (
                 <DropdownMenuItem className='cursor-pointer rounded px-4 py-2.5 text-[15px]' onClick={() => navigate(path.BUSINESS_OWNER_S2D_BOOK)}>
                   S2d — Sổ kho
                 </DropdownMenuItem>
@@ -586,6 +619,27 @@ export default function OwnerHeader() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          )}
+
+          {!isOverTaxThreshold && (
+            <button
+              type='button'
+              onClick={openExportS1aModal}
+              className='cursor-pointer'
+            >
+              <NavItem label='Sổ doanh thu S1a' isActive={showExportS1aModal} />
+            </button>
+          )}
+
+          {isRevenueBased && (
+            <button
+              type='button'
+              onClick={openExportS2aModal}
+              className='cursor-pointer'
+            >
+              <NavItem label='Sổ doanh thu S2a' isActive={showExportS2aModal} />
+            </button>
+          )}
 
           <NavLink to={path.BUSINESS_OWNER_REPORTS}>
             {({ isActive }) => (
@@ -723,7 +777,7 @@ export default function OwnerHeader() {
                   </button>
                 )}
 
-                {isOverTaxThreshold && (
+                {isRevenueBased && (
                   <button
                     className='w-full flex items-center gap-4 px-5 py-3.5 hover:bg-[#fef2f2] group transition-colors cursor-pointer'
                     onClick={openExportS2aModal}

@@ -42,7 +42,6 @@ import { useBusiness } from '../../../contexts/BusinessContext'
 import path from '../../../constants/path'
 import {
   taxPeriodCalculationPath,
-  taxPeriodPreviewPath,
   tknTaxPeriodPreviewPath
 } from '../../../utils/taxPeriodRoute'
 
@@ -398,7 +397,30 @@ export default function TaxDeclarationPage() {
               totalTaxPayableAmount: 0,
               generatedAt: new Date().toISOString(),
               submittedAt: null,
-              lines: []
+              lines: (tknCalc?.lines ?? []).map((l, idx) => ({
+                id: `preview-tkn-line-${idx}`,
+                taxDeclarationId: 'preview-tkn-declaration',
+                sectionCode: 'I',
+                indicatorCode: '08',
+                businessActivityCode: l.businessCategoryCode,
+                businessActivityName: l.businessCategoryName,
+                businessLocationId: null,
+                businessLocationCode: null,
+                totalRevenue: l.totalRevenue,
+                vatTaxableRevenue: 0,
+                vatNonTaxableRevenue: l.totalRevenue,
+                zeroRatedVatRevenue: 0,
+                vatTaxRate: 0,
+                vatTaxAmount: 0,
+                personalIncomeTaxableRevenue: 0,
+                personalIncomeTaxDeductibleRevenue: 0,
+                personalIncomeTaxRevenue: 0,
+                personalIncomeTaxRate: 0,
+                personalIncomeTaxAmount: 0,
+                displayOrder: idx + 1,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              }))
             })
           } else {
             const calc =
@@ -792,8 +814,10 @@ export default function TaxDeclarationPage() {
               } else {
                 navigate(`${taxPeriodCalculationPath(taxPeriodId!)}?mode=preview`)
               }
+            } else if (isTkn) {
+              navigate(path.BUSINESS_OWNER_TAX)
             } else {
-              isTkn ? navigate(path.BUSINESS_OWNER_TAX) : navigate(-1)
+              navigate(-1)
             }
           }}
           className='mb-5 flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-red-600'
