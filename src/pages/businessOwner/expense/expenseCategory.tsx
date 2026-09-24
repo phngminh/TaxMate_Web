@@ -18,7 +18,7 @@ import {
   PaginationPrevious,
 } from '../../../components/ui/pagination'
 import { toast } from 'react-toastify'
-import type { ExpenseCategory } from '../../../types/expense.type'
+import type { ExpenseCategory, S2cGroupCode } from '../../../types/expense.type'
 import type { IncomeCategory } from '../../../types/income.type'
 import {
   getExpenseCategories,
@@ -35,6 +35,12 @@ import {
 import { useBusiness } from '../../../contexts/BusinessContext'
 
 type Tab = 'expense' | 'income'
+
+const s2cGroupLabels: Record<S2cGroupCode, string> = {
+  Labor: 'Không vào S2c — nhân công chưa được hỗ trợ',
+  PurchasedServices: 'Chi phí dịch vụ mua ngoài',
+  OtherDirect: 'Chi phí khác',
+}
 
 type ConfirmAction =
   | { type: 'delete-expense-category'; id: string; name: string }
@@ -64,6 +70,7 @@ export default function ExpenseCategoryPage() {
 
   const [formName, setFormName] = useState('')
   const [formDescription, setFormDescription] = useState('')
+  const [formS2cGroupCode, setFormS2cGroupCode] = useState<S2cGroupCode | ''>('')
 
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null)
   const [isConfirmLoading, setIsConfirmLoading] = useState(false)
@@ -155,6 +162,7 @@ export default function ExpenseCategoryPage() {
     setEditingCategory(null)
     setFormName('')
     setFormDescription('')
+    setFormS2cGroupCode('')
   }
 
   const handleOpenAdd = (type: Tab) => {
@@ -162,6 +170,7 @@ export default function ExpenseCategoryPage() {
     setActiveTab(type)
     setFormName('')
     setFormDescription('')
+    setFormS2cGroupCode('')
     setIsAddModalOpen(true)
   }
 
@@ -170,6 +179,7 @@ export default function ExpenseCategoryPage() {
     setEditingCategory(category)
     setFormName(category.categoryName)
     setFormDescription(category.description || '')
+    setFormS2cGroupCode(type === 'expense' && category.s2cGroupCode !== 'Labor' ? category.s2cGroupCode || '' : '')
     setIsEditModalOpen(true)
   }
 
@@ -200,7 +210,11 @@ export default function ExpenseCategoryPage() {
     try {
       if (isAddModalOpen) {
         if (activeTab === 'expense') {
-          await createExpenseCategory(businessId, { categoryName: formName.trim(), description: formDescription.trim() })
+          await createExpenseCategory(businessId, {
+            categoryName: formName.trim(),
+            description: formDescription.trim(),
+            s2cGroupCode: formS2cGroupCode || null,
+          })
           toast.success('Thêm danh mục chi thành công.')
           fetchExpenseCategories()
         } else {
@@ -210,7 +224,11 @@ export default function ExpenseCategoryPage() {
         }
       } else if (isEditModalOpen && editingCategory) {
         if (activeTab === 'expense') {
-          await updateExpenseCategory(editingCategory.expenseCategoryId, { categoryName: formName.trim(), description: formDescription.trim() })
+          await updateExpenseCategory(editingCategory.expenseCategoryId, {
+            categoryName: formName.trim(),
+            description: formDescription.trim(),
+            s2cGroupCode: formS2cGroupCode || null,
+          })
           toast.success('Cập nhật danh mục chi thành công.')
           fetchExpenseCategories()
         } else {
@@ -350,6 +368,7 @@ export default function ExpenseCategoryPage() {
                   <thead>
                     <tr className='bg-[#fff7ed] text-[#ea580c] text-[13.5px] font-bold border-b border-orange-100/50'>
                       <th className='py-4 px-6 font-semibold tracking-wide'>Tên loại khoản chi</th>
+                      <th className='py-4 px-6 font-semibold tracking-wide'>Nhóm trên S2c</th>
                       <th className='py-4 px-6 font-semibold tracking-wide text-center'>Ngày tạo</th>
                       <th className='py-4 px-6 font-semibold tracking-wide text-center w-28'>Thao tác</th>
                     </tr>
@@ -359,6 +378,9 @@ export default function ExpenseCategoryPage() {
                       paginatedExpenseCategories.map((item) => (
                         <tr key={item.expenseCategoryId} className='hover:bg-[#fcfdfe] transition-colors group'>
                           <td className='py-4 px-6 text-[14px] text-gray-900 font-bold'>{item.categoryName}</td>
+                          <td className='py-4 px-6 text-[13px] text-gray-600'>
+                            {item.s2cGroupCode ? s2cGroupLabels[item.s2cGroupCode] : 'Không vào S2c'}
+                          </td>
                           <td className='py-4 px-6 text-[13px] text-gray-500 text-center'>{formatDate(item.createdAt)}</td>
                           <td className='py-4 px-6 text-center'>
                             <div className='flex items-center justify-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity'>
@@ -382,7 +404,7 @@ export default function ExpenseCategoryPage() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={3} className='py-16 text-center text-gray-500 text-[14px]'>
+                        <td colSpan={4} className='py-16 text-center text-gray-500 text-[14px]'>
                           Không tìm thấy loại khoản chi nào
                         </td>
                       </tr>
@@ -580,6 +602,26 @@ export default function ExpenseCategoryPage() {
                   className={`w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden transition-all font-medium text-gray-800 ${activeTab === 'expense' ? 'focus:border-orange-400' : 'focus:border-emerald-400'}`}
                 />
               </div>
+              {activeTab === 'expense' && (
+                <div className='flex flex-col gap-1.5'>
+                  <label className='text-[13px] font-bold text-gray-600'>Nhóm trên sổ chi phí S2c</label>
+                  <select
+                    value={formS2cGroupCode}
+                    onChange={e => setFormS2cGroupCode(e.target.value as S2cGroupCode | '')}
+                    className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2 text-[13.5px] outline-hidden font-medium text-gray-800 focus:border-orange-400'
+                  >
+                    <option value=''>Không đưa vào S2c</option>
+                    <option value='PurchasedServices'>Dự kiến vào S2c: Chi phí dịch vụ mua ngoài</option>
+                    <option value='OtherDirect'>Dự kiến vào S2c: Chi phí khác</option>
+                  </select>
+                  <span className='text-xs text-gray-500'>
+                    {formS2cGroupCode
+                      ? 'Danh mục chỉ giúp phân nhóm; người dùng vẫn cần rà soát chứng từ trước khi quyết toán.'
+                      : 'Các khoản thuộc danh mục này không được TaxMate tự đưa vào chi phí dự kiến được trừ.'}
+                    {' '}Chi phí nguyên vật liệu lấy tự động từ sổ kho S2d; chi phí nhân công chưa được hỗ trợ.
+                  </span>
+                </div>
+              )}
               <div className='flex items-center justify-end gap-3 mt-2 pt-4 border-t border-gray-100'>
                 <button type='button' onClick={closeModal} className='px-6 py-2 border-2 border-gray-200 text-gray-600 text-[13px] font-bold rounded-[8px] hover:bg-gray-50 transition-colors'>Hủy</button>
                 <button type='submit' className='px-6 py-2 text-white text-[13px] font-bold rounded-[8px] transition-colors shadow-xs' style={{ background: activeTab === 'expense' ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}>

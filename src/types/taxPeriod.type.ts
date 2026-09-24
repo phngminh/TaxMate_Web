@@ -9,6 +9,12 @@ export type TaxPeriodType =
   | 'Monthly'
   | 'Quarterly'
   | 'Yearly'
+  | 'Tkn'
+
+export type TaxPeriodFilingWindow =
+  | 'FirstHalf'
+  | 'SecondHalf'
+  | 'Annual'
 
 export type DataCheckStatus =
   | 'Good'
@@ -20,6 +26,7 @@ export interface TaxPeriodSummary {
   businessId: string
 
   periodType: TaxPeriodType
+  filingWindow: TaxPeriodFilingWindow | null
 
   year: number
   month: number | null
@@ -37,6 +44,17 @@ export interface TaxPeriodSummary {
   taxAmountDebt: number
 
   paidDate: string | null
+}
+
+export interface TaxPeriodBusinessBreakdown {
+  businessId: string
+  businessName: string
+  transactionCount: number
+  paidTransactionCount: number
+  unpaidTransactionCount: number
+  missingInvoiceCount: number
+  expenseCount: number
+  revenue: number
 }
 
 export interface TaxPeriodDetail
@@ -61,6 +79,7 @@ export interface TaxPeriodDetail
   closedAt: string | null
   calculatedAt: string | null
   submittedAt: string | null
+  businessBreakdowns?: TaxPeriodBusinessBreakdown[]
 }
 
 export interface TaxPeriodPreviewWarning {
@@ -92,6 +111,7 @@ export interface TaxPeriodPreview {
   canClose: boolean
 
   warnings: TaxPeriodPreviewWarning[]
+  businessBreakdowns?: TaxPeriodBusinessBreakdown[]
 }
 
 export interface CloseTaxPeriodResponse {
@@ -150,7 +170,7 @@ export interface CalculateTaxPeriodResponse {
   totalExemptionAmount: number
   totalTaxPayableAmount: number
 
-  status: 'Calculated'
+  status: string
   calculatedAt: string
 
   lines: TaxCalculationLine[]

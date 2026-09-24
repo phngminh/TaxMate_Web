@@ -132,7 +132,7 @@ export default function POS() {
   const creatingDraftTabIdsRef = useRef<Set<string>>(new Set())
 
   // Payment states
-  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'EWallet' | 'Transfer'>('Cash')
+  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Transfer'>('Cash')
   const [checkingOut, setCheckingOut] = useState(false)
   const [showAccountModal, setShowAccountModal] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<PaymentAccount | null>(null)
@@ -1158,12 +1158,12 @@ export default function POS() {
       }
       setShowAccountModal(true)
     } else {
-      // Cash or EWallet (Card) checkouts directly
+      // Cash checkout completes directly.
       await executeCheckout(paymentMethod, null)
     }
   }
 
-  const executeCheckout = async (method: 'Cash' | 'EWallet' | 'Transfer', bankAccountId: string | null) => {
+  const executeCheckout = async (method: 'Cash' | 'Transfer', bankAccountId: string | null) => {
     if (!activeTab || !businessId || !activeTab.orderId) return
     const orderId = activeTab.orderId
     const tabId = activeTab.tabId
@@ -2359,18 +2359,27 @@ export default function POS() {
               )}
             </div>
 
-            <button
-              onClick={() => {
-                setShowSuccessOverlay(false)
-                setSuccessOfficialPdfUrl(null)
-                setSuccessOfficialXmlUrl(null)
-                setSuccessInvoiceStatus(null)
-                setSuccessTaxAuthorityCode(null)
-              }}
-              className='w-full bg-[#b90a0a] hover:bg-[#a00909] text-white py-2.5 rounded-md text-xs font-bold transition-all cursor-pointer shadow-xs select-none'
-            >
-              Đơn hàng mới
-            </button>
+            <div className='grid grid-cols-2 gap-2.5'>
+              <button
+                onClick={() => navigate(path.BUSINESS_OWNER_HOME)}
+                className='border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700 py-2.5 rounded-md text-xs font-bold transition-all cursor-pointer shadow-xs select-none flex items-center justify-center gap-1.5'
+              >
+                <House size={15} />
+                Về trang chủ
+              </button>
+              <button
+                onClick={() => {
+                  setShowSuccessOverlay(false)
+                  setSuccessOfficialPdfUrl(null)
+                  setSuccessOfficialXmlUrl(null)
+                  setSuccessInvoiceStatus(null)
+                  setSuccessTaxAuthorityCode(null)
+                }}
+                className='bg-[#b90a0a] hover:bg-[#a00909] text-white py-2.5 rounded-md text-xs font-bold transition-all cursor-pointer shadow-xs select-none'
+              >
+                Đơn hàng mới
+              </button>
+            </div>
           </div>
         </div>
       )}

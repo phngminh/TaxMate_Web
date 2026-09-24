@@ -5,7 +5,8 @@ import {
   Download,
   FileText,
   PlusCircle,
-  Send
+  Send,
+  Sparkles
 } from 'lucide-react'
 import {
   useEffect,
@@ -13,20 +14,36 @@ import {
 } from 'react'
 import {
   useNavigate,
-  useParams
+  useParams,
+  useSearchParams
 } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
 import {
   createTaxDeclaration,
   exportTaxDeclarationDocument,
+  exportTaxPeriodPreviewDocument,
   getTaxDeclarationByTaxPeriod,
   submitTaxDeclaration
 } from '../../../apis/taxDeclaration.api'
+import { getPaymentAccounts } from '../../../apis/paymentAccount.api'
 
 import {
-  getTaxPeriodById
+  getTaxPeriodById,
+  getTaxPeriodCalculationPreview
 } from '../../../apis/taxPeriod.api'
+import {
+  applyTknQttNextStep,
+  getTknQttNextStep,
+  getTknTaxPeriodCalculationPreview
+} from '../../../apis/tknTaxPeriod.api'
+
+import { useBusiness } from '../../../contexts/BusinessContext'
+import path from '../../../constants/path'
+import {
+  taxPeriodCalculationPath,
+  tknTaxPeriodPreviewPath
+} from '../../../utils/taxPeriodRoute'
 
 import type {
   TaxDeclaration
@@ -35,6 +52,10 @@ import type {
 import type {
   TaxPeriodDetail
 } from '../../../types/taxPeriod.type'
+import type { PaymentAccount } from '../../../types/paymentAccount.type'
+import type { TknQttNextStep } from '../../../types/tknTaxPeriod.type'
+import LegalBadge from '../../../components/owner/tax/LegalBadge'
+import Tip from '../../../components/owner/tax/Tip'
 
 function formatMoney(value: number) {
   return `${value.toLocaleString('vi-VN')}đ`
@@ -52,6 +73,26 @@ function formatDate(
   }
 
   return date.toLocaleDateString('vi-VN')
+}
+
+function getPeriodLabel(period: TaxPeriodDetail) {
+  if (period.periodType === 'Tkn') {
+    switch (period.filingWindow) {
+      case 'FirstHalf':
+        return `6 tháng đầu năm ${period.year}`
+      case 'SecondHalf':
+        return `6 tháng cuối năm ${period.year}`
+      default:
+        return `Năm ${period.year}`
+    }
+  }
+  if (period.periodType === 'Quarterly') {
+    return `Quý ${period.quarter}/${period.year}`
+  }
+  if (period.periodType === 'Monthly') {
+    return `Tháng ${period.month}/${period.year}`
+  }
+  return `Năm ${period.year}`
 }
 
 function InfoRow({
@@ -161,6 +202,9 @@ function ConfirmDialog({
 
 export default function TaxDeclarationPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isPreviewMode = searchParams.get('mode') === 'preview'
+  const { currentBusiness, businesses } = useBusiness()
 
   const { taxPeriodId } = useParams<{
     taxPeriodId: string
@@ -212,6 +256,66 @@ export default function TaxDeclarationPage() {
     setErrorMessage
   ] = useState<string | null>(null)
 
+  const [qttNextStep, setQttNextStep] =
+    useState<TknQttNextStep | null>(null)
+  const [refundAccounts, setRefundAccounts] =
+    useState<PaymentAccount[]>([])
+  const [refundAccountId, setRefundAccountId] =
+    useState('')
+  const [isApplyingNextStep, setIsApplyingNextStep] =
+    useState(false)
+  const [nextStepError, setNextStepError] =
+    useState<string | null>(null)
+
+  async function loadTknNextStep(
+    period: TaxPeriodDetail
+  ) {
+    if (
+      period.periodType !== 'Tkn' ||
+      period.filingWindow === 'FirstHalf' ||
+      !['Submitted', 'Paid'].includes(
+        period.status
+      )
+    ) {
+      setQttNextStep(null)
+      return
+    }
+
+    try {
+      setNextStepError(null)
+      const [nextStep, accountResponse] =
+        await Promise.all([
+          getTknQttNextStep(period.id),
+          getPaymentAccounts(
+            period.businessId
+          )
+        ])
+      const accounts =
+        (accountResponse.data ?? []).filter(
+          (account) =>
+            account.accountType === 'Bank' &&
+            account.isActive
+        )
+      setQttNextStep(nextStep)
+      setRefundAccounts(accounts)
+      setRefundAccountId(
+        accounts.find(
+          (account) => account.isDefault
+        )?.paymentAccountId ??
+          accounts[0]?.paymentAccountId ??
+          ''
+      )
+    } catch (error) {
+      console.error(
+        '[TaxDeclaration] TKN next step failed:',
+        error
+      )
+      setNextStepError(
+        'Không thể tải bước xử lý thuế TNCN đã tạm nộp.'
+      )
+    }
+  }
+
   useEffect(() => {
     let active = true
 
@@ -237,15 +341,163 @@ export default function TaxDeclarationPage() {
 
           getTaxDeclarationByTaxPeriod(
             taxPeriodId
-          )
+          ).catch(() => null)
         ])
 
         if (!active) return
 
         setTaxPeriod(periodResult)
-        setDeclaration(
-          declarationResult
-        )
+
+        if (declarationResult) {
+          setDeclaration(declarationResult)
+          await loadTknNextStep(periodResult)
+        } else if (isPreviewMode) {
+          const activeBiz =
+            currentBusiness ||
+            businesses.find(
+              (b) => b.id === periodResult.businessId
+            ) ||
+            businesses[0]
+          const bizName =
+            activeBiz?.businessName || 'Hộ kinh doanh mẫu'
+          const bizTaxCode = '0123456789'
+          const bizAddress =
+            activeBiz?.address || 'Địa chỉ kinh doanh'
+
+          if (periodResult.periodType === 'Tkn') {
+            const tknCalc =
+              await getTknTaxPeriodCalculationPreview(
+                taxPeriodId
+              ).catch(() => null)
+            if (!active) return
+
+            const rev =
+              tknCalc?.totalRevenue ?? periodResult.totalRevenue
+
+            setDeclaration({
+              id: 'preview-tkn-declaration',
+              taxPeriodId: periodResult.id,
+              taxCalculationId: 'preview-calc-id',
+              formCode: '01/TKN-CNKD',
+              declarationCode: 'PREVIEW-TKN-DEMO',
+              version: 1,
+              declarationType: 'Initial',
+              supplementNumber: null,
+              status: 'Draft',
+              taxpayerName: bizName,
+              taxCode: bizTaxCode,
+              taxpayerAddress: bizAddress,
+              totalRevenue: rev,
+              totalVatTaxAmount: 0,
+              totalPersonalIncomeTaxAmount: 0,
+              vatExemptionAmount: 0,
+              personalIncomeTaxExemptionAmount: 0,
+              vatPayableAmount: 0,
+              personalIncomeTaxPayableAmount: 0,
+              totalTaxPayableAmount: 0,
+              generatedAt: new Date().toISOString(),
+              submittedAt: null,
+              lines: (tknCalc?.lines ?? []).map((l, idx) => ({
+                id: `preview-tkn-line-${idx}`,
+                taxDeclarationId: 'preview-tkn-declaration',
+                sectionCode: 'I',
+                indicatorCode: '08',
+                businessActivityCode: l.businessCategoryCode,
+                businessActivityName: l.businessCategoryName,
+                businessLocationId: null,
+                businessLocationCode: null,
+                totalRevenue: l.totalRevenue,
+                vatTaxableRevenue: 0,
+                vatNonTaxableRevenue: l.totalRevenue,
+                zeroRatedVatRevenue: 0,
+                vatTaxRate: 0,
+                vatTaxAmount: 0,
+                personalIncomeTaxableRevenue: 0,
+                personalIncomeTaxDeductibleRevenue: 0,
+                personalIncomeTaxRevenue: 0,
+                personalIncomeTaxRate: 0,
+                personalIncomeTaxAmount: 0,
+                displayOrder: idx + 1,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              }))
+            })
+          } else {
+            const calc =
+              await getTaxPeriodCalculationPreview(
+                taxPeriodId
+              ).catch(() => null)
+            if (!active) return
+
+            const totalRev =
+              calc?.totalRevenue ?? periodResult.totalRevenue
+            const vatTax =
+              calc?.totalVatTaxAmount ?? periodResult.vatTaxAmount
+            const pitTax =
+              calc?.totalPersonalIncomeTaxAmount ??
+              periodResult.personalIncomeTaxAmount
+            const totalTax =
+              calc?.totalTaxPayableAmount ??
+              vatTax + pitTax
+
+            setDeclaration({
+              id: 'preview-declaration',
+              taxPeriodId: periodResult.id,
+              taxCalculationId:
+                calc?.taxCalculationId || 'preview-calc-id',
+              formCode: '01/CNKD',
+              declarationCode: 'PREVIEW-01CNKD-DEMO',
+              version: 1,
+              declarationType: 'Initial',
+              supplementNumber: null,
+              status: 'Draft',
+              taxpayerName: bizName,
+              taxCode: bizTaxCode,
+              taxpayerAddress: bizAddress,
+              totalRevenue: totalRev,
+              totalVatTaxAmount: vatTax,
+              totalPersonalIncomeTaxAmount: pitTax,
+              vatExemptionAmount:
+                calc?.totalExemptionAmount ?? 0,
+              personalIncomeTaxExemptionAmount: 0,
+              vatPayableAmount: vatTax,
+              personalIncomeTaxPayableAmount: pitTax,
+              totalTaxPayableAmount: totalTax,
+              generatedAt: new Date().toISOString(),
+              submittedAt: null,
+              lines: (calc?.lines ?? []).map((line) => ({
+                id: line.id,
+                businessCategoryId: line.businessCategoryId,
+                sectionCode: line.sectionCode,
+                indicatorCode: line.indicatorCode,
+                businessActivityCode:
+                  line.businessActivityCode,
+                businessActivityName:
+                  line.businessActivityName,
+                totalRevenue: line.totalRevenue,
+                vatTaxableRevenue: line.vatTaxableRevenue,
+                zeroRatedVatRevenue:
+                  line.zeroRatedVatRevenue,
+                vatTaxRate: line.vatTaxRate,
+                vatTaxAmount: line.vatTaxAmount,
+                personalIncomeTaxableRevenue:
+                  line.personalIncomeTaxableRevenue,
+                personalIncomeTaxDeductibleRevenue:
+                  line.personalIncomeTaxDeductibleRevenue,
+                personalIncomeTaxRate:
+                  line.personalIncomeTaxRate,
+                personalIncomeTaxAmount:
+                  line.personalIncomeTaxAmount,
+                vatNonTaxableRevenue:
+                  line.vatNonTaxableRevenue,
+                personalIncomeTaxRevenue:
+                  line.personalIncomeTaxRevenue
+              }))
+            })
+          }
+        } else {
+          setDeclaration(null)
+        }
       } catch (error) {
         console.error(
           '[TaxDeclaration] Load failed:',
@@ -269,7 +521,7 @@ export default function TaxDeclarationPage() {
     return () => {
       active = false
     }
-  }, [taxPeriodId])
+  }, [taxPeriodId, isPreviewMode, currentBusiness, businesses])
 
   async function handleCreate() {
     if (
@@ -321,29 +573,33 @@ export default function TaxDeclarationPage() {
   }
 
   async function handleExport() {
-    if (!declaration?.id) {
+    if (!taxPeriodId) {
+      toast.warning('Không tìm thấy mã kỳ thuế.')
       return
     }
 
     try {
       setIsExporting(true)
 
-      const result =
-        await exportTaxDeclarationDocument(
-          declaration.id
-        )
+      const result = isPreviewMode
+        ? await exportTaxPeriodPreviewDocument(taxPeriodId)
+        : await exportTaxDeclarationDocument(declaration!.id)
 
       const url =
         URL.createObjectURL(
           result.blob
         )
 
+      const fallbackName = isPreviewMode
+        ? `${isTkn ? '01-TKN-CNKD' : '01-CNKD'}_XEM-TRUOC_${taxPeriod?.year || new Date().getFullYear()}.docx`
+        : `${declaration?.formCode || '01-CNKD'}_${taxPeriod?.periodType === 'Quarterly' ? `Q${taxPeriod?.quarter}` : `Thang${taxPeriod?.month || ''}`}_${taxPeriod?.year || new Date().getFullYear()}.docx`
+
       const anchor =
         document.createElement('a')
 
       anchor.href = url
       anchor.download =
-        result.fileName
+        result.fileName || fallbackName
 
       document.body.appendChild(
         anchor
@@ -358,7 +614,9 @@ export default function TaxDeclarationPage() {
       URL.revokeObjectURL(url)
 
       toast.success(
-        'Xuất tờ khai thành công.'
+        isPreviewMode
+          ? 'Đã tải tệp tờ khai xem trước (.docx).'
+          : 'Xuất tờ khai thành công.'
       )
     } catch (error) {
       console.error(
@@ -396,6 +654,27 @@ export default function TaxDeclarationPage() {
   }
 
   async function confirmSubmit() {
+    if (isPreviewMode) {
+      setIsSubmitting(true)
+      setTimeout(() => {
+        setIsSubmitting(false)
+        setIsSubmitConfirmOpen(false)
+        if (declaration) {
+          setDeclaration({
+            ...declaration,
+            status: 'Submitted',
+            submittedAt: new Date().toISOString()
+          })
+        }
+        toast.success(
+          taxPeriod?.periodType === 'Tkn'
+            ? 'Đã hoàn tất trải nghiệm gửi thông báo doanh thu.'
+            : 'Đã hoàn tất trải nghiệm gửi tờ khai.'
+        )
+      }, 500)
+      return
+    }
+
     if (!declaration?.id) {
       return
     }
@@ -409,6 +688,18 @@ export default function TaxDeclarationPage() {
         )
 
       setDeclaration(result)
+      if (
+        taxPeriod?.periodType === 'Tkn'
+      ) {
+        const submittedPeriod = {
+          ...taxPeriod,
+          status: 'Submitted' as const
+        }
+        setTaxPeriod(submittedPeriod)
+        await loadTknNextStep(
+          submittedPeriod
+        )
+      }
       setIsSubmitConfirmOpen(false)
 
       toast.success(
@@ -458,18 +749,81 @@ export default function TaxDeclarationPage() {
     )
   }
 
+  async function applyNextStep(
+    choice: 'Later' | 'Refund'
+  ) {
+    if (!taxPeriodId) return
+    if (
+      choice === 'Refund' &&
+      !refundAccountId
+    ) {
+      toast.warning(
+        'Hãy chọn tài khoản ngân hàng nhận hoàn.'
+      )
+      return
+    }
+
+    try {
+      setIsApplyingNextStep(true)
+      const result =
+        await applyTknQttNextStep(
+          taxPeriodId,
+          {
+            choice,
+            refundPaymentAccountId:
+              choice === 'Refund'
+                ? refundAccountId
+                : null,
+            offsetItems: []
+          }
+        )
+      setQttNextStep(result)
+      toast.success(
+        choice === 'Later'
+          ? 'Chưa tạo hồ sơ quyết toán. Bạn có thể quay lại xử lý khoản này sau.'
+          : 'Đã tạo hồ sơ quyết toán nháp để đề nghị hoàn.'
+      )
+    } catch (error) {
+      console.error(
+        '[TaxDeclaration] Apply TKN next step failed:',
+        error
+      )
+      toast.error(
+        'Không thể lưu lựa chọn xử lý khoản TNCN đã tạm nộp.'
+      )
+    } finally {
+      setIsApplyingNextStep(false)
+    }
+  }
+
+  const isTkn =
+    taxPeriod.periodType === 'Tkn'
+  const isTknYearEnd =
+    isTkn &&
+    taxPeriod.filingWindow !== 'FirstHalf'
+
   return (
     <div className='min-h-[calc(100vh-56px)] bg-[#f5f6f8] px-6 py-7'>
       <div className='mx-auto max-w-6xl'>
         <button
           type='button'
-          onClick={() =>
-            navigate(-1)
-          }
+          onClick={() => {
+            if (isPreviewMode) {
+              if (isTkn) {
+                navigate(tknTaxPeriodPreviewPath(taxPeriodId!))
+              } else {
+                navigate(`${taxPeriodCalculationPath(taxPeriodId!)}?mode=preview`)
+              }
+            } else if (isTkn) {
+              navigate(path.BUSINESS_OWNER_TAX)
+            } else {
+              navigate(-1)
+            }
+          }}
           className='mb-5 flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-red-600'
         >
           <ArrowLeft size={18} />
-          Quay lại
+          {isPreviewMode ? 'Quay lại bước tính toán' : (isTkn ? 'Quay lại tổng quan thuế' : 'Quay lại')}
         </button>
 
         <div className='rounded-2xl bg-white p-6 shadow-sm'>
@@ -480,44 +834,98 @@ export default function TaxDeclarationPage() {
               </div>
 
               <div>
-                <h1 className='text-2xl font-black'>
-                  Tờ khai thuế
-                </h1>
+                <div className='flex flex-wrap items-center gap-2.5'>
+                  <h1 className='text-2xl font-black'>
+                    {isTkn
+                      ? 'Thông báo doanh thu'
+                      : 'Tờ khai thuế'}
+                  </h1>
+                  {isTkn ? (
+                    <LegalBadge
+                      formCode='Mẫu 01/TKN-CNKD'
+                      circular='TT 40/2021/TT-BTC'
+                      title='Thông tư số 40/2021/TT-BTC ngày 01/06/2021 của Bộ Tài chính'
+                      article='Phụ lục 1 - Hướng dẫn thuế đối với hộ, cá nhân kinh doanh'
+                      description={'Dành cho hộ kinh doanh có doanh thu không quá 1 tỷ đồng/năm (không phải nộp tờ khai quý 01/CNKD).\n\nHạn nộp theo TT 40/2021/TT-BTC:\n• HKD hoạt động cả năm: Nộp 1 lần trước ngày 31/01 năm sau.\n• HKD mới lập nửa đầu năm: Nộp lần 1 trước 31/07 (6 tháng đầu), lần 2 trước 31/01 năm sau (6 tháng cuối).\n• HKD mới lập nửa cuối năm: Nộp 1 lần trước ngày 31/01 năm sau.'}
+                    />
+                  ) : (
+                    <LegalBadge
+                      formCode='Mẫu 01/CNKD'
+                      circular='TT 40/2021/TT-BTC'
+                      title='Thông tư số 40/2021/TT-BTC ngày 01/06/2021 của Bộ Tài chính'
+                      article='Phụ lục 1 - Tờ khai thuế đối với hộ, cá nhân kinh doanh'
+                      description='Mẫu 01/CNKD áp dụng cho hộ kinh doanh có doanh thu trên 1 tỷ đồng/năm nộp thuế theo phương pháp kê khai. Thời hạn nộp tờ khai thuế quý chậm nhất là ngày cuối cùng của tháng đầu tiên của quý tiếp theo quý phát sinh nghĩa vụ thuế (Điều 44 Luật Quản lý thuế số 38/2019/QH14).'
+                    />
+                  )}
+                </div>
 
                 <p className='mt-1 text-sm text-gray-500'>
-                  Kiểm tra thông tin
-                  trước khi xuất hồ sơ.
+                  {isTkn
+                    ? 'Kiểm tra mẫu 01/TKN-CNKD trước khi tải hoặc gửi hồ sơ.'
+                    : 'Kiểm tra thông tin trước khi xuất hồ sơ.'}
                 </p>
               </div>
             </div>
 
             {declaration && (
               <div className='text-right'>
-                <p className='text-xs font-semibold uppercase text-gray-400'>
-                  Mã tờ khai
-                </p>
+                <div className='flex items-center justify-end gap-2'>
+                  <span className='text-sm font-bold text-gray-900'>
+                    {declaration.declarationType === 'Supplement'
+                      ? `Tờ khai bổ sung lần ${declaration.supplementNumber ?? 1} · ${getPeriodLabel(taxPeriod)}`
+                      : `Tờ khai lần đầu · ${getPeriodLabel(taxPeriod)}`}
+                  </span>
+                  <span
+                    className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                      declaration.status === 'Submitted'
+                        ? 'bg-green-100 text-green-700'
+                        : isPreviewMode
+                          ? 'bg-violet-100 text-violet-800'
+                          : 'bg-amber-100 text-amber-700'
+                    }`}
+                  >
+                    {declaration.status === 'Submitted'
+                      ? 'Đã gửi'
+                      : isPreviewMode
+                        ? 'Bản xem trước'
+                        : 'Bản nháp'}
+                  </span>
+                </div>
 
-                <p className='mt-1 text-lg font-black text-red-600'>
-                  {declaration.declarationCode}
+                <p className='mt-1 text-xs text-gray-400'>
+                  Mã hồ sơ: <span className='font-mono font-medium text-gray-500'>{declaration.declarationCode}</span>
                 </p>
-
-                <span
-                  className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-bold ${
-                    declaration.status ===
-                    'Submitted'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-amber-100 text-amber-700'
-                  }`}
-                >
-                  {declaration.status ===
-                  'Submitted'
-                    ? 'Đã gửi'
-                    : 'Bản nháp'}
-                </span>
               </div>
             )}
           </div>
         </div>
+
+        {isPreviewMode && (
+          <div className='mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-violet-400 bg-gradient-to-r from-violet-100/90 via-purple-50 to-indigo-50 p-4.5 shadow-sm'>
+            <div className='flex items-start gap-3.5'>
+              <div className='flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm mt-0.5'>
+                <Sparkles className='size-5' />
+              </div>
+              <div>
+                <div className='flex items-center gap-2'>
+                  <span className='rounded-md bg-violet-700 px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-white'>
+                    Chế độ xem thử nghiệm
+                  </span>
+                  <span className='text-xs font-bold text-violet-900'>Mô phỏng quy trình</span>
+                </div>
+                <p className='mt-1 text-xs sm:text-sm font-medium text-violet-800 leading-relaxed'>
+                  Biểu mẫu được tạo để bạn trải nghiệm và làm quen toàn bộ quy trình trước khi thực hiện chính thức. Thao tác thử nghiệm hoàn toàn không ảnh hưởng đến số liệu kinh doanh.
+                </p>
+              </div>
+            </div>
+            <div className='shrink-0'>
+              <span className='inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-violet-200 px-3 py-1 text-xs font-bold text-violet-800 shadow-2xs'>
+                <span className='size-2 rounded-full bg-violet-500 animate-pulse' />
+                Môi trường an toàn
+              </span>
+            </div>
+          </div>
+        )}
 
         {!declaration ? (
           <div className='mt-6 rounded-2xl bg-white p-10 text-center shadow-sm'>
@@ -527,14 +935,15 @@ export default function TaxDeclarationPage() {
             />
 
             <h2 className='mt-4 text-xl font-black'>
-              Chưa có tờ khai
+              {isTkn
+                ? 'Chưa có thông báo doanh thu'
+                : 'Chưa có tờ khai'}
             </h2>
 
             <p className='mx-auto mt-2 max-w-lg text-sm leading-6 text-gray-500'>
-              Kỳ thuế đã được tính.
-              Bạn có thể tạo tờ khai
-              01/CNKD từ dữ liệu hiện
-              tại.
+              {isTkn
+                ? 'Doanh thu kỳ này đã được tổng hợp. Bạn có thể tạo mẫu 01/TKN-CNKD từ dữ liệu đã chốt.'
+                : 'Kỳ thuế đã được tính. Bạn có thể tạo tờ khai 01/CNKD từ dữ liệu hiện tại.'}
             </p>
 
             <button
@@ -545,7 +954,9 @@ export default function TaxDeclarationPage() {
             >
               {isCreating
                 ? 'Đang tạo...'
-                : 'Tạo tờ khai'}
+                : isTkn
+                  ? 'Tạo mẫu 01/TKN-CNKD'
+                  : 'Tạo tờ khai'}
             </button>
           </div>
         ) : (
@@ -696,11 +1107,19 @@ export default function TaxDeclarationPage() {
                         </th>
 
                         <th className='px-5 py-4 text-right'>
-                          Thuế GTGT
+                          <Tip content='Tính theo tỷ lệ % trên toàn bộ doanh thu từng ngành nghề (không trừ 1 tỷ).' side='top' align='end'>
+                            <span className='cursor-help border-b border-dashed border-gray-400'>
+                              Thuế GTGT ⓘ
+                            </span>
+                          </Tip>
                         </th>
 
                         <th className='px-5 py-4 text-right'>
-                          Thuế TNCN
+                          <Tip content={'Tính theo phương pháp đã đăng ký:\n• Nộp theo doanh thu: tính trên phần vượt 1 tỷ/năm\n• Nộp theo thu nhập: tạm nộp từng quý, quyết toán cuối năm'} side='top' align='end' maxWidth='max-w-xs'>
+                            <span className='cursor-help border-b border-dashed border-gray-400'>
+                              Thuế TNCN ⓘ
+                            </span>
+                          </Tip>
                         </th>
                       </tr>
                     </thead>
@@ -767,42 +1186,290 @@ export default function TaxDeclarationPage() {
 
                 {isExporting
                   ? 'Đang xuất...'
-                  : 'Xuất tờ khai DOCX'}
+                  : isTkn
+                    ? 'Tải mẫu 01/TKN-CNKD'
+                    : 'Xuất tờ khai DOCX'}
               </button>
 
-              {declaration.status ===
-              'Submitted' ? (
-                <div className='flex h-12 items-center gap-2 rounded-xl bg-green-100 px-7 text-sm font-bold text-green-700'>
-                  <CheckCircle2 size={18} />
-
-                  Tờ khai đã được gửi
-                </div>
+              {declaration.status === 'Submitted' ? (
+                <>
+                  <div className='flex h-12 items-center gap-2 rounded-xl bg-green-100 px-7 text-sm font-bold text-green-700'>
+                    <CheckCircle2 size={18} />
+                    {isTkn
+                      ? 'Thông báo doanh thu đã được gửi'
+                      : 'Tờ khai đã được gửi'}
+                  </div>
+                  {isPreviewMode && (
+                    <button
+                      type='button'
+                      onClick={() => navigate(path.BUSINESS_OWNER_TAX)}
+                      className='flex h-12 items-center gap-2 rounded-xl bg-slate-900 px-7 text-sm font-bold text-white hover:bg-black transition'
+                    >
+                      Hoàn tất xem trước
+                    </button>
+                  )}
+                </>
               ) : (
-                <button
-                  type='button'
-                  disabled={isSubmitting}
-                  onClick={() => {
-                    void handleSubmit()
-                  }}
-                  className='flex h-12 items-center gap-2 rounded-xl bg-red-600 px-7 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300'
-                >
-                  <Send size={18} />
-
-                  {isSubmitting
-                    ? 'Đang gửi...'
-                    : 'Gửi tờ khai'}
-                </button>
+                <>
+                  <button
+                    type='button'
+                    disabled={isSubmitting}
+                    onClick={() => {
+                      void handleSubmit()
+                    }}
+                    className='flex h-12 items-center gap-2 rounded-xl bg-red-600 px-7 text-sm font-bold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300'
+                  >
+                    <Send size={18} />
+                    {isSubmitting
+                      ? 'Đang gửi...'
+                      : isTkn
+                        ? 'Đánh dấu đã gửi thông báo'
+                        : 'Gửi tờ khai'}
+                  </button>
+                  {isPreviewMode && (
+                    <button
+                      type='button'
+                      onClick={() => navigate(path.BUSINESS_OWNER_TAX)}
+                      className='flex h-12 items-center gap-2 rounded-xl border border-gray-300 bg-white px-6 text-sm font-bold text-gray-700 hover:bg-gray-50 transition'
+                    >
+                      Thoát xem trước
+                    </button>
+                  )}
+                </>
               )}
             </div>
+
+            {isTknYearEnd &&
+              ['Submitted', 'Paid'].includes(
+                taxPeriod.status
+              ) && (
+              <section className='mt-6 rounded-2xl border border-violet-200 bg-violet-50 p-6'>
+                <h2 className='text-lg font-black text-violet-900'>
+                  Bước tiếp theo sau thông báo doanh thu
+                </h2>
+
+                {nextStepError ? (
+                  <p className='mt-3 text-sm font-semibold text-red-600'>
+                    {nextStepError}
+                  </p>
+                ) : !qttNextStep ? (
+                  <p className='mt-3 text-sm text-violet-700'>
+                    Đang kiểm tra khoản thuế TNCN đã tạm nộp...
+                  </p>
+                ) : qttNextStep.qttDeclarationStatus &&
+                  qttNextStep.qttDeclarationStatus !== 'Draft' ? (
+                  <div className='mt-3 rounded-xl border border-violet-200 bg-white p-4'>
+                    <p className='text-sm font-bold text-violet-900'>
+                      Hồ sơ quyết toán đã được chốt
+                    </p>
+                    <p className='mt-1 text-sm leading-6 text-gray-600'>
+                      Hồ sơ quyết toán hiện tại không còn ở trạng thái nháp nên không thể thay đổi lựa chọn hoàn hoặc bù trừ.
+                    </p>
+                    <button
+                      type='button'
+                      onClick={() =>
+                        navigate(
+                          `${path.BUSINESS_OWNER_QTT}?year=${qttNextStep.taxYear}`
+                        )
+                      }
+                      className='mt-4 h-10 rounded-lg bg-violet-600 px-5 text-sm font-bold text-white hover:bg-violet-700'
+                    >
+                      Xem hồ sơ quyết toán
+                    </button>
+                  </div>
+                ) : qttNextStep.choices.length === 0 ? (
+                  <div className='mt-3 flex gap-3 rounded-xl bg-white p-4 text-green-700'>
+                    <CheckCircle2
+                      size={20}
+                      className='shrink-0'
+                    />
+                    <div>
+                      <p className='text-sm font-bold'>
+                        Thông báo doanh thu đã hoàn tất
+                      </p>
+                      <p className='mt-1 text-sm leading-6 text-gray-600'>
+                        Không có khoản thuế TNCN theo phương pháp thu nhập cần tạo thêm hồ sơ quyết toán.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className='mt-2 text-sm leading-6 text-violet-800'>
+                      Bạn đã tạm nộp{' '}
+                      <strong>
+                        {formatMoney(
+                          qttNextStep.incomeBasedPitPaid
+                        )}
+                      </strong>{' '}
+                      thuế TNCN theo phương pháp thu nhập. Khoản này có thể được xử lý là thuế nộp thừa; cơ quan thuế sẽ tiếp nhận và quyết định số được hoàn hoặc bù trừ.
+                    </p>
+
+                    {qttNextStep.blockingIssues.length > 0 && (
+                      <div className='mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4'>
+                        <p className='text-sm font-bold text-amber-800'>
+                          Cần rà soát trước khi tạo hồ sơ quyết toán
+                        </p>
+                        <ul className='mt-2 space-y-1 text-sm text-amber-700'>
+                          {qttNextStep.blockingIssues.map(
+                            (issue) => (
+                              <li key={`${issue.code}-${issue.sourceId ?? ''}`}>
+                                {issue.message}
+                              </li>
+                            )
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className='mt-5 grid gap-4 lg:grid-cols-3'>
+                      <div className='rounded-xl border border-violet-200 bg-white p-4'>
+                        <h3 className='font-black text-gray-900'>
+                          Để lại xử lý sau
+                        </h3>
+                        <p className='mt-1 text-sm leading-6 text-gray-500'>
+                          Hoàn tất thông báo doanh thu và chưa tạo hồ sơ quyết toán lúc này.
+                        </p>
+                        <button
+                          type='button'
+                          disabled={
+                            isApplyingNextStep ||
+                            !qttNextStep.choices.includes('Later')
+                          }
+                          onClick={() =>
+                            void applyNextStep('Later')
+                          }
+                          className='mt-4 h-10 w-full rounded-lg border border-violet-300 text-sm font-bold text-violet-700 hover:bg-violet-50 disabled:opacity-50'
+                        >
+                          Để xử lý sau
+                        </button>
+                      </div>
+
+                      <div className='rounded-xl border border-violet-200 bg-white p-4'>
+                        <h3 className='font-black text-gray-900'>
+                          Đề nghị hoàn thuế
+                        </h3>
+                        <label className='mt-3 block text-sm font-semibold text-gray-600'>
+                          Tài khoản ngân hàng nhận hoàn
+                          <select
+                            value={refundAccountId}
+                            onChange={(event) =>
+                              setRefundAccountId(
+                                event.target.value
+                              )
+                            }
+                            className='mt-1 block w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm'
+                          >
+                            <option value=''>Chọn tài khoản</option>
+                            {refundAccounts.map(
+                              (account) => (
+                                <option
+                                  key={account.paymentAccountId}
+                                  value={account.paymentAccountId}
+                                >
+                                  {account.bankShortName || account.bankName} · {account.accountNumber}
+                                </option>
+                              )
+                            )}
+                          </select>
+                        </label>
+                        {refundAccounts.length === 0 && (
+                          <button
+                            type='button'
+                            onClick={() =>
+                              navigate(
+                                path.BUSINESS_OWNER_BANK_CONFIG
+                              )
+                            }
+                            className='mt-2 text-sm font-bold text-red-600 hover:underline'
+                          >
+                            Thêm tài khoản nhận tiền
+                          </button>
+                        )}
+                        <button
+                          type='button'
+                          disabled={
+                            isApplyingNextStep ||
+                            !qttNextStep.choices.includes('Refund') ||
+                            !qttNextStep.canCreateQttDraft ||
+                            !refundAccountId
+                          }
+                          onClick={() =>
+                            void applyNextStep('Refund')
+                          }
+                          className='mt-4 h-10 w-full rounded-lg bg-violet-600 text-sm font-bold text-white hover:bg-violet-700 disabled:bg-gray-300'
+                        >
+                          Tạo hồ sơ quyết toán đề nghị hoàn
+                        </button>
+                      </div>
+
+                      <div className='rounded-xl border border-violet-200 bg-white p-4'>
+                        <h3 className='font-black text-gray-900'>
+                          Bù trừ nghĩa vụ thuế
+                        </h3>
+                        <p className='mt-1 text-sm leading-6 text-gray-500'>
+                          Mở hồ sơ quyết toán để chọn nghĩa vụ và phân bổ đủ số tiền bù trừ.
+                        </p>
+                        <button
+                          type='button'
+                          disabled={
+                            !qttNextStep.choices.includes('Offset') ||
+                            !qttNextStep.canCreateQttDraft
+                          }
+                          onClick={() =>
+                            navigate(
+                              `${path.BUSINESS_OWNER_QTT}?year=${qttNextStep.taxYear}&fromTkn=${taxPeriod.id}`
+                            )
+                          }
+                          className='mt-4 h-10 w-full rounded-lg bg-violet-600 text-sm font-bold text-white hover:bg-violet-700 disabled:bg-gray-300'
+                        >
+                          Mở quyết toán để bù trừ
+                        </button>
+                      </div>
+                    </div>
+
+                    {qttNextStep.selectedChoice && (
+                      <p className='mt-4 text-sm font-bold text-green-700'>
+                        Lựa chọn đã lưu:{' '}
+                        {qttNextStep.selectedChoice === 'Later'
+                          ? 'Xử lý sau'
+                          : qttNextStep.selectedChoice === 'Refund'
+                            ? 'Đề nghị hoàn'
+                            : 'Bù trừ'}.
+                      </p>
+                    )}
+                  </>
+                )}
+              </section>
+            )}
           </>
         )}
       </div>
 
       <ConfirmDialog
         open={isSubmitConfirmOpen}
-        title='Xác nhận gửi tờ khai'
-        description='Sau khi gửi, tờ khai sẽ chuyển sang trạng thái Đã gửi. Vui lòng kiểm tra kỹ thông tin trước khi tiếp tục.'
-        confirmLabel='Gửi tờ khai'
+        title={
+          isPreviewMode
+            ? isTkn
+              ? 'Xác nhận gửi thử nghiệm (Thông báo doanh thu)'
+              : 'Xác nhận gửi thử nghiệm (Tờ khai thuế)'
+            : isTkn
+              ? 'Xác nhận đã gửi thông báo doanh thu'
+              : 'Xác nhận gửi tờ khai'
+        }
+        description={
+          isPreviewMode
+            ? 'Đây là thao tác gửi thử nghiệm để bạn làm quen với quy trình. Hệ thống sẽ mô phỏng trạng thái Đã gửi trên màn hình, dữ liệu thực tế và kỳ thuế của bạn hoàn toàn an toàn.'
+            : isTkn
+              ? 'Sau khi xác nhận, hồ sơ 01/TKN-CNKD sẽ chuyển sang trạng thái Đã gửi. Vui lòng kiểm tra kỹ bản tải về trước khi tiếp tục.'
+              : 'Sau khi gửi, tờ khai sẽ chuyển sang trạng thái Đã gửi. Vui lòng kiểm tra kỹ thông tin trước khi tiếp tục.'
+        }
+        confirmLabel={
+          isPreviewMode
+            ? 'Xác nhận gửi thử'
+            : isTkn
+              ? 'Xác nhận đã gửi'
+              : 'Gửi tờ khai'
+        }
         isProcessing={isSubmitting}
         onCancel={() =>
           setIsSubmitConfirmOpen(false)

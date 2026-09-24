@@ -17,6 +17,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '../../components/ui/dropdown-menu'
+import { getOwnerTaxProfile } from '../../apis/taxProfile.api'
+import { useTaxProfileRevision } from '../../hooks/useTaxProfileRevision'
+import type { OwnerTaxProfile } from '../../types/taxProfile.type'
 import { getTaxDashboard } from '../../apis/taxDashboard.api'
 import { mapTaxDashboardApiToUi } from '../../utils/taxDashboardMapper'
 
@@ -51,6 +54,7 @@ const menuItems = [
 export default function OwnerHeader() {
   const [productOpen, setProductOpen] = useState(false)
   const [expenseOpen, setExpenseOpen] = useState(false)
+  const [bookOpen, setBookOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const [showBusinessModal, setShowBusinessModal] = useState(false)
   const [showAddBusinessModal, setShowAddBusinessModal] = useState(false)
@@ -84,6 +88,35 @@ export default function OwnerHeader() {
   const location = useLocation()
   const { user, logout } = useAuth()
 
+  const profileRevision = useTaxProfileRevision()
+  const [taxProfile, setTaxProfile] = useState<OwnerTaxProfile | null>(null)
+
+  useEffect(() => {
+    if (!currentBusiness?.id) {
+      setTaxProfile(null)
+      return
+    }
+    let isMounted = true
+    getOwnerTaxProfile(currentBusiness.id)
+      .then((profile) => {
+        if (isMounted) setTaxProfile(profile)
+      })
+      .catch((err) => {
+        console.error('[OwnerHeader] Failed to load tax profile:', err)
+      })
+    return () => {
+      isMounted = false
+    }
+  }, [currentBusiness?.id, profileRevision])
+
+  const isIncomeBased =
+    taxProfile?.declaredRevenueBracket !== 'AtOrBelow1B' &&
+    taxProfile?.personalIncomeTaxMethod === 'IncomeBased'
+
+  const isRevenueBased =
+    taxProfile?.declaredRevenueBracket === 'Over1BTo3B' &&
+    taxProfile?.personalIncomeTaxMethod === 'RevenueBased'
+
   const [accumulatedRevenue, setAccumulatedRevenue] = useState(0)
   const [taxThresholdAmount, setTaxThresholdAmount] = useState(0)
   const isOverTaxThreshold =
@@ -102,7 +135,15 @@ export default function OwnerHeader() {
     if (!currentBusiness) return
     try {
       setIsTogglingStock(true)
-      await toggleStockTracking(currentBusiness.id, pendingStockTrackingState)
+      if (pendingStockTrackingState) {
+        setShowToggleStockModal(false)
+        setProfileOpen(false)
+        navigate(path.BUSINESS_OWNER_INVENTORY)
+        return
+      }
+      await toggleStockTracking(currentBusiness.id, {
+        isStockTrackingEnabled: false
+      })
       const updatedBusiness = {
         ...currentBusiness,
         isStockTrackingEnabled: pendingStockTrackingState
@@ -113,8 +154,8 @@ export default function OwnerHeader() {
       )
       toast.success(
         pendingStockTrackingState
-          ? 'Đã bật quản lý tồn kho tự động'
-          : 'Đã chuyển sang chế độ chỉ tính giá vốn'
+          ? 'Đã bật hiển thị quản lý tồn kho'
+          : 'Đã ẩn số lượng và cảnh báo tồn kho'
       )
       setShowToggleStockModal(false)
     } catch (error) {
@@ -462,6 +503,12 @@ export default function OwnerHeader() {
               >
                 Danh mục sản phẩm
               </DropdownMenuItem>
+              <DropdownMenuItem
+                className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
+                onClick={() => navigate(path.BUSINESS_OWNER_INVENTORY)}
+              >
+                Khởi tạo / kiểm kê tồn kho
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -542,6 +589,58 @@ export default function OwnerHeader() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {isIncomeBased && (
+            <DropdownMenu open={bookOpen} onOpenChange={setBookOpen}>
+            <DropdownMenuTrigger>
+              <div className='cursor-pointer'>
+                <NavItem
+                  isActive={bookOpen || location.pathname.includes('/tax-books/')}
+                  label={<div className='flex items-center gap-1'><span>Sổ sách</span><ChevronDown size={14} className={`transition-transform duration-200 ${bookOpen ? 'rotate-180' : ''}`} /></div>}
+                />
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align='start' sideOffset={8} className='w-64 rounded-md border border-gray-200 bg-white p-1 shadow-xl z-9999 animate-in fade-in-0 zoom-in-95'>
+              <DropdownMenuItem className='cursor-pointer rounded px-4 py-2.5 text-[15px]' onClick={() => navigate(path.BUSINESS_OWNER_S2B_BOOK)}>
+                S2b — Sổ doanh thu
+              </DropdownMenuItem>
+              <DropdownMenuItem className='cursor-pointer rounded px-4 py-2.5 text-[15px]' onClick={() => navigate(path.BUSINESS_OWNER_S2C_BOOK)}>
+                S2c — Sổ chi phí
+              </DropdownMenuItem>
+              {!isServiceStore && currentBusiness?.isStockTrackingEnabled !== false && (
+                <DropdownMenuItem className='cursor-pointer rounded px-4 py-2.5 text-[15px]' onClick={() => navigate(path.BUSINESS_OWNER_S2D_BOOK)}>
+                  S2d — Sổ kho
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem className='cursor-pointer rounded px-4 py-2.5 text-[15px]' onClick={() => navigate(path.BUSINESS_OWNER_S2E_BOOK)}>
+                S2e — Sổ tiền
+              </DropdownMenuItem>
+              <DropdownMenuItem className='cursor-pointer rounded px-4 py-2.5 text-[15px]' onClick={() => navigate(path.BUSINESS_OWNER_QTT)}>
+                QTT — Quyết toán TNCN
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          )}
+
+          {!isOverTaxThreshold && (
+            <button
+              type='button'
+              onClick={openExportS1aModal}
+              className='cursor-pointer'
+            >
+              <NavItem label='Sổ doanh thu S1a' isActive={showExportS1aModal} />
+            </button>
+          )}
+
+          {isRevenueBased && (
+            <button
+              type='button'
+              onClick={openExportS2aModal}
+              className='cursor-pointer'
+            >
+              <NavItem label='Sổ doanh thu S2a' isActive={showExportS2aModal} />
+            </button>
+          )}
+
           <NavLink to={path.BUSINESS_OWNER_REPORTS}>
             {({ isActive }) => (
               <NavItem label='Báo cáo' isActive={isActive} />
@@ -552,7 +651,11 @@ export default function OwnerHeader() {
             {({ isActive }) => (
               <NavItem
                 label='Thuế'
-                isActive={isActive}
+                isActive={
+                  isActive ||
+                  location.pathname.includes('/tax-period/') ||
+                  location.pathname.includes('/tkn-tax-period/')
+                }
               />
             )}
           </NavLink>
@@ -615,8 +718,8 @@ export default function OwnerHeader() {
                         <div className='text-[13px] font-bold text-gray-800'>Quản lý tồn kho</div>
                         <div className='text-[11px] text-gray-500 mt-0.5'>
                           {currentBusiness?.isStockTrackingEnabled !== false
-                            ? 'Tự động trừ kho khi bán'
-                            : 'Chỉ tính giá vốn món'}
+                            ? 'Hiển thị số lượng và cảnh báo kho'
+                            : 'Đang ẩn số lượng và cảnh báo kho'}
                         </div>
                       </div>
                       <label className='relative inline-flex cursor-pointer items-center'>
@@ -674,7 +777,7 @@ export default function OwnerHeader() {
                   </button>
                 )}
 
-                {isOverTaxThreshold && (
+                {isRevenueBased && (
                   <button
                     className='w-full flex items-center gap-4 px-5 py-3.5 hover:bg-[#fef2f2] group transition-colors cursor-pointer'
                     onClick={openExportS2aModal}
@@ -946,23 +1049,23 @@ export default function OwnerHeader() {
         <div className='fixed inset-0 z-70 flex items-center justify-center bg-black/60 p-4' onClick={() => !isTogglingStock && setShowToggleStockModal(false)}>
           <div className='w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl' onClick={(e) => e.stopPropagation()}>
             <h3 className='text-lg font-bold text-gray-900 mb-2'>
-              {pendingStockTrackingState ? 'Bật quản lý tồn kho tự động' : 'Tắt trừ tồn kho tự động'}
+              {pendingStockTrackingState ? 'Bật lại quản lý tồn kho' : 'Ẩn quản lý tồn kho trên giao diện'}
             </h3>
             <div className='text-sm text-gray-600 leading-relaxed mb-6 space-y-3'>
               {pendingStockTrackingState ? (
                 <div className='p-3.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-[13.5px]'>
-                  <p className='font-bold mb-1 flex items-center gap-1.5'>💡 Lưu ý quan trọng:</p>
-                  <p>Hệ thống sẽ bắt đầu tự động trừ tồn kho khi hoàn tất đơn hàng.</p>
+                  <p className='font-bold mb-1 flex items-center gap-1.5'>💡 Cần kiểm kê trước khi bật lại:</p>
+                  <p>TaxMate vẫn ghi nhận mọi lần nhập, bán và tính giá vốn trong thời gian đang ẩn quản lý kho.</p>
                   <p className='mt-2 text-[12.5px] text-blue-800 bg-white/70 p-2 rounded-lg border border-blue-100'>
-                    👉 Bạn hãy vào mục <strong>"Nhập nguyên liệu"</strong> (hoặc <strong>"Sản phẩm"</strong>) để cập nhật số lượng tồn thực tế của quán trước khi bán hàng nhé!
+                    👉 Hãy kiểm đếm số lượng thực tế. TaxMate sẽ đối chiếu, ghi phần chênh lệch và chỉ bật lại sau khi bạn lưu kiểm kê.
                   </p>
                 </div>
               ) : (
                 <div className='p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-[13.5px]'>
-                  <p className='font-bold mb-1 flex items-center gap-1.5'>💡 Chế độ tính giá vốn:</p>
-                  <p>Hệ thống sẽ tạm dừng trừ tồn kho khi bán hàng.</p>
+                  <p className='font-bold mb-1 flex items-center gap-1.5'>💡 Chỉ thay đổi cách hiển thị:</p>
+                  <p>TaxMate sẽ ẩn số lượng và cảnh báo tồn kho trên giao diện.</p>
                   <p className='mt-2 text-[12.5px] text-amber-800 bg-white/70 p-2 rounded-lg border border-amber-100'>
-                    Các công thức định lượng (BOM) vẫn được giữ lại đầy đủ để tính giá vốn sản phẩm và báo cáo lãi lỗ chính xác.
+                    Các lần nhập, bán, xuất nguyên liệu theo BOM và giá vốn vẫn được ghi nhận đầy đủ vào sổ. Khi bật lại, bạn cần kiểm kê nhanh để đối chiếu số thực tế.
                   </p>
                 </div>
               )}
@@ -982,7 +1085,7 @@ export default function OwnerHeader() {
                 disabled={isTogglingStock}
                 className='px-4 py-2 rounded-xl bg-taxmate-red text-white font-semibold hover:bg-red-700 disabled:opacity-60'
               >
-                {isTogglingStock ? 'Đang xử lý...' : pendingStockTrackingState ? 'Xác nhận bật' : 'Xác nhận tắt'}
+                {isTogglingStock ? 'Đang xử lý...' : pendingStockTrackingState ? 'Đi kiểm kê để bật lại' : 'Xác nhận ẩn'}
               </button>
             </div>
           </div>

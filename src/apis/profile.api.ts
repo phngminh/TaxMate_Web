@@ -1,4 +1,4 @@
-import type { BusinessProfile, CreateBusinessProfileRequest } from '../types/profile.type'
+import type { BusinessProfile, CreateBusinessProfileRequest, ToggleStockTrackingRequest } from '../types/profile.type'
 import type { ApiResponse, PagedResult } from '../types/common.type'
 import http from '../utils/http'
 
@@ -36,10 +36,8 @@ export const updateBusinessProfile = async (
 
 export const toggleStockTracking = async (
   id: string,
-  isStockTrackingEnabled: boolean
+  request: ToggleStockTrackingRequest
 ) => {
-  const response = await http.patch(`/BusinessProfile/${id}/toggle-stock-tracking`, {
-    isStockTrackingEnabled
-  })
+  const response = await http.patch<ApiResponse<BusinessProfile>>(`/BusinessProfile/${id}/toggle-stock-tracking`, request)
   return response.data
 }
