@@ -109,18 +109,26 @@ export default function OwnerHeader() {
     }
   }, [currentBusiness?.id, profileRevision])
 
+  const [accumulatedRevenue, setAccumulatedRevenue] = useState(0)
+  const [taxThresholdAmount, setTaxThresholdAmount] = useState(0)
+  const isOverTaxThreshold =
+    taxThresholdAmount > 0 && accumulatedRevenue >= taxThresholdAmount
+
   const isIncomeBased =
     taxProfile?.declaredRevenueBracket !== 'AtOrBelow1B' &&
     taxProfile?.personalIncomeTaxMethod === 'IncomeBased'
 
   const isRevenueBased =
-    taxProfile?.declaredRevenueBracket === 'Over1BTo3B' &&
-    taxProfile?.personalIncomeTaxMethod === 'RevenueBased'
+    !isIncomeBased &&
+    (taxProfile?.personalIncomeTaxMethod === 'RevenueBased' ||
+      (taxProfile?.declaredRevenueBracket === 'AtOrBelow1B' && isOverTaxThreshold))
 
-  const [accumulatedRevenue, setAccumulatedRevenue] = useState(0)
-  const [taxThresholdAmount, setTaxThresholdAmount] = useState(0)
-  const isOverTaxThreshold =
-    taxThresholdAmount > 0 && accumulatedRevenue >= taxThresholdAmount
+  const isS1aEligible =
+    !isIncomeBased &&
+    !isRevenueBased &&
+    (!taxProfile?.declaredRevenueBracket ||
+      taxProfile.declaredRevenueBracket === 'AtOrBelow1B') &&
+    !isOverTaxThreshold
 
   const isServiceStore =
     currentBusiness?.mainCategoryId === 'd2222222-2222-2222-2222-222222222222' ||
@@ -621,7 +629,7 @@ export default function OwnerHeader() {
           </DropdownMenu>
           )}
 
-          {!isOverTaxThreshold && (
+          {isS1aEligible && (
             <button
               type='button'
               onClick={openExportS1aModal}
@@ -760,7 +768,7 @@ export default function OwnerHeader() {
                   </button>
                 ))}
 
-                {!isOverTaxThreshold && (
+                {isS1aEligible && (
                   <button
                     className='w-full flex items-center gap-4 px-5 py-3.5 hover:bg-[#fef2f2] group transition-colors cursor-pointer'
                     onClick={openExportS1aModal}

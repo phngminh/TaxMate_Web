@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import {
   useEffect,
+  useMemo,
   useState
 } from 'react'
 import {
@@ -273,6 +274,15 @@ export default function TaxDashboard() {
     currentYear,
     profileRevision
   ])
+
+  const firstCrossingQuarter = useMemo(() => {
+    const crossedAlert = taxProfile?.thresholdReviews?.find(
+      (r) =>
+        (r.thresholdCode === 'Crossed1B' || r.thresholdAmount === 1000000000) &&
+        r.year === (dashboard?.year ?? currentYear)
+    )
+    return crossedAlert ? crossedAlert.quarter : null
+  }, [taxProfile, dashboard?.year, currentYear])
 
   function findQuarterTaxPeriod(
       quarter: number
@@ -1167,6 +1177,10 @@ export default function TaxDashboard() {
                       taxPeriod?.status
                     }
                     disabled={!isRequired}
+                    isExempt={
+                      firstCrossingQuarter !== null &&
+                      index + 1 < firstCrossingQuarter
+                    }
                     onOpen={
                       handleOpenQuarter
                     }
