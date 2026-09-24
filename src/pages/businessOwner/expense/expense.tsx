@@ -689,7 +689,7 @@ export default function Expense() {
 
         <div className='grow p-6 overflow-y-auto flex flex-col gap-5'>
           <div className='grid grid-cols-2 gap-5'>
-            <div className='bg-white rounded-[14px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.03)] px-7 py-5'>
+            <div className='bg-yellow-50 rounded-[14px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.03)] px-7 py-5'>
               <div className='flex items-start justify-between'>
                 <div>
                   <div className='flex items-center gap-2 mb-1'>
@@ -705,7 +705,7 @@ export default function Expense() {
               </div>
             </div>
 
-            <div className='bg-white rounded-[14px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.03)] px-7 py-5'>
+            <div className='bg-[#e9fff5] rounded-[14px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.03)] px-7 py-5'>
               <div className='flex items-start justify-between'>
                 <div>
                   <div className='flex items-center gap-2 mb-1'>

@@ -20,6 +20,7 @@ import Subscription from '../pages/admin/user/subscription'
 import LegalDocuments from '../pages/admin/document/document'
 import TaxPolicyPage from '../pages/admin/taxPolicy/taxPolicy'
 import SubscriptionPage from '../pages/landingPage/subscription'
+import AboutUsPage from '../pages/landingPage/aboutUs'
 import BusinessList from '../pages/admin/user/business'
 import Expense from '../pages/businessOwner/expense/expense'
 import ExpenseCategoryPage from '../pages/businessOwner/expense/expenseCategory'
@@ -50,6 +51,7 @@ export default function useRouteElements() {
   const routeElements = useRoutes([
     { path: path.home, element: <LandingPage /> },
     { path: path.subscription, element: <SubscriptionPage /> },
+    { path: path.aboutUs, element: <AboutUsPage /> },
     {
       path: path.BUSINESS_OWNER_LOGIN,
       element: isLoading

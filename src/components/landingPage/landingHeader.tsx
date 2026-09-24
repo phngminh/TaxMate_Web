@@ -24,9 +24,9 @@ export default function LandingHeader() {
           <Link to={path.subscription} className='text-slate-600 hover:text-slate-900 font-medium transition-colors duration-200'>
             Gói dịch vụ
           </Link>
-          <a href='#' className='text-slate-600 hover:text-slate-900 font-medium transition-colors duration-200'>
+          <Link to={path.aboutUs} className='text-slate-600 hover:text-slate-900 font-medium transition-colors duration-200'>
             Về chúng tôi
-          </a>
+          </Link>
         </nav>
 
         <div className='hidden md:flex items-center gap-4'>

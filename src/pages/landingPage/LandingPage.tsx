@@ -71,11 +71,11 @@ export default function LandingPage() {
       {/* PROBLEMS SECTION */}
       <section
         id='problems'
-        className='overflow-hidden border-y border-slate-100 bg-[#FCF7F3] py-16 sm:py-24'
+        className='overflow-hidden border-y border-slate-100 bg-[#FCF7F3] py-12 sm:py-12'
       >
         <div className='mx-auto max-w-7xl px-4 sm:px-6 lg:px-8'>
           <div
-            className='mx-auto mb-16 max-w-3xl text-center'
+            className='mx-auto mb-8 max-w-3xl text-center'
             data-aos='fade-up'
           >
             <span className='mb-2 block text-sm font-bold uppercase tracking-widest text-[#FF4E11] sm:text-base'>
@@ -140,7 +140,7 @@ export default function LandingPage() {
       <section id='features' className='py-16 sm:py-24 bg-white overflow-hidden'>
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
           <div className='text-center max-w-3xl mx-auto mb-16' data-aos='fade-up'>
-            <span className='text-slate-500 text-sm sm:text-xl font-semibold block mb-2'>
+            <span className='mb-2 block text-sm font-bold uppercase tracking-widest text-[#FF4E11] sm:text-base'>
               TaxMate giúp bạn
             </span>
             <h2 className='text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight'>
