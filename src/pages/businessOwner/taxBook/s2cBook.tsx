@@ -16,6 +16,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'react-toastify'
 import { confirmS2cEvidenceReview, exportS2c, getS2cPreview } from '../../../apis/taxBook.api'
 import { getExpenseById, updateExpense } from '../../../apis/expense.api'
+import { getInventoryPurchaseById, updateInventoryPurchase } from '../../../apis/inventoryPurchase.api'
 import { uploadImage } from '../../../apis/image.api'
 import { useBusiness } from '../../../contexts/BusinessContext'
 import type { S2cBook, S2cExpenseGroupCode, S2cExpenseLine, S2cBookWarning } from '../../../types/taxBook.type'
@@ -57,12 +58,14 @@ const WARNING_META: Record<string, { label: string; severity: WarningSeverity }>
 }
 
 interface EvidenceTarget {
+  sourceType: 'expense' | 'inventoryPurchase'
   expenseId: string
   expenseTitle: string
   amount: number
   expenseDate: string
   voucherNumber?: string
   categoryName?: string
+  supplierName?: string
 }
 
 interface QuarterSummary {
@@ -380,6 +383,7 @@ export default function S2cBookPage() {
 
   const openUploadModal = (line: S2cExpenseLine) => {
     setEvidenceTarget({
+      sourceType: 'expense',
       expenseId: line.expenseId,
       expenseTitle: line.expenseTitle,
       amount: line.amount,
@@ -401,6 +405,7 @@ export default function S2cBookPage() {
       const res = await getExpenseById(expenseId)
       if (res.success && res.data) {
         setEvidenceTarget({
+          sourceType: 'expense',
           expenseId: res.data.expenseId,
           expenseTitle: res.data.expenseTitle,
           amount: res.data.amount,
@@ -415,6 +420,30 @@ export default function S2cBookPage() {
       }
     } catch {
       navigate(`/business-owner/expenses?expenseId=${encodeURIComponent(expenseId)}&autoOpen=true`)
+    }
+  }
+
+  const openInventoryUploadModalById = async (expenseId: string) => {
+    if (!expenseId) return
+    try {
+      const res = await getInventoryPurchaseById(expenseId)
+      if (res.success && res.data) {
+        setEvidenceTarget({
+          sourceType: 'inventoryPurchase',
+          expenseId: res.data.expenseId,
+          expenseTitle: res.data.expenseTitle,
+          amount: res.data.amount,
+          expenseDate: res.data.purchaseDate,
+          voucherNumber: res.data.voucherNumber,
+          supplierName: res.data.supplierName ?? undefined,
+        })
+        setEvidenceFile(null)
+        setEvidencePreview(null)
+        return
+      }
+      navigate(`/business-owner/purchase-expenses?id=${encodeURIComponent(expenseId)}&autoOpen=true`)
+    } catch {
+      navigate(`/business-owner/purchase-expenses?id=${encodeURIComponent(expenseId)}&autoOpen=true`)
     }
   }
 
@@ -440,6 +469,43 @@ export default function S2cBookPage() {
     try {
       setIsSavingEvidence(true)
       const uploadedUrl = await uploadImage(evidenceFile)
+
+      if (evidenceTarget.sourceType === 'inventoryPurchase') {
+        const purchaseRes = await getInventoryPurchaseById(evidenceTarget.expenseId)
+        if (!purchaseRes.success || !purchaseRes.data) {
+          throw new Error(purchaseRes.message || 'Không thể lấy thông tin phiếu nhập kho')
+        }
+        const purchase = purchaseRes.data
+        const updateRes = await updateInventoryPurchase(purchase.expenseId, {
+          expenseCategoryId: purchase.expenseCategoryId,
+          voucherNumber: purchase.voucherNumber,
+          expenseTitle: purchase.expenseTitle,
+          purchaseDate: purchase.purchaseDate,
+          supplierId: purchase.supplierId ?? undefined,
+          receiptImageUrl: uploadedUrl,
+          fileUrl: purchase.fileUrl ?? undefined,
+          note: purchase.note ?? undefined,
+          dueDate: purchase.dueDate ?? undefined,
+          paidDate: purchase.paidDate ?? undefined,
+          paymentMethod: purchase.paymentMethod ?? undefined,
+          paymentAccountId: purchase.paymentAccountId ?? undefined,
+          lines: purchase.lines.map((line) => ({
+            ...(line.productId ? { productId: line.productId } : {}),
+            ...(line.ingredientId ? { ingredientId: line.ingredientId } : {}),
+            quantity: line.quantity,
+            totalValue: line.totalValue,
+          })),
+        })
+
+        if (!updateRes.success) {
+          throw new Error(updateRes.message || 'Không thể cập nhật chứng từ cho phiếu nhập kho')
+        }
+
+        toast.success('Bổ sung chứng từ phiếu nhập kho thành công!')
+        closeUploadModal()
+        void load()
+        return
+      }
 
       const res = await getExpenseById(evidenceTarget.expenseId)
       if (!res.success || !res.data) {
@@ -805,16 +871,12 @@ export default function S2cBookPage() {
                                     {isInventoryPurchase ? (
                                       <button
                                         type='button'
-                                        onClick={() =>
-                                          navigate(
-                                            `/business-owner/purchase-expenses?id=${encodeURIComponent(item.sourceId ?? '')}&autoOpen=true`
-                                          )
-                                        }
+                                        onClick={() => void openInventoryUploadModalById(item.sourceId ?? '')}
                                         className='inline-flex items-center gap-1 rounded bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2.5 py-1 text-[11.5px] font-semibold text-slate-700 transition-colors cursor-pointer'
-                                        title='Đi tới danh sách phiếu nhập kho để bổ sung chứng từ'
+                                        title='Bổ sung ảnh chứng từ cho phiếu nhập kho'
                                       >
-                                        <span>Xem phiếu nhập</span>
-                                        <ExternalLink size={12} />
+                                        <ImagePlus size={12} className='text-slate-500' />
+                                        <span>Bổ sung chứng từ</span>
                                       </button>
                                     ) : (
                                       <button
@@ -967,16 +1029,12 @@ export default function S2cBookPage() {
                               <div>
                                 {isInventoryPurchase ? (
                                   <button
-                                    onClick={() =>
-                                      navigate(
-                                        `/business-owner/purchase-expenses?id=${encodeURIComponent(item.sourceId ?? '')}&autoOpen=true`
-                                      )
-                                    }
+                                    onClick={() => void openInventoryUploadModalById(item.sourceId ?? '')}
                                     className='inline-flex items-center gap-1 rounded-md bg-amber-100 hover:bg-amber-200 border border-amber-300 px-2.5 py-1 text-[11.5px] font-semibold text-amber-900 transition-colors cursor-pointer'
-                                    title='Đi tới danh sách phiếu nhập kho để bổ sung chứng từ'
+                                    title='Bổ sung ảnh chứng từ cho phiếu nhập kho'
                                   >
-                                    <span>Xem phiếu nhập</span>
-                                    <ExternalLink size={12} />
+                                    <ImagePlus size={13} />
+                                    <span>Bổ sung chứng từ</span>
                                   </button>
                                 ) : (
                                   <button
@@ -1182,8 +1240,16 @@ export default function S2cBookPage() {
                   <ImagePlus size={18} />
                 </div>
                 <div>
-                  <h3 className='text-[15px] font-bold text-gray-900'>Bổ sung chứng từ chi phí</h3>
-                  <p className='text-xs text-gray-500'>Cập nhật hóa đơn / biên lai cho sổ S2c</p>
+                  <h3 className='text-[15px] font-bold text-gray-900'>
+                    {evidenceTarget.sourceType === 'inventoryPurchase'
+                      ? 'Bổ sung chứng từ phiếu nhập kho'
+                      : 'Bổ sung chứng từ chi phí'}
+                  </h3>
+                  <p className='text-xs text-gray-500'>
+                    {evidenceTarget.sourceType === 'inventoryPurchase'
+                      ? 'Cập nhật hóa đơn / chứng từ tính giá xuất S2d'
+                      : 'Cập nhật hóa đơn / biên lai cho sổ S2c'}
+                  </p>
                 </div>
               </div>
               <button
@@ -1206,7 +1272,9 @@ export default function S2cBookPage() {
                 </div>
                 <div className='flex flex-wrap items-center gap-x-4 gap-y-1 text-gray-500'>
                   <span>Ngày: {new Date(evidenceTarget.expenseDate).toLocaleDateString('vi-VN')}</span>
-                  {evidenceTarget.categoryName && <span>Danh mục: {evidenceTarget.categoryName}</span>}
+                  {evidenceTarget.sourceType === 'inventoryPurchase'
+                    ? evidenceTarget.supplierName && <span>Nhà cung cấp: {evidenceTarget.supplierName}</span>
+                    : evidenceTarget.categoryName && <span>Danh mục: {evidenceTarget.categoryName}</span>}
                   {evidenceTarget.voucherNumber && (
                     <span className='font-mono text-[11px]'>#{evidenceTarget.voucherNumber}</span>
                   )}
@@ -1272,12 +1340,21 @@ export default function S2cBookPage() {
                   type='button'
                   onClick={() => {
                     const id = evidenceTarget.expenseId
+                    const isInventoryPurchase = evidenceTarget.sourceType === 'inventoryPurchase'
                     closeUploadModal()
-                    navigate(`/business-owner/expenses?expenseId=${encodeURIComponent(id)}&autoOpen=true`)
+                    navigate(
+                      isInventoryPurchase
+                        ? `/business-owner/purchase-expenses?id=${encodeURIComponent(id)}&autoOpen=true`
+                        : `/business-owner/expenses?expenseId=${encodeURIComponent(id)}&autoOpen=true`
+                    )
                   }}
                   className='inline-flex items-center gap-1 text-xs font-medium text-orange-700 hover:underline cursor-pointer'
                 >
-                  <span>Mở trang chi tiết khoản chi đầy đủ</span>
+                  <span>
+                    {evidenceTarget.sourceType === 'inventoryPurchase'
+                      ? 'Mở trang chi tiết phiếu nhập đầy đủ'
+                      : 'Mở trang chi tiết khoản chi đầy đủ'}
+                  </span>
                   <ExternalLink size={11} />
                 </button>
               </div>
