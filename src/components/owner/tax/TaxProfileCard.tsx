@@ -70,6 +70,7 @@ export default function TaxProfileCard({
   )
   const [busy, setBusy] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
 
   useEffect(() => {
     if (window.location.hash === '#threshold-review') {
@@ -101,7 +102,12 @@ export default function TaxProfileCard({
         confirmed: true
       })
       onChanged(result)
-      toast.success('Đã xác nhận và kích hoạt hồ sơ thuế.')
+      setIsEditing(false)
+      toast.success(
+        profile.isConfigured
+          ? 'Đã cập nhật hồ sơ thuế.'
+          : 'Đã xác nhận và kích hoạt hồ sơ thuế.'
+      )
     } catch (error) {
       toast.error(errorMessage(error))
     } finally {
@@ -134,11 +140,11 @@ export default function TaxProfileCard({
   }
 
   // =========================================================================
-  // 1. TRẠNG THÁI CHƯA CẤU HÌNH (UNCONFIGURED ONBOARDING STATE)
+  // 1. TRẠNG THÁI CHƯA CẤU HÌNH HOẶC ĐANG CHỈNH SỬA (ONBOARDING / EDIT MODE)
   // =========================================================================
-  if (!profile.isConfigured) {
-    // A. Khi người dùng bấm "Để sau" -> Thu nhỏ thành thanh Apple-style Pill tinh tế
-    if (isDismissed) {
+  if (!profile.isConfigured || isEditing) {
+    // A. Khi người dùng bấm "Để sau" -> Thu nhỏ thành thanh Apple-style Pill tinh tế (chỉ khi chưa cấu hình lần nào)
+    if (!profile.isConfigured && isDismissed) {
       return (
         <motion.section
           initial={{ opacity: 0, y: -8 }}
@@ -183,7 +189,9 @@ export default function TaxProfileCard({
           <div className='space-y-1.5'>
             <div className='inline-flex items-center gap-2 rounded-full border border-sky-200/70 bg-sky-50 px-3 py-1 text-xs font-bold text-sky-800 uppercase tracking-wider'>
               <ShieldCheck className='h-3.5 w-3.5 text-sky-600' />
-              Thiết lập Hồ sơ Thuế Chủ hộ
+              {profile.isConfigured
+                ? 'Xem lại Hồ sơ Thuế Chủ hộ'
+                : 'Thiết lập Hồ sơ Thuế Chủ hộ'}
             </div>
             <h2 className='text-2xl font-bold tracking-tight text-slate-900 md:text-[1.65rem]'>
               Chế độ Thuế & Hạn mức Miễn trừ
@@ -196,14 +204,21 @@ export default function TaxProfileCard({
 
           <button
             type='button'
-            onClick={() => setIsDismissed(true)}
-            className='inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors'
-            title='Tạm hoãn thiết lập để bán hàng'
+            onClick={() => {
+              if (profile.isConfigured) {
+                setIsEditing(false)
+              } else {
+                setIsDismissed(true)
+              }
+            }}
+            className='inline-flex items-center gap-1 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer'
+            title={profile.isConfigured ? 'Đóng xem lại' : 'Tạm hoãn thiết lập để bán hàng'}
           >
-            <span>Để sau</span>
+            <span>{profile.isConfigured ? 'Đóng' : 'Để sau'}</span>
             <X className='h-3.5 w-3.5' />
           </button>
         </div>
+
 
         {/* STEP 1: Chọn quy mô doanh thu (3 Bento Cards) */}
         <div className='mt-6'>
@@ -291,8 +306,8 @@ export default function TaxProfileCard({
                 </p>
                 <p className='mt-1 text-xs leading-relaxed text-slate-600'>
                   Được trừ 1 tỷ doanh thu miễn thuế. Được linh hoạt lựa chọn tính theo{' '}
-                  <span className='font-semibold text-slate-800'>Doanh thu</span> hoặc{' '}
-                  <span className='font-semibold text-slate-800'>Lợi nhuận sổ sách</span>.
+                  <span className='font-semibold text-slate-800'>Tỷ lệ doanh thu</span> hoặc{' '}
+                  <span className='font-semibold text-slate-800'>Thu nhập tính thuế (Doanh thu − Chi phí)</span>.
                 </p>
               </div>
 
@@ -484,7 +499,7 @@ export default function TaxProfileCard({
                   </div>
 
                   <p className='mt-2.5 text-sm font-bold text-slate-900'>
-                    Theo Tỷ lệ Doanh thu (Khoán % theo ngành)
+                    Theo Tỷ lệ trên Doanh thu
                   </p>
                   <ul className='mt-2 space-y-1.5 text-xs text-slate-600'>
                     <li className='flex items-start gap-1.5'>
@@ -594,18 +609,29 @@ export default function TaxProfileCard({
           </div>
 
           <div className='flex items-center gap-3'>
-            <button
-              type='button'
-              onClick={() => setIsDismissed(true)}
-              className='rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors'
-            >
-              Để sau
-            </button>
+            {profile.isConfigured ? (
+              <button
+                type='button'
+                onClick={() => setIsEditing(false)}
+                className='rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer'
+              >
+                Hủy
+              </button>
+            ) : (
+              <button
+                type='button'
+                onClick={() => setIsDismissed(true)}
+                className='rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer'
+              >
+                Để sau
+              </button>
+            )}
+
             <button
               type='button'
               disabled={busy}
               onClick={() => void saveInitialProfile()}
-              className='inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-md transition-all hover:bg-slate-800 hover:shadow-lg active:scale-98 disabled:bg-slate-300'
+              className='inline-flex items-center gap-2 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-md transition-all hover:bg-slate-800 hover:shadow-lg active:scale-98 disabled:bg-slate-300 cursor-pointer'
             >
               {busy ? (
                 <>
@@ -614,7 +640,11 @@ export default function TaxProfileCard({
                 </>
               ) : (
                 <>
-                  <span>Xác nhận & Áp dụng hồ sơ</span>
+                  <span>
+                    {profile.isConfigured
+                      ? 'Cập nhật cấu hình'
+                      : 'Xác nhận & Áp dụng hồ sơ'}
+                  </span>
                   <ArrowRight className='h-4 w-4' />
                 </>
               )}
@@ -656,9 +686,9 @@ export default function TaxProfileCard({
             Phương pháp TNCN:{' '}
             <span className='font-semibold text-slate-800'>
               {profile.personalIncomeTaxMethod === 'IncomeBased'
-                ? 'Theo thu nhập tính thuế (Lợi nhuận sổ sách)'
+                ? 'Theo thu nhập tính thuế (Doanh thu − Chi phí)'
                 : profile.personalIncomeTaxMethod === 'RevenueBased'
-                  ? 'Theo tỷ lệ doanh thu khoán'
+                  ? 'Theo tỷ lệ trên doanh thu'
                   : 'Không phát sinh (Thuộc diện không chịu thuế)'}
             </span>
           </p>
@@ -676,8 +706,7 @@ export default function TaxProfileCard({
             if (profile.commencementPeriod) {
               setCommencement(profile.commencementPeriod)
             }
-            // Mở lại chế độ chỉnh sửa
-            setIsDismissed(false)
+            setIsEditing(true)
           }}
           className='rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors'
         >
@@ -741,7 +770,7 @@ export default function TaxProfileCard({
                               : 'text-slate-600 hover:text-slate-900'
                           }`}
                         >
-                          {choice === 'IncomeBased' ? 'Thu nhập tính thuế' : 'Theo doanh thu'}
+                          {choice === 'IncomeBased' ? 'Thu nhập tính thuế' : 'Tỷ lệ trên doanh thu'}
                         </button>
                       ))}
                     </div>

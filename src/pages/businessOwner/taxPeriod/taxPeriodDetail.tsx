@@ -1,6 +1,7 @@
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowRight,
   Calculator,
   CheckCircle2,
   CircleDollarSign,
@@ -8,6 +9,7 @@ import {
   ExternalLink,
   FileText,
   ReceiptText,
+  ShieldCheck,
   Trash2
 } from 'lucide-react'
 import {
@@ -22,15 +24,21 @@ import {
 } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
-import { getTaxPeriodById, cancelTaxPeriodDrafts } from '../../../apis/taxPeriod.api'
+import {
+  getTaxPeriodById,
+  cancelTaxPeriodDrafts,
+  getBusinessTaxPeriods
+} from '../../../apis/taxPeriod.api'
 import { getTaxDeclarationByTaxPeriod } from '../../../apis/taxDeclaration.api'
-import { useBusiness } from '../../../contexts/BusinessContext'
+import { getOwnerTaxProfile } from '../../../apis/taxProfile.api'
 
 import type {
   DataCheckStatus,
   TaxPeriodDetail,
-  TaxPeriodStatus
+  TaxPeriodStatus,
+  TaxPeriodSummary
 } from '../../../types/taxPeriod.type'
+import type { OwnerTaxProfile } from '../../../types/taxProfile.type'
 
 import {
   taxPeriodCalculationPath,
@@ -440,49 +448,107 @@ export default function TaxPeriodDetailPage() {
   }>()
 
   const [taxPeriod, setTaxPeriod] = useState<TaxPeriodDetail | null>(null)
+  const [taxProfile, setTaxProfile] = useState<OwnerTaxProfile | null>(null)
+  const [siblingPeriods, setSiblingPeriods] = useState<TaxPeriodSummary[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [declarationStatus, setDeclarationStatus] = useState<'Draft' | 'Submitted' | null>(null)
   const [isCancellingDrafts, setIsCancellingDrafts] = useState(false)
   const [isCancelDraftsConfirmOpen, setIsCancelDraftsConfirmOpen] = useState(false)
 
-  const { businesses } = useBusiness()
-
-  const loadTaxPeriod = useCallback(async () => {
-    if (!taxPeriodId) {
-      setErrorMessage('Không tìm thấy mã kỳ thuế.')
-      setIsLoading(false)
-      return
-    }
-
+  const reloadTaxPeriod = useCallback(async () => {
+    if (!taxPeriodId) return
     try {
-      setIsLoading(true)
-      setErrorMessage(null)
-
       const periodResult = await getTaxPeriodById(taxPeriodId)
       setTaxPeriod(periodResult)
-
-      if (
-        periodResult.status === 'Calculated' ||
-        periodResult.status === 'Submitted' ||
-        periodResult.status === 'Paid'
-      ) {
-        const declarationResult = await getTaxDeclarationByTaxPeriod(taxPeriodId)
-        setDeclarationStatus(declarationResult?.status ?? null)
-      } else {
-        setDeclarationStatus(null)
-      }
     } catch (error) {
-      console.error('[TaxPeriodDetail] Failed:', error)
-      setErrorMessage('Không thể tải chi tiết kỳ thuế.')
-    } finally {
-      setIsLoading(false)
+      console.error('[TaxPeriodDetail] Reload failed:', error)
     }
   }, [taxPeriodId])
 
   useEffect(() => {
-    void loadTaxPeriod()
-  }, [loadTaxPeriod])
+    let ignore = false
+
+    async function fetchData() {
+      if (!taxPeriodId) {
+        setErrorMessage('Không tìm thấy mã kỳ thuế.')
+        setIsLoading(false)
+        return
+      }
+
+      try {
+        setErrorMessage(null)
+
+        const periodResult = await getTaxPeriodById(taxPeriodId)
+        if (ignore) return
+        setTaxPeriod(periodResult)
+
+        if (periodResult.businessId) {
+          getOwnerTaxProfile(periodResult.businessId)
+            .then((profile) => {
+              if (!ignore) setTaxProfile(profile)
+            })
+            .catch(() => {})
+
+          if (periodResult.year) {
+            getBusinessTaxPeriods({
+              businessId: periodResult.businessId,
+              year: periodResult.year
+            })
+              .then((periods) => {
+                if (!ignore) setSiblingPeriods(periods)
+              })
+              .catch(() => {})
+          }
+        }
+
+        if (
+          periodResult.status === 'Calculated' ||
+          periodResult.status === 'Submitted' ||
+          periodResult.status === 'Paid'
+        ) {
+          const declarationResult = await getTaxDeclarationByTaxPeriod(taxPeriodId)
+          if (!ignore) setDeclarationStatus(declarationResult?.status ?? null)
+        } else {
+          if (!ignore) setDeclarationStatus(null)
+        }
+      } catch (error) {
+        if (!ignore) {
+          console.error('[TaxPeriodDetail] Failed:', error)
+          setErrorMessage('Không thể tải chi tiết kỳ thuế.')
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    void fetchData()
+
+    return () => {
+      ignore = true
+    }
+  }, [taxPeriodId])
+
+  const firstCrossingQuarter = useMemo(() => {
+    const crossedAlert = taxProfile?.thresholdReviews?.find(
+      (r) =>
+        (r.thresholdCode === 'Crossed1B' || r.thresholdAmount === 1000000000) &&
+        r.year === taxPeriod?.year
+    )
+    return crossedAlert ? crossedAlert.quarter : null
+  }, [taxProfile, taxPeriod?.year])
+
+  const isExemptQuarter = useMemo(() => {
+    if (!taxPeriod?.quarter || firstCrossingQuarter === null) return false
+    return taxPeriod.quarter < firstCrossingQuarter
+  }, [taxPeriod, firstCrossingQuarter])
+
+  const targetPeriod = useMemo(() => {
+    if (!firstCrossingQuarter || !siblingPeriods.length) return null
+    return siblingPeriods.find((p) => p.quarter === firstCrossingQuarter)
+  }, [firstCrossingQuarter, siblingPeriods])
 
   async function handleConfirmCancelDrafts() {
     if (!taxPeriodId) return
@@ -492,10 +558,11 @@ export default function TaxPeriodDetailPage() {
       const count = await cancelTaxPeriodDrafts(taxPeriodId)
       toast.success(`Đã hủy thành công ${count} đơn hàng nháp trong kỳ.`)
       setIsCancelDraftsConfirmOpen(false)
-      await loadTaxPeriod()
-    } catch (error: any) {
+      await reloadTaxPeriod()
+    } catch (error: unknown) {
       console.error('[TaxPeriodDetail] Cancel drafts failed:', error)
-      toast.error(error?.response?.data?.message || 'Không thể hủy các đơn hàng nháp.')
+      const err = error as { response?: { data?: { message?: string } } }
+      toast.error(err?.response?.data?.message || 'Không thể hủy các đơn hàng nháp.')
     } finally {
       setIsCancellingDrafts(false)
     }
@@ -601,16 +668,70 @@ export default function TaxPeriodDetailPage() {
             </div>
 
             <div className='text-right'>
-              <span className='inline-flex rounded-full bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700'>
-                {getStatusLabel(taxPeriod.status)}
-              </span>
-
-              <p className='mt-2 max-w-sm text-sm leading-6 text-gray-500'>
-                {getStatusDescription(taxPeriod.status)}
-              </p>
+              {isExemptQuarter ? (
+                <>
+                  <span className='inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-4 py-2 text-sm font-bold text-emerald-800 border border-emerald-300/80'>
+                    <ShieldCheck size={16} className='text-emerald-600' />
+                    Miễn thuế GTGT & TNCN
+                  </span>
+                  <p className='mt-2 max-w-sm text-sm leading-6 text-slate-500'>
+                    Doanh thu Quý {taxPeriod.quarter} chưa vượt ngưỡng 1 tỷ đồng. Được miễn 100% thuế theo quy định.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <span className='inline-flex rounded-full bg-blue-50 px-4 py-2 text-sm font-bold text-blue-700'>
+                    {getStatusLabel(taxPeriod.status)}
+                  </span>
+                  <p className='mt-2 max-w-sm text-sm leading-6 text-gray-500'>
+                    {getStatusDescription(taxPeriod.status)}
+                  </p>
+                </>
+              )}
             </div>
           </div>
         </div>
+
+        {/* Apple & Stripe Craft Exemption Callout */}
+        {isExemptQuarter && (
+          <div className='mt-6 overflow-hidden rounded-2xl border border-emerald-200/90 bg-gradient-to-r from-emerald-50/90 via-teal-50/50 to-emerald-50/70 p-5 shadow-xs backdrop-blur-md'>
+            <div className='flex flex-wrap items-start justify-between gap-4'>
+              <div className='flex items-start gap-3.5'>
+                <div className='flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs mt-0.5'>
+                  <ShieldCheck className='size-5' />
+                </div>
+                <div>
+                  <div className='flex items-center gap-2'>
+                    <span className='rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 uppercase tracking-wider'>
+                      Bảo vệ quyền lợi miễn thuế
+                    </span>
+                    <span className='text-xs font-semibold text-slate-500'>
+                      Nghị định 141/2026/NĐ-CP
+                    </span>
+                  </div>
+                  <h3 className='mt-1 text-base font-bold text-slate-900'>
+                    Quý {taxPeriod.quarter} không phát sinh nghĩa vụ thuế · Bắt đầu nộp từ Quý {firstCrossingQuarter}
+                  </h3>
+                  <p className='mt-1 text-xs text-slate-600 leading-relaxed max-w-2xl'>
+                    Doanh thu Quý {taxPeriod.quarter} ({formatMoney(taxPeriod.totalRevenue)}) đã được ghi nhận và tính vào hạn mức miễn thuế 1 tỷ đồng của năm {taxPeriod.year}. 
+                    Bạn không cần tính thuế và không phải nộp tờ khai 01/CNKD cho quý này.
+                  </p>
+                </div>
+              </div>
+
+              {targetPeriod && (
+                <button
+                  type='button'
+                  onClick={() => navigate(taxPeriodCalculationPath(targetPeriod.id))}
+                  className='inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-800 hover:shadow-md active:scale-98 transition-all shrink-0'
+                >
+                  <span>Mở Quý {firstCrossingQuarter} để kê khai</span>
+                  <ArrowRight className='size-3.5' />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className='mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
           <MetricCard
@@ -620,20 +741,22 @@ export default function TaxPeriodDetailPage() {
 
           <MetricCard
             label='Doanh thu chịu thuế'
-            value={formatMoney(taxPeriod.taxableRevenue)}
+            value={isExemptQuarter ? '0đ (Miễn trong hạn mức)' : formatMoney(taxPeriod.taxableRevenue)}
           />
 
           <MetricCard
             label='Tổng thuế ước tính'
-            value={isCalculated ? formatMoney(taxPeriod.estimatedTax) : 'Chưa tính toán'}
-            isPending={!isCalculated}
+            value={isExemptQuarter ? '0đ (Miễn 100%)' : isCalculated ? formatMoney(taxPeriod.estimatedTax) : 'Chưa tính toán'}
+            isPending={!isCalculated && !isExemptQuarter}
+            success={isExemptQuarter}
           />
 
           <MetricCard
             label='Số thuế chưa nộp'
-            value={isCalculated ? formatMoney(taxPeriod.taxAmountDebt) : 'Chưa tính'}
-            isPending={!isCalculated}
+            value={isExemptQuarter ? '0đ' : isCalculated ? formatMoney(taxPeriod.taxAmountDebt) : 'Chưa tính'}
+            isPending={!isCalculated && !isExemptQuarter}
             danger={
+              !isExemptQuarter &&
               isCalculated &&
               taxPeriod.taxAmountDebt > 0 &&
               Boolean(
@@ -642,12 +765,13 @@ export default function TaxPeriodDetailPage() {
               )
             }
             warning={
+              !isExemptQuarter &&
               isCalculated &&
               taxPeriod.taxAmountDebt > 0 &&
               (!taxPeriod.dueDate ||
                 new Date() <= new Date(taxPeriod.dueDate))
             }
-            success={isCalculated && taxPeriod.taxAmountDebt === 0}
+            success={isExemptQuarter || (isCalculated && taxPeriod.taxAmountDebt === 0)}
           />
         </div>
 
@@ -917,19 +1041,40 @@ export default function TaxPeriodDetailPage() {
             Quay lại
           </button>
 
-          <button
-            type='button'
-            onClick={handlePrimaryAction}
-            className='flex h-12 min-w-56 items-center justify-center gap-2 rounded-xl bg-red-600 px-6 text-sm font-bold text-white transition hover:bg-red-700'
-          >
-            {taxPeriod.status === 'Open' ? (
-              <CircleDollarSign size={18} />
+          {isExemptQuarter ? (
+            targetPeriod ? (
+              <button
+                type='button'
+                onClick={() => navigate(taxPeriodCalculationPath(targetPeriod.id))}
+                className='inline-flex h-12 min-w-56 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 text-sm font-bold text-white shadow-xs hover:bg-emerald-800 transition active:scale-98'
+              >
+                <span>Chuyển sang Quý {firstCrossingQuarter} để kê khai thuế</span>
+                <ArrowRight size={18} />
+              </button>
             ) : (
-              <FileText size={18} />
-            )}
+              <button
+                type='button'
+                disabled
+                className='h-12 min-w-56 rounded-xl bg-slate-200 px-6 text-sm font-bold text-slate-500 cursor-not-allowed'
+              >
+                Quý {taxPeriod.quarter} được miễn thuế
+              </button>
+            )
+          ) : (
+            <button
+              type='button'
+              onClick={handlePrimaryAction}
+              className='flex h-12 min-w-56 items-center justify-center gap-2 rounded-xl bg-red-600 px-6 text-sm font-bold text-white transition hover:bg-red-700'
+            >
+              {taxPeriod.status === 'Open' ? (
+                <CircleDollarSign size={18} />
+              ) : (
+                <FileText size={18} />
+              )}
 
-            {getPrimaryActionLabel(taxPeriod.status)}
-          </button>
+              {getPrimaryActionLabel(taxPeriod.status)}
+            </button>
+          )}
         </div>
       </div>
 

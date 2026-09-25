@@ -2,14 +2,18 @@ import axios from 'axios'
 import {
   AlertTriangle,
   ArrowRight,
+  BookOpen,
   Bot,
   CircleDollarSign,
   Plus,
   ReceiptText,
-  TrendingUp
+  Sparkles,
+  TrendingUp,
+  X
 } from 'lucide-react'
 import {
   useEffect,
+  useMemo,
   useState
 } from 'react'
 import {
@@ -121,6 +125,8 @@ export default function TaxDashboard() {
     useState<TaxMethod>('RevenueBased')
 
   const [isConfirmingConclusion, setIsConfirmingConclusion] =
+    useState(false)
+  const [showPolicyGuideModal, setShowPolicyGuideModal] =
     useState(false)
 
   const [isLoading, setIsLoading] =
@@ -273,6 +279,15 @@ export default function TaxDashboard() {
     currentYear,
     profileRevision
   ])
+
+  const firstCrossingQuarter = useMemo(() => {
+    const crossedAlert = taxProfile?.thresholdReviews?.find(
+      (r) =>
+        (r.thresholdCode === 'Crossed1B' || r.thresholdAmount === 1000000000) &&
+        r.year === (dashboard?.year ?? currentYear)
+    )
+    return crossedAlert ? crossedAlert.quarter : null
+  }, [taxProfile, dashboard?.year, currentYear])
 
   function findQuarterTaxPeriod(
       quarter: number
@@ -671,7 +686,8 @@ export default function TaxDashboard() {
 
             <button
               type='button'
-              className='mt-2 flex items-center gap-1 text-sm font-bold text-blue-600 hover:underline'
+              onClick={() => setShowPolicyGuideModal(true)}
+              className='mt-2 flex items-center gap-1 text-sm font-bold text-blue-600 hover:underline cursor-pointer'
             >
               Tìm hiểu thêm
               <ArrowRight size={15} />
@@ -898,7 +914,7 @@ export default function TaxDashboard() {
           !annualConclusion.blockingIssues.some(
             (x) => x.code === 'LaterTaxProfileInUse'
           ) && (
-            <section className='mt-6 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl ring-1 ring-inset ring-white/20 sm:p-8'>
+            <section id='annual-conclusion' className='mt-6 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-xl shadow-slate-200/40 backdrop-blur-xl ring-1 ring-inset ring-white/20 sm:p-8 scroll-mt-20'>
               <div className='flex flex-wrap items-center justify-between gap-3'>
                 <div className='flex flex-wrap items-center gap-2'>
                   <span className='inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-emerald-800'>
@@ -984,7 +1000,7 @@ export default function TaxDashboard() {
                           <span className='text-xs font-bold text-emerald-600'>✓ Đang chọn</span>
                         )}
                       </div>
-                      <p className='mt-2 font-bold text-slate-900'>Theo tỷ lệ Doanh thu (Khoán %)</p>
+                      <p className='mt-2 font-bold text-slate-900'>Theo tỷ lệ trên Doanh thu</p>
                       <p className='mt-1 text-xs text-slate-500'>
                         Đơn giản, tính % trên doanh thu vượt 1 tỷ, không yêu cầu hóa đơn chi phí đầu vào.
                       </p>
@@ -1092,7 +1108,7 @@ export default function TaxDashboard() {
         )}
 
         {/* Quarter analysis */}
-        <div className='mt-6 rounded-2xl bg-white p-6 shadow-sm'>
+        <div id='tax-quarters' className='mt-6 rounded-2xl bg-white p-6 shadow-sm scroll-mt-20'>
           <div className='mb-5 flex items-center gap-3'>
             <div className='flex size-10 items-center justify-center rounded-xl bg-red-50 text-red-600'>
               <CircleDollarSign
@@ -1167,6 +1183,10 @@ export default function TaxDashboard() {
                       taxPeriod?.status
                     }
                     disabled={!isRequired}
+                    isExempt={
+                      firstCrossingQuarter !== null &&
+                      index + 1 < firstCrossingQuarter
+                    }
                     onOpen={
                       handleOpenQuarter
                     }
@@ -1177,6 +1197,128 @@ export default function TaxDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Modal Hướng dẫn Quy định Thuế & Ngưỡng Doanh thu */}
+      {showPolicyGuideModal && (
+        <div className='fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-xs'>
+          <div className='relative flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl animate-in fade-in zoom-in-95 duration-200'>
+            {/* Header */}
+            <div className='flex items-start justify-between border-b border-slate-100 p-6 pb-4'>
+              <div className='flex items-center gap-3.5'>
+                <div className='flex size-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 shadow-2xs'>
+                  <BookOpen size={22} />
+                </div>
+                <div>
+                  <h3 className='text-lg font-extrabold text-slate-900'>
+                    Quy định Ngưỡng Doanh thu & Nghĩa vụ Thuế
+                  </h3>
+                  <p className='mt-0.5 text-xs text-slate-500'>
+                    Tổng hợp theo Nghị định 141/2026/NĐ-CP, Thông tư 152/2025/TT-BTC & VBHN 24/2026/TT-BTC
+                  </p>
+                </div>
+              </div>
+              <button
+                type='button'
+                onClick={() => setShowPolicyGuideModal(false)}
+                className='rounded-xl p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 cursor-pointer'
+                title='Đóng'
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className='space-y-4 overflow-y-auto p-6 text-sm'>
+              {/* Tier 1 */}
+              <div className='rounded-2xl border border-emerald-200/80 bg-emerald-50/50 p-4.5'>
+                <div className='flex items-center justify-between gap-2'>
+                  <span className='inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800'>
+                    <Sparkles className='size-3.5' />
+                    Doanh thu đến 1 tỷ VNĐ/năm
+                  </span>
+                  <span className='text-xs font-bold text-emerald-700'>Miễn 100% Thuế</span>
+                </div>
+                <p className='mt-2.5 text-xs leading-relaxed text-slate-700'>
+                  Không phát sinh nghĩa vụ nộp thuế GTGT và thuế TNCN. Hộ kinh doanh chỉ cần nộp <strong>Thông báo doanh thu định kỳ (mẫu 01/TKN-CNKD)</strong> và ghi chép <strong>Sổ doanh thu S1a</strong>.
+                </p>
+              </div>
+
+              {/* Tier 2 */}
+              <div className='rounded-2xl border border-sky-200/80 bg-sky-50/50 p-4.5'>
+                <div className='flex items-center justify-between gap-2'>
+                  <span className='inline-flex items-center gap-1.5 rounded-full bg-sky-100 px-3 py-1 text-xs font-bold text-sky-800'>
+                    Doanh thu trên 1 tỷ đến 3 tỷ VNĐ/năm
+                  </span>
+                  <span className='text-xs font-bold text-sky-700'>Kê khai theo Quý</span>
+                </div>
+                <p className='mt-2.5 text-xs leading-relaxed text-slate-700'>
+                  Bắt buộc kê khai theo quý đối với doanh thu phát sinh sau khi chạm ngưỡng 1 tỷ. Được lựa chọn 1 trong 2 phương pháp:
+                </p>
+                <div className='mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2'>
+                  <div className='rounded-xl border border-sky-200/70 bg-white/90 p-3'>
+                    <p className='text-xs font-bold text-sky-900'>• Theo tỷ lệ trên doanh thu</p>
+                    <p className='mt-1 text-xs leading-relaxed text-slate-600'>
+                      Tính thuế theo % doanh thu từng quý (tờ khai 01/CNKD, được trừ 1 tỷ miễn thuế/năm khi tính TNCN), không cần chứng từ chi phí đầu vào.
+                    </p>
+                  </div>
+                  <div className='rounded-xl border border-sky-200/70 bg-white/90 p-3'>
+                    <p className='text-xs font-bold text-sky-900'>• Theo thu nhập tính thuế</p>
+                    <p className='mt-1 text-xs leading-relaxed text-slate-600'>
+                      Tính trên lợi nhuận (Doanh thu − Chi phí) với thuế suất quyết toán <strong>15%</strong>, yêu cầu chứng từ hợp lệ và ổn định tối thiểu 2 năm.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tier 3 */}
+              <div className='rounded-2xl border border-purple-200/80 bg-purple-50/50 p-4.5'>
+                <div className='flex items-center justify-between gap-2'>
+                  <span className='inline-flex items-center gap-1.5 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-800'>
+                    Doanh thu trên 3 tỷ đến 50 tỷ VNĐ/năm
+                  </span>
+                  <span className='text-xs font-bold text-purple-700'>Chế độ Sổ sách S2</span>
+                </div>
+                <p className='mt-2.5 text-xs leading-relaxed text-slate-700'>
+                  Bắt buộc áp dụng phương pháp <strong>Theo thu nhập tính thuế</strong>, duy trì hệ thống sổ kế toán S2 <strong>(S2b, S2c, S2d, S2e)</strong> và lập <strong>Tờ khai quyết toán thuế TNCN cuối năm (02/CNKD-TNCN-QTT)</strong> với thuế suất <strong>17%</strong>.
+                </p>
+              </div>
+
+              {/* E-invoice note */}
+              <div className='rounded-2xl border border-amber-200/80 bg-amber-50/60 p-4'>
+                <p className='text-xs font-bold text-amber-900'>Quy định Hóa đơn điện tử (HĐĐT):</p>
+                <p className='mt-1 text-xs leading-relaxed text-amber-800'>
+                  Hộ kinh doanh có doanh thu năm đạt từ <strong>1 tỷ VNĐ trở lên</strong> thuộc diện bắt buộc phải khởi tạo hóa đơn điện tử có mã của cơ quan thuế hoặc hóa đơn điện tử từ máy tính tiền theo tiến độ chuyển đổi số.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className='flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 p-4 px-6'>
+              <button
+                type='button'
+                onClick={() => {
+                  setShowPolicyGuideModal(false)
+                  const el = document.getElementById('threshold-review')
+                  if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                  }
+                }}
+                className='inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 hover:text-blue-800 cursor-pointer'
+              >
+                Xem cấu hình thuế của bạn
+                <ArrowRight size={14} />
+              </button>
+              <button
+                type='button'
+                onClick={() => setShowPolicyGuideModal(false)}
+                className='rounded-xl bg-slate-900 px-5 py-2 text-xs font-bold text-white shadow-xs transition hover:bg-slate-800 cursor-pointer'
+              >
+                Đã hiểu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

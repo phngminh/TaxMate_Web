@@ -2,7 +2,8 @@ import {
   ArrowRight,
   CalendarDays,
   CheckCircle2,
-  LockKeyhole
+  LockKeyhole,
+  ShieldCheck
 } from 'lucide-react'
 
 import type {
@@ -19,6 +20,7 @@ interface Props {
   taxPeriodStatus?: TaxPeriodStatus
 
   disabled?: boolean
+  isExempt?: boolean
 
   onOpen: (
     taxPeriodId: string | undefined
@@ -28,8 +30,18 @@ interface Props {
 function getFilingStatus(
   taxPeriodStatus: TaxPeriodStatus | undefined,
   disabled: boolean,
+  isExempt: boolean,
   fallbackText: string
 ) {
+  if (isExempt) {
+    return {
+      label: 'Miễn 100% thuế (Dưới 1 tỷ)',
+      className:
+        'bg-emerald-100 text-emerald-800 border border-emerald-300/80',
+      completed: true
+    }
+  }
+
   if (disabled) {
     return {
       label: 'Chỉ theo dõi doanh thu',
@@ -88,12 +100,14 @@ export default function TaxQuarterCard({
   taxPeriodId,
   taxPeriodStatus,
   disabled = false,
+  isExempt = false,
   onOpen
 }: Props) {
   const filingStatus =
     getFilingStatus(
       taxPeriodStatus,
       disabled,
+      isExempt,
       quarter.statusText
     )
 
@@ -107,25 +121,34 @@ export default function TaxQuarterCard({
       className={`group flex min-h-44 flex-col rounded-2xl border p-5 text-left shadow-xs transition-all duration-200 ${
         disabled
           ? 'cursor-not-allowed border-gray-200 bg-gray-50 opacity-80'
-          : filingStatus.completed
-            ? 'border-green-200 bg-green-50 hover:-translate-y-0.5 hover:shadow-md'
-            : 'border-blue-100 bg-[#eef7ff] hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md'
+          : isExempt
+            ? 'border-emerald-200/90 bg-emerald-50/50 hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md'
+            : filingStatus.completed
+              ? 'border-green-200 bg-green-50 hover:-translate-y-0.5 hover:shadow-md'
+              : 'border-blue-100 bg-[#eef7ff] hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md'
       }`}
     >
       <div className='flex w-full items-center justify-between'>
         <div className='flex items-center gap-2'>
-          <CalendarDays
-            size={18}
-            className={
-              disabled
-                ? 'text-gray-400'
-                : filingStatus.completed
-                  ? 'text-green-600'
-                  : 'text-blue-500'
-            }
-          />
+          {isExempt ? (
+            <ShieldCheck
+              size={19}
+              className='text-emerald-600 shrink-0'
+            />
+          ) : (
+            <CalendarDays
+              size={18}
+              className={
+                disabled
+                  ? 'text-gray-400'
+                  : filingStatus.completed
+                    ? 'text-green-600'
+                    : 'text-blue-500'
+              }
+            />
+          )}
 
-          <span className='text-base font-bold text-gray-600'>
+          <span className='text-base font-bold text-gray-700'>
             {quarter.name}
           </span>
         </div>
@@ -138,7 +161,7 @@ export default function TaxQuarterCard({
         ) : filingStatus.completed ? (
           <CheckCircle2
             size={20}
-            className='text-green-600'
+            className={isExempt ? 'text-emerald-600' : 'text-green-600'}
           />
         ) : (
           <ArrowRight
@@ -153,9 +176,9 @@ export default function TaxQuarterCard({
       </div>
 
       <div
-        className={`mt-auto inline-flex self-start rounded-full px-3 py-1 text-xs font-bold ${filingStatus.className}`}
+        className={`mt-auto inline-flex items-center self-start rounded-full px-3 py-1 text-xs font-bold ${filingStatus.className}`}
       >
-        {filingStatus.completed && (
+        {filingStatus.completed && !isExempt && (
           <CheckCircle2
             size={13}
             className='mr-1'
