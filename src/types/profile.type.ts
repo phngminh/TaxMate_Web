@@ -34,3 +34,8 @@ export interface UpdateBusinessProfileRequest {
   preferElectronicInvoice: boolean
   isStockTrackingEnabled?: boolean
 }
+
+export interface ToggleStockTrackingRequest {
+  isStockTrackingEnabled: boolean
+  reconciliation?: import('./inventory.type').ReconcileInventoryRequest
+}

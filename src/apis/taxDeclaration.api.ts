@@ -14,30 +14,30 @@ function getFileNameFromContentDisposition(
   contentDisposition?: string
 ): string {
   if (!contentDisposition) {
-    return 'tax-declaration.docx'
+    return ''
   }
 
   const utf8Match =
     contentDisposition.match(
-      /filename\*=UTF-8''([^;]+)/
+      /filename\*=UTF-8''([^;]+)/i
     )
 
   if (utf8Match?.[1]) {
     return decodeURIComponent(
-      utf8Match[1]
+      utf8Match[1].trim()
     )
   }
 
   const normalMatch =
     contentDisposition.match(
-      /filename="?([^"]+)"?/
+      /filename="?([^";]+)"?/i
     )
 
   if (normalMatch?.[1]) {
-    return normalMatch[1]
+    return normalMatch[1].trim()
   }
 
-  return 'tax-declaration.docx'
+  return ''
 }
 
 export async function getTaxDeclarationByTaxPeriod(
@@ -82,6 +82,27 @@ export async function exportTaxDeclarationDocument(
 ): Promise<ExportedTaxDeclarationDocument> {
   const response = await http.get<Blob>(
     `/tax-declarations/${declarationId}/export`,
+    {
+      responseType: 'blob'
+    }
+  )
+
+  return {
+    blob: response.data,
+    fileName:
+      getFileNameFromContentDisposition(
+        response.headers[
+          'content-disposition'
+        ]
+      )
+  }
+}
+
+export async function exportTaxPeriodPreviewDocument(
+  taxPeriodId: string
+): Promise<ExportedTaxDeclarationDocument> {
+  const response = await http.get<Blob>(
+    `/tax-declarations/preview/${taxPeriodId}/export`,
     {
       responseType: 'blob'
     }

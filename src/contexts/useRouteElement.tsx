@@ -9,6 +9,7 @@ import ProductCategoryPage from '../pages/businessOwner/product/categoryList'
 import OwnerLayout from '../components/owner/ownerLayout'
 import LandingPage from '../pages/landingPage/LandingPage'
 import Ingredient from '../pages/businessOwner/ingredient'
+import InventoryControlPage from '../pages/businessOwner/inventory/inventoryControl'
 import Order from '../pages/businessOwner/order'
 import POS from '../pages/businessOwner/pos'
 import AdminLayout from '../components/admin/AdminLayout'
@@ -19,6 +20,7 @@ import Subscription from '../pages/admin/user/subscription'
 import LegalDocuments from '../pages/admin/document/document'
 import TaxPolicyPage from '../pages/admin/taxPolicy/taxPolicy'
 import SubscriptionPage from '../pages/landingPage/subscription'
+import AboutUsPage from '../pages/landingPage/aboutUs'
 import BusinessList from '../pages/admin/user/business'
 import Expense from '../pages/businessOwner/expense/expense'
 import ExpenseCategoryPage from '../pages/businessOwner/expense/expenseCategory'
@@ -31,16 +33,25 @@ import { useAuth } from './AuthContext'
 import TaxDashboard from '../pages/businessOwner/taxDashboard'
 import TaxPeriodDetailPage from '../pages/businessOwner/taxPeriod/taxPeriodDetail'
 import TaxPeriodPreviewPage from '../pages/businessOwner/taxPeriod/taxPeriodPreview'
+import S2bBookPage from '../pages/businessOwner/taxBook/s2bBook'
+import S2cBookPage from '../pages/businessOwner/taxBook/s2cBook'
+import S2dBookPage from '../pages/businessOwner/taxBook/s2dBook'
+import S2eBookPage from '../pages/businessOwner/taxBook/s2eBook'
+import QttPage from '../pages/businessOwner/taxBook/qtt'
+import TaxBookRouteGuard from '../components/owner/tax/TaxBookRouteGuard'
 
 import TaxCalculationPage from '../pages/businessOwner/taxPeriod/taxCalculation'
 
 import TaxDeclarationPage from '../pages/businessOwner/taxPeriod/taxDeclaration'
+import TknTaxPeriodDetailPage from '../pages/businessOwner/taxPeriod/tknTaxPeriodDetail'
+import TknTaxPeriodPreviewPage from '../pages/businessOwner/taxPeriod/tknTaxPeriodPreview'
 
 export default function useRouteElements() {
   const { isAuthenticated, isLoading, user } = useAuth()
   const routeElements = useRoutes([
     { path: path.home, element: <LandingPage /> },
     { path: path.subscription, element: <SubscriptionPage /> },
+    { path: path.aboutUs, element: <AboutUsPage /> },
     {
       path: path.BUSINESS_OWNER_LOGIN,
       element: isLoading
@@ -88,6 +99,7 @@ export default function useRouteElements() {
             { path: path.BUSINESS_OWNER_PRODUCTS, element: <Product /> },
             { path: path.BUSINESS_OWNER_PRODUCT_CATEGORIES, element: <ProductCategoryPage /> },
             { path: path.BUSINESS_OWNER_INGREDIENTS, element: <Ingredient /> },
+            { path: path.BUSINESS_OWNER_INVENTORY, element: <InventoryControlPage /> },
             { path: path.BUSINESS_OWNER_ORDERS, element: <Order /> },
             { path: path.BUSINESS_OWNER_EXPENSES, element: <Expense /> },
             { path: path.BUSINESS_OWNER_EXPENSE_CATEGORIES, element: <ExpenseCategoryPage /> },
@@ -95,6 +107,46 @@ export default function useRouteElements() {
             { path: path.BUSINESS_OWNER_SUPPLIER, element: <Purchase /> },
             { path: path.BUSINESS_OWNER_REPORTS, element: <Report /> },
             { path: path.BUSINESS_OWNER_TAX, element: <TaxDashboard /> },
+            {
+              path: path.BUSINESS_OWNER_S2B_BOOK,
+              element: (
+                <TaxBookRouteGuard bookType='s2b'>
+                  <S2bBookPage />
+                </TaxBookRouteGuard>
+              )
+            },
+            {
+              path: path.BUSINESS_OWNER_S2C_BOOK,
+              element: (
+                <TaxBookRouteGuard bookType='s2c'>
+                  <S2cBookPage />
+                </TaxBookRouteGuard>
+              )
+            },
+            {
+              path: path.BUSINESS_OWNER_S2D_BOOK,
+              element: (
+                <TaxBookRouteGuard bookType='s2d'>
+                  <S2dBookPage />
+                </TaxBookRouteGuard>
+              )
+            },
+            {
+              path: path.BUSINESS_OWNER_S2E_BOOK,
+              element: (
+                <TaxBookRouteGuard bookType='s2e'>
+                  <S2eBookPage />
+                </TaxBookRouteGuard>
+              )
+            },
+            {
+              path: path.BUSINESS_OWNER_QTT,
+              element: (
+                <TaxBookRouteGuard bookType='qtt'>
+                  <QttPage />
+                </TaxBookRouteGuard>
+              )
+            },
             { path: path.BUSINESS_OWNER_TAX_PERIOD, element: <TaxPeriodDetailPage /> },
             {
               path:
@@ -115,6 +167,14 @@ export default function useRouteElements() {
                 path.BUSINESS_OWNER_TAX_PERIOD_DECLARATION,
               element:
                 <TaxDeclarationPage />
+            },
+            {
+              path: path.BUSINESS_OWNER_TKN_TAX_PERIOD,
+              element: <TknTaxPeriodDetailPage />
+            },
+            {
+              path: path.BUSINESS_OWNER_TKN_TAX_PERIOD_PREVIEW,
+              element: <TknTaxPeriodPreviewPage />
             },
             { path: path.BUSINESS_OWNER_BANK_CONFIG, element: <BankConfig /> },
             { path: path.BUSINESS_OWNER_EINVOICE_CONFIG, element: <EInvoiceConfig /> },

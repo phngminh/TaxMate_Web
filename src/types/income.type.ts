@@ -13,6 +13,8 @@ export interface CreateIncomeCategoryRequest {
   description?: string
 }
 
+export type IncomeAccountingType = 'BusinessRevenue' | 'NonRevenueCashIn'
+
 export interface IncomeDTO {
   incomeId: string
   businessId: string
@@ -21,7 +23,9 @@ export interface IncomeDTO {
   incomeTitle: string
   amount: number
   incomeDate: string
+  accountingType?: IncomeAccountingType
   paymentMethod?: string
+  paymentAccountId?: string
   receiptImageUrl?: string
   note?: string
   fileUrl?: string
@@ -36,7 +40,9 @@ export interface CreateIncomeRequest {
   incomeTitle: string
   amount: number
   incomeDate: string
+  accountingType: IncomeAccountingType
   paymentMethod?: string
+  paymentAccountId?: string
   receiptImageUrl?: string
   note?: string
   fileUrl?: string

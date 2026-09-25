@@ -1,4 +1,4 @@
-import type { PaymentAccount, CreatePaymentAccountRequest } from '../types/paymentAccount.type'
+import type { PaymentAccount, CreatePaymentAccountRequest, UpdateInitialBalanceRequest } from '../types/paymentAccount.type'
 import type { ApiResponse } from '../types/common.type'
 import http from '../utils/http'
 
@@ -7,6 +7,21 @@ export const getPaymentAccounts = async (businessId: string) => {
     `/PaymentAccount/business/${businessId}`
   )
   return response.data
+}
+
+export const getMoneyAccounts = async (businessId: string) => {
+  const response = await http.get<ApiResponse<PaymentAccount[]>>(
+    `/PaymentAccount/business/${businessId}/money-accounts`,
+    { params: { includeInactive: true } }
+  )
+  return response.data.data
+}
+
+export const updateInitialBalance = async (
+  paymentAccountId: string,
+  body: UpdateInitialBalanceRequest
+) => {
+  await http.put(`/PaymentAccount/${paymentAccountId}/initial-balance`, body)
 }
 
 export const createPaymentAccount = async (

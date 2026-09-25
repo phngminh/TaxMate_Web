@@ -1,52 +1,177 @@
-export type TaxPeriodType =
-  | 'Quarterly'
-  | 'Monthly'
-
 export type TaxPeriodStatus =
   | 'Open'
   | 'Closed'
   | 'Calculated'
   | 'Submitted'
+  | 'Paid'
 
-export type TaxPitMethod =
-  | 'RevenueBased'
-  | 'IncomeBased'
-  | null
+export type TaxPeriodType =
+  | 'Monthly'
+  | 'Quarterly'
+  | 'Yearly'
+  | 'Tkn'
 
-export interface TaxPeriodBusinessRevenue {
-  businessId: string
-  businessName: string
-  revenue: number
-}
+export type TaxPeriodFilingWindow =
+  | 'FirstHalf'
+  | 'SecondHalf'
+  | 'Annual'
+
+export type DataCheckStatus =
+  | 'Good'
+  | 'Warning'
+  | 'NeedReview'
 
 export interface TaxPeriodSummary {
   id: string
-  ownerId: string
+  businessId: string
+
   periodType: TaxPeriodType
+  filingWindow: TaxPeriodFilingWindow | null
+
   year: number
   month: number | null
   quarter: number | null
+
   periodStartDate: string
   periodEndDate: string
   dueDate: string | null
+
   status: TaxPeriodStatus
+
   totalRevenue: number
   taxableRevenue: number
   estimatedTax: number
   taxAmountDebt: number
-  filingFrequency: 'Quarterly' | 'Monthly' | 'None'
-  canDeclare: boolean
+
+  paidDate: string | null
 }
 
-export interface TaxPeriodDetail extends TaxPeriodSummary {
+export interface TaxPeriodBusinessBreakdown {
+  businessId: string
+  businessName: string
+  transactionCount: number
+  paidTransactionCount: number
+  unpaidTransactionCount: number
+  missingInvoiceCount: number
+  expenseCount: number
+  revenue: number
+}
+
+export interface TaxPeriodDetail
+  extends TaxPeriodSummary {
   salesRevenue: number
   otherRevenue: number
+
   vatTaxAmount: number
   personalIncomeTaxAmount: number
+
   totalExpense: number
   estimatedProfit: number
+
   transactionCount: number
-  businesses: TaxPeriodBusinessRevenue[]
-  pitMethod: TaxPitMethod
-  pitMethodLocked: boolean
+  paidTransactionCount: number
+  unpaidTransactionCount: number
+  missingInvoiceCount: number
+  expenseCount: number
+
+  dataCheckStatus: DataCheckStatus
+
+  closedAt: string | null
+  calculatedAt: string | null
+  submittedAt: string | null
+  businessBreakdowns?: TaxPeriodBusinessBreakdown[]
+}
+
+export interface TaxPeriodPreviewWarning {
+  code: string
+  message: string
+}
+
+export interface TaxPeriodPreview {
+  taxPeriodId: string
+  businessId: string
+
+  status: TaxPeriodStatus
+
+  salesRevenue: number
+  otherRevenue: number
+  totalRevenue: number
+  taxableRevenue: number
+  totalExpense: number
+
+  transactionCount: number
+  completedTransactionCount: number
+  unpaidTransactionCount: number
+  cancelledTransactionCount: number
+  missingInvoiceCount: number
+  expenseCount: number
+
+  dataCheckStatus: DataCheckStatus
+
+  canClose: boolean
+
+  warnings: TaxPeriodPreviewWarning[]
+  businessBreakdowns?: TaxPeriodBusinessBreakdown[]
+}
+
+export interface CloseTaxPeriodResponse {
+  taxPeriodId: string
+  status: 'Closed'
+
+  salesRevenue: number
+  otherRevenue: number
+  totalRevenue: number
+  taxableRevenue: number
+
+  closedAt: string
+}
+
+export interface TaxCalculationLine {
+  id: string
+  businessCategoryId: string
+
+  sectionCode: string
+  indicatorCode: string
+
+  businessActivityCode: string
+  businessActivityName: string
+
+  totalRevenue: number
+
+  vatTaxableRevenue: number
+  zeroRatedVatRevenue: number
+
+  vatTaxRate: number
+  vatTaxAmount: number
+
+  personalIncomeTaxableRevenue: number
+  personalIncomeTaxDeductibleRevenue: number
+
+  personalIncomeTaxRate: number
+  personalIncomeTaxAmount: number
+
+  vatNonTaxableRevenue: number
+  personalIncomeTaxRevenue: number
+}
+
+export interface CalculateTaxPeriodResponse {
+  taxPeriodId: string
+  taxCalculationId: string
+
+  version: number
+
+  totalRevenue: number
+  totalTaxableRevenue: number
+
+  totalVatTaxAmount: number
+  totalPersonalIncomeTaxAmount: number
+
+  totalTaxBeforeExemption: number
+  totalExemptionAmount: number
+  totalTaxPayableAmount: number
+
+  status: string
+  calculatedAt: string
+
+  lines: TaxCalculationLine[]
 }
