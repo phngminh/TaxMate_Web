@@ -1,9 +1,10 @@
 import type { ApiResponse } from '../types/common.type'
-
 import type {
   CalculateTaxPeriodResponse,
   CloseTaxPeriodResponse,
+  RecordTaxPeriodPaymentRequest,
   TaxPeriodDetail,
+  TaxPeriodPaymentSummary,
   TaxPeriodPreview,
   TaxPeriodStatus,
   TaxPeriodSummary,
@@ -114,3 +115,24 @@ export async function cancelTaxPeriodDrafts(
 
   return response.data.data
 }
+
+export async function recordTaxPeriodPayment(
+  taxPeriodId: string,
+  request: RecordTaxPeriodPaymentRequest
+): Promise<TaxPeriodPaymentSummary> {
+  const response = await http.post<
+    ApiResponse<TaxPeriodPaymentSummary>
+  >(`/tax-periods/${taxPeriodId}/payments`, request)
+
+  return response.data.data
+}
+
+export async function getTaxPeriodPayments(
+  taxPeriodId: string
+): Promise<TaxPeriodPaymentSummary> {
+  const response = await http.get<
+    ApiResponse<TaxPeriodPaymentSummary>
+  >(`/tax-periods/${taxPeriodId}/payments`)
+
+  return response.data.data
+}

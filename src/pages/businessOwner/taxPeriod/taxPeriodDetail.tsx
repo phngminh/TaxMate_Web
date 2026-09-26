@@ -39,6 +39,7 @@ import type {
   TaxPeriodSummary
 } from '../../../types/taxPeriod.type'
 import type { OwnerTaxProfile } from '../../../types/taxProfile.type'
+import RecordTaxPaymentModal from '../../../components/owner/tax/RecordTaxPaymentModal'
 
 import {
   taxPeriodCalculationPath,
@@ -455,6 +456,7 @@ export default function TaxPeriodDetailPage() {
   const [declarationStatus, setDeclarationStatus] = useState<'Draft' | 'Submitted' | null>(null)
   const [isCancellingDrafts, setIsCancellingDrafts] = useState(false)
   const [isCancelDraftsConfirmOpen, setIsCancelDraftsConfirmOpen] = useState(false)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
 
   const reloadTaxPeriod = useCallback(async () => {
     if (!taxPeriodId) return
@@ -995,7 +997,7 @@ export default function TaxPeriodDetailPage() {
             Luồng khai thuế
           </h2>
 
-          <div className='mt-5 grid gap-4 md:grid-cols-5'>
+          <div className='mt-5 grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-6'>
             <FlowStep
               number={1}
               title='Kiểm tra doanh thu'
@@ -1027,12 +1029,18 @@ export default function TaxPeriodDetailPage() {
             <FlowStep
               number={5}
               title='Gửi tờ khai'
-              done={declarationStatus === 'Submitted'}
+              done={declarationStatus === 'Submitted' || taxPeriod.status === 'Paid'}
+            />
+
+            <FlowStep
+              number={6}
+              title='Nộp thuế NSNN'
+              done={taxPeriod.status === 'Paid'}
             />
           </div>
         </div>
 
-        <div className='mt-6 flex justify-end gap-3'>
+        <div className='mt-6 flex flex-wrap justify-end gap-3'>
           <button
             type='button'
             onClick={() => navigate(-1)}
@@ -1061,22 +1069,55 @@ export default function TaxPeriodDetailPage() {
               </button>
             )
           ) : (
-            <button
-              type='button'
-              onClick={handlePrimaryAction}
-              className='flex h-12 min-w-56 items-center justify-center gap-2 rounded-xl bg-red-600 px-6 text-sm font-bold text-white transition hover:bg-red-700'
-            >
-              {taxPeriod.status === 'Open' ? (
-                <CircleDollarSign size={18} />
-              ) : (
-                <FileText size={18} />
+            <>
+              {['Submitted', 'Paid'].includes(taxPeriod.status) && (
+                <button
+                  type='button'
+                  onClick={() => setIsPaymentModalOpen(true)}
+                  className='flex h-12 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 text-sm font-bold text-white transition hover:bg-emerald-800 shadow-xs'
+                >
+                  <CheckCircle2 size={18} />
+                  {taxPeriod.status === 'Paid' ? 'Cập nhật nộp thuế' : 'Xác nhận đã nộp thuế'}
+                </button>
               )}
 
-              {getPrimaryActionLabel(taxPeriod.status)}
-            </button>
+              <button
+                type='button'
+                onClick={handlePrimaryAction}
+                className={
+                  ['Submitted', 'Paid'].includes(taxPeriod.status)
+                    ? 'flex h-12 min-w-44 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-6 text-sm font-bold text-gray-700 hover:bg-gray-50 transition shadow-2xs'
+                    : 'flex h-12 min-w-56 items-center justify-center gap-2 rounded-xl bg-red-600 px-6 text-sm font-bold text-white transition hover:bg-red-700 shadow-xs'
+                }
+              >
+                {taxPeriod.status === 'Open' ? (
+                  <CircleDollarSign size={18} />
+                ) : (
+                  <FileText
+                    size={18}
+                    className={
+                      ['Submitted', 'Paid'].includes(taxPeriod.status)
+                        ? 'text-gray-500'
+                        : ''
+                    }
+                  />
+                )}
+
+                <span>{getPrimaryActionLabel(taxPeriod.status)}</span>
+              </button>
+            </>
           )}
         </div>
       </div>
+
+      <RecordTaxPaymentModal
+        open={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        taxPeriod={taxPeriod}
+        onSuccess={async () => {
+          await reloadTaxPeriod()
+        }}
+      />
 
       <ConfirmDialog
         open={isCancelDraftsConfirmOpen}

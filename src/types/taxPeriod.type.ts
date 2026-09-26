@@ -175,3 +175,44 @@ export interface CalculateTaxPeriodResponse {
 
   lines: TaxCalculationLine[]
 }
+
+export interface RecordTaxPaymentItemRequest {
+  taxType: string
+  amount: number
+  stateBudgetChapterCode?: string | null
+  stateBudgetSubsectionCode?: string | null
+  administrativeAreaCode?: string | null
+}
+
+export interface RecordTaxPeriodPaymentRequest {
+  paymentDate: string
+  paymentMethod?: string
+  transactionReference?: string | null
+  receiptFileUrl?: string | null
+  note?: string | null
+  items?: RecordTaxPaymentItemRequest[] | null
+}
+
+export interface TaxPaymentDetail {
+  id: string
+  taxType: string
+  paymentCode: string
+  amount: number
+  paymentDate: string
+  paymentMethod: string
+  status: string
+  transactionReference?: string | null
+  stateBudgetChapterCode?: string | null
+  stateBudgetSubsectionCode?: string | null
+  administrativeAreaCode?: string | null
+  receiptFileUrl?: string | null
+  note?: string | null
+}
+
+export interface TaxPeriodPaymentSummary {
+  taxPeriodId: string
+  periodStatus: TaxPeriodStatus
+  paidDate: string | null
+  totalPaidAmount: number
+  payments: TaxPaymentDetail[]
+}
