@@ -18,6 +18,13 @@ export const createInventoryPurchase = async (businessId: string, body: CreateIn
   return response.data
 }
 
+export const getInventoryPurchaseById = async (expenseId: string) => {
+  const response = await http.get<ApiResponse<InventoryPurchaseResponse>>(
+    `/inventory-purchases/${expenseId}`
+  )
+  return response.data
+}
+
 export const deleteInventoryPurchase = async (expenseId: string) => {
   const response = await http.delete<ApiResponse<string>>(`/inventory-purchases/${expenseId}`)
   return response.data

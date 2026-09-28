@@ -20,20 +20,24 @@ export default function InventoryControlPage() {
   const [description, setDescription] = useState('Kiểm kê tồn kho thực tế')
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [needsReview, setNeedsReview] = useState(false)
 
   const keyOf = (productId: string | null, ingredientId: string | null) => productId ?? ingredientId ?? ''
 
-  const load = async () => {
+  const load = async (preserveCounts = false) => {
     if (!currentBusiness) return
     try {
       setLoading(true)
       const result = await getInventoryInitializationPreview(currentBusiness.id)
       setPreview(result)
       setDescription(result.isInitialized ? 'Kiểm kê tồn kho thực tế' : 'Xác nhận tồn kho ban đầu')
-      setCounts(Object.fromEntries(result.items.map(item => [
+      setCounts(previous => Object.fromEntries(result.items.map(item => [
         keyOf(item.productId, item.ingredientId),
-        { quantity: item.currentQuantity, unitValue: item.currentUnitValue ?? 0 }
+        preserveCounts && previous[keyOf(item.productId, item.ingredientId)]
+          ? previous[keyOf(item.productId, item.ingredientId)]
+          : { quantity: item.currentQuantity, unitValue: item.currentUnitValue ?? 0 }
       ])))
+      setNeedsReview(false)
     } catch {
       toast.error('Không thể tải dữ liệu tồn kho')
     } finally {
@@ -41,7 +45,7 @@ export default function InventoryControlPage() {
     }
   }
 
-  useEffect(() => { load() }, [currentBusiness?.id])
+  useEffect(() => { setPreview(null); setCounts({}); setNeedsReview(false); void load() }, [currentBusiness?.id])
 
   const updateBusinessTracking = (enabled: boolean) => {
     if (!currentBusiness) return
@@ -51,7 +55,7 @@ export default function InventoryControlPage() {
   }
 
   const save = async () => {
-    if (!currentBusiness || !preview) return
+    if (!currentBusiness || !preview || preview.businessId !== currentBusiness.id || loading || needsReview) return
     if (!documentNumber.trim() || !description.trim()) {
       toast.error('Vui lòng nhập số chứng từ và diễn giải')
       return
@@ -61,12 +65,11 @@ export default function InventoryControlPage() {
       return
     }
 
-    const date = new Date(`${occurredAt}T00:00:00`).toISOString()
     try {
       setSaving(true)
       if (!preview.isInitialized) {
         await initializeInventory(currentBusiness.id, {
-          occurredAt: date,
+          occurredAt: new Date(`${occurredAt}T00:00:00`).toISOString(),
           documentNumber: documentNumber.trim(),
           description: description.trim(),
           lines: preview.items.map(item => {
@@ -80,7 +83,7 @@ export default function InventoryControlPage() {
         })
       } else {
         const reconciliation: ReconcileInventoryRequest = {
-          occurredAt: date,
+          expectedVersion: preview.version,
           documentNumber: documentNumber.trim(),
           description: description.trim(),
           lines: preview.items.map(item => {
@@ -112,6 +115,7 @@ export default function InventoryControlPage() {
       )
       await load()
     } catch (error: any) {
+      if (error?.response?.status === 409) setNeedsReview(true)
       toast.error(error?.response?.data?.message || 'Không thể lưu dữ liệu tồn kho')
     } finally {
       setSaving(false)
@@ -139,11 +143,12 @@ export default function InventoryControlPage() {
       ) : null}
 
       <div className='mb-4 grid gap-3 rounded-xl border bg-white p-4 md:grid-cols-3'>
-        <label className='text-sm text-gray-600'>
+        {!preview?.isInitialized && <label className='text-sm text-gray-600'>
           {preview?.isInitialized ? 'Ngày kiểm kê' : 'Ngày xác nhận tồn đầu'}
           <input type='date' value={occurredAt} onChange={e => setOccurredAt(e.target.value)} className='mt-1 block w-full rounded-lg border px-3 py-2' />
           {!preview?.isInitialized ? <span className='mt-1 block text-xs text-gray-500'>Ngày bạn kiểm đếm và bắt đầu theo dõi kho trên TaxMate.</span> : null}
-        </label>
+        </label>}
+        {preview?.isInitialized && <p className='text-sm text-gray-600'>Kiểm kê hiện tại. Thời điểm được ghi tự động khi lưu.</p>}
         <label className='text-sm text-gray-600'>Số chứng từ<input value={documentNumber} onChange={e => setDocumentNumber(e.target.value)} className='mt-1 block w-full rounded-lg border px-3 py-2' /></label>
         <label className='text-sm text-gray-600'>Diễn giải<input value={description} onChange={e => setDescription(e.target.value)} className='mt-1 block w-full rounded-lg border px-3 py-2' /></label>
       </div>
@@ -182,7 +187,8 @@ export default function InventoryControlPage() {
         )}
       </div>
 
-      <div className='mt-4 flex justify-end'><button disabled={!preview || saving} onClick={save} className='rounded-lg bg-[#9b0000] px-5 py-2.5 font-semibold text-white disabled:opacity-50'>{saving ? 'Đang lưu...' : !preview?.isInitialized ? 'Xác nhận tồn đầu' : !preview.isStockTrackingEnabled ? 'Kiểm kê và bật quản lý tồn' : 'Lưu kiểm kê'}</button></div>
+      {needsReview && <p>Tồn kho đã thay đổi. Số bạn nhập vẫn được giữ lại. <button type='button' disabled={loading || saving} onClick={() => void load(true)}>Tải số tồn mới để đối chiếu trước khi lưu</button></p>}
+      <div className='mt-4 flex justify-end'><button disabled={!preview || saving || loading || needsReview || preview.businessId !== currentBusiness?.id} onClick={save} className='rounded-lg bg-[#9b0000] px-5 py-2.5 font-semibold text-white disabled:opacity-50'>{saving ? 'Đang lưu...' : !preview?.isInitialized ? 'Xác nhận tồn đầu' : !preview.isStockTrackingEnabled ? 'Kiểm kê và bật quản lý tồn' : 'Lưu kiểm kê'}</button></div>
     </div>
   )
 }

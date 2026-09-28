@@ -1,22 +1,30 @@
-import axios from 'axios'
 import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
+  FileText,
   ReceiptText
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import axios from 'axios'
 import { toast } from 'react-toastify'
 
 import { getTaxPeriodById } from '../../../apis/taxPeriod.api'
 import {
+  calculateTknTaxPeriod,
   closeTknTaxPeriod,
+  getTknTaxPeriodCalculationPreview,
   getTknTaxPeriodPreview
 } from '../../../apis/tknTaxPeriod.api'
+import path from '../../../constants/path'
 import type { TaxPeriodDetail } from '../../../types/taxPeriod.type'
-import type { TknTaxPeriodPreview } from '../../../types/tknTaxPeriod.type'
-import { tknTaxPeriodDetailPath } from '../../../utils/taxPeriodRoute'
+import type {
+  TknTaxCalculationResponse,
+  TknTaxPeriodPreview
+} from '../../../types/tknTaxPeriod.type'
+import LegalBadge from '../../../components/owner/tax/LegalBadge'
+import { taxPeriodDeclarationPath } from '../../../utils/taxPeriodRoute'
 
 function formatMoney(value: number) {
   return `${value.toLocaleString('vi-VN')}đ`
@@ -48,6 +56,7 @@ export default function TknTaxPeriodPreviewPage() {
   const { taxPeriodId } = useParams<{ taxPeriodId: string }>()
   const [period, setPeriod] = useState<TaxPeriodDetail | null>(null)
   const [preview, setPreview] = useState<TknTaxPeriodPreview | null>(null)
+  const [calcPreview, setCalcPreview] = useState<TknTaxCalculationResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isClosing, setIsClosing] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
@@ -62,9 +71,10 @@ export default function TknTaxPeriodPreviewPage() {
         return
       }
       try {
-        const [periodResult, previewResult] = await Promise.all([
+        const [periodResult, previewResult, calcResult] = await Promise.all([
           getTaxPeriodById(taxPeriodId),
-          getTknTaxPeriodPreview(taxPeriodId)
+          getTknTaxPeriodPreview(taxPeriodId),
+          getTknTaxPeriodCalculationPreview(taxPeriodId).catch(() => null)
         ])
         if (!active) return
         if (periodResult.periodType !== 'Tkn') {
@@ -73,9 +83,10 @@ export default function TknTaxPeriodPreviewPage() {
         }
         setPeriod(periodResult)
         setPreview(previewResult)
+        setCalcPreview(calcResult)
       } catch (error) {
         if (active) {
-          setLoadError(errorMessage(error, 'Không thể tải dữ liệu xem trước TKN.'))
+          setLoadError(errorMessage(error, 'Không thể tải dữ liệu xem trước thông báo doanh thu.'))
         }
       } finally {
         if (active) setIsLoading(false)
@@ -95,8 +106,13 @@ export default function TknTaxPeriodPreviewPage() {
       await closeTknTaxPeriod(taxPeriodId, {
         confirmWarnings: preview.warnings.length > 0
       })
-      toast.success('Đã chốt doanh thu kỳ thông báo.')
-      navigate(tknTaxPeriodDetailPath(taxPeriodId), { replace: true })
+      try {
+        await calculateTknTaxPeriod(taxPeriodId)
+      } catch (calcError) {
+        console.error('[TknPreview] Calculate after close failed:', calcError)
+      }
+      toast.success('Đã chốt doanh thu và tổng hợp mẫu 01/TKN-CNKD.')
+      navigate(taxPeriodDeclarationPath(taxPeriodId), { replace: true })
     } catch (error) {
       toast.error(errorMessage(error, 'Không thể chốt kỳ thông báo doanh thu.'))
     } finally {
@@ -124,10 +140,10 @@ export default function TknTaxPeriodPreviewPage() {
       <div className='mx-auto max-w-5xl'>
         <button
           type='button'
-          onClick={() => navigate(tknTaxPeriodDetailPath(period.id))}
+          onClick={() => navigate(path.BUSINESS_OWNER_TAX)}
           className='mb-5 flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-red-600'
         >
-          <ArrowLeft size={18} /> Quay lại chi tiết TKN
+          <ArrowLeft size={18} /> Quay lại tổng quan thuế
         </button>
 
         <section className='rounded-2xl bg-white p-6 shadow-sm'>
@@ -136,9 +152,17 @@ export default function TknTaxPeriodPreviewPage() {
               <ReceiptText size={28} />
             </div>
             <div>
-              <h1 className='text-2xl font-black text-gray-900'>
-                Xem trước thông báo doanh thu
-              </h1>
+              <div className='flex flex-wrap items-center gap-2.5'>
+                <h1 className='text-2xl font-black text-gray-900'>
+                  Xem trước thông báo doanh thu
+                </h1>
+                <LegalBadge
+                  formCode='Mẫu 01/TKN-CNKD'
+                  circular='TT 40/2021/TT-BTC'
+                  title='Thông tư số 40/2021/TT-BTC ngày 01/06/2021 của Bộ Tài chính'
+                  description={'Dành cho hộ kinh doanh có doanh thu không quá 1 tỷ đồng/năm (không phải nộp tờ khai quý 01/CNKD).\n\nHạn nộp theo TT 40/2021/TT-BTC:\n• HKD hoạt động cả năm: Nộp 1 lần trước ngày 31/01 năm sau.\n• HKD mới lập nửa đầu năm: Nộp lần 1 trước 31/07 (6 tháng đầu), lần 2 trước 31/01 năm sau (6 tháng cuối).\n• HKD mới lập nửa cuối năm: Nộp 1 lần trước ngày 31/01 năm sau.'}
+                />
+              </div>
               <p className='mt-1 text-sm text-gray-500'>
                 Kiểm tra nguồn doanh thu trước khi khóa kỳ 01/TKN-CNKD.
               </p>
@@ -160,6 +184,54 @@ export default function TknTaxPeriodPreviewPage() {
             <p className='mt-2 text-lg font-black text-gray-900'>{formatDate(preview.dueDate)}</p>
           </div>
         </div>
+
+        {calcPreview && (
+          <div className='mt-6 rounded-2xl bg-white p-6 shadow-sm border border-slate-100'>
+            <div className='flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4'>
+              <div className='flex items-center gap-3'>
+                <div className='flex h-10 w-10 items-center justify-center rounded-xl bg-violet-100 text-violet-700'>
+                  <ReceiptText className='h-5 w-5' />
+                </div>
+                <div>
+                  <h2 className='text-lg font-black text-slate-900'>
+                    Ước tính doanh thu & nghĩa vụ thuế TKN (Tạm tính)
+                  </h2>
+                  <p className='text-xs text-slate-500'>
+                    Ước tính doanh thu tính thuế và đối chiếu ngưỡng tờ khai {calcPreview.recommendedFormCode}
+                  </p>
+                </div>
+              </div>
+              <div className='flex flex-wrap items-center gap-2.5'>
+                <span className='rounded-full bg-violet-50 border border-violet-200 px-3 py-1 text-xs font-bold text-violet-700'>
+                  Số liệu ước tính (Chưa chốt kỳ)
+                </span>
+                <button
+                  type='button'
+                  onClick={() => navigate(`${taxPeriodDeclarationPath(taxPeriodId!)}?mode=preview`)}
+                  className='inline-flex items-center gap-1 rounded-lg border border-violet-200 bg-white px-2.5 py-1 text-xs font-bold text-violet-700 hover:bg-violet-50 transition'
+                >
+                  <FileText size={14} /> Xem trước mẫu 01/TKN-CNKD →
+                </button>
+              </div>
+            </div>
+
+            <div className='mt-5 grid gap-4 sm:grid-cols-2'>
+              <div className='rounded-xl bg-slate-50 p-4 border border-slate-100'>
+                <span className='text-xs font-semibold text-slate-500'>Doanh thu ước tính lũy kế</span>
+                <p className='mt-1 text-xl font-black text-slate-900'>{formatMoney(calcPreview.totalRevenue)}</p>
+              </div>
+              <div className='rounded-xl bg-violet-50/70 p-4 border border-violet-100'>
+                <span className='text-xs font-bold text-violet-700'>Ngưỡng tối đa mẫu 01/TKN-CNKD</span>
+                <p className='mt-1 text-xl font-black text-violet-900'>{formatMoney(calcPreview.applicableRevenueThreshold)}</p>
+                <p className='mt-1 text-xs text-violet-600 font-medium'>
+                  {calcPreview.totalRevenue <= calcPreview.applicableRevenueThreshold
+                    ? '✓ Đủ điều kiện thông báo doanh thu 01/TKN-CNKD'
+                    : '⚠ Vượt ngưỡng 1 tỷ/năm - Cần chuyển sang kê khai theo quý (01/CNKD)'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <section className='mt-6 rounded-2xl bg-white p-6 shadow-sm'>
           <h2 className='text-lg font-black text-gray-900'>Phạm vi doanh thu</h2>
@@ -194,14 +266,23 @@ export default function TknTaxPeriodPreviewPage() {
           </section>
         )}
 
-        <div className='mt-6 flex justify-end'>
+        <div className='mt-6 flex justify-end gap-3'>
+          <button
+            type='button'
+            onClick={() => navigate(`${taxPeriodDeclarationPath(taxPeriodId!)}?mode=preview`)}
+            className='h-12 rounded-xl border border-violet-600 bg-violet-50 px-6 text-sm font-bold text-violet-700 hover:bg-violet-100 flex items-center gap-2 transition'
+          >
+            <FileText size={18} />
+            Xem trước mẫu 01/TKN-CNKD
+          </button>
+
           <button
             type='button'
             disabled={!preview.canClose || period.status !== 'Open'}
             onClick={() => setShowConfirm(true)}
             className='h-12 rounded-xl bg-red-600 px-7 text-sm font-bold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300'
           >
-            Chốt doanh thu kỳ TKN
+            Chốt doanh thu kỳ thông báo
           </button>
         </div>
       </div>

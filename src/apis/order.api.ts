@@ -15,12 +15,17 @@ export const getOrderById = async (id: string) => {
 export const getOrders = async (
   businessId: string,
   params?: {
+    startDate?: string
+    endDate?: string
+    search?: string
+    excludeEmptyDrafts?: boolean
     pageNumber?: number
     pageSize?: number
     status?: string | null
     paymentMethod?: string | null
     minAmount?: number | null
     maxAmount?: number | null
+    hasInvoice?: boolean | null
   }
 ) => {
   const response = await http.get<ApiResponse<PagedResult<Order>>>(`/Order/business/${businessId}`, {
@@ -71,4 +76,4 @@ export const checkoutOrder = async (orderId: string, body: CheckoutRequest) => {
 export const confirmPayment = async (orderId: string) => {
   const response = await http.post<ApiResponse<any>>(`/Order/${orderId}/confirm-payment`)
   return response.data
-}
+}

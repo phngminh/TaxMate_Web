@@ -7,6 +7,7 @@ import type {
   UpdateOwnerTaxProfileRequest
 } from '../types/taxProfile.type'
 import http from '../utils/http'
+import { notifyTaxProfileChanged } from '../utils/taxProfileUpdates'
 
 export async function getAnnualRevenueConclusion(
   businessId: string,
@@ -34,6 +35,7 @@ export async function confirmAnnualRevenueConclusion(
     { params: { year } }
   )
 
+  notifyTaxProfileChanged()
   return response.data.data
 }
 
@@ -54,6 +56,7 @@ export async function updateOwnerTaxProfile(
     `/tax-profile/business/${businessId}`,
     request
   )
+  notifyTaxProfileChanged()
   return response.data.data
 }
 
@@ -66,6 +69,7 @@ export async function confirmThresholdReview(
     `/tax-profile/business/${businessId}/threshold-reviews/${alertId}/confirm`,
     { confirmed: true, personalIncomeTaxMethod }
   )
+  notifyTaxProfileChanged()
   return response.data.data
 }
 
@@ -77,5 +81,6 @@ export async function dismissThresholdReview(
     `/tax-profile/business/${businessId}/threshold-reviews/${alertId}/dismiss`,
     {}
   )
+  notifyTaxProfileChanged()
   return response.data.data
 }

@@ -1,4 +1,5 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ArrowUpCircle, ArrowDownCircle, MoreVertical, RotateCcw, Plus, ChevronRight, ImagePlus, Loader2 } from 'lucide-react'
 import { NumericFormat } from 'react-number-format'
 import { useBusiness } from '../../../contexts/BusinessContext'
@@ -30,8 +31,13 @@ interface ExpenseRecord {
   imageUrl?: string
 }
 
+const isPurchaseCategory = (category: ExpenseCategory) => {
+  const name = (category.categoryName || '').toLowerCase()
+  return name.includes('nhập hàng') || name.includes('nhap hang')
+}
+
 const supportedExpenseCategories = (categories: ExpenseCategory[]) =>
-  categories.filter((category) => category.s2cGroupCode !== 'Labor')
+  categories.filter((category) => category.s2cGroupCode !== 'Labor' && !isPurchaseCategory(category))
 
 const expenseCategoryOptionLabel = (category: ExpenseCategory) => {
   if (category.s2cGroupCode === 'PurchasedServices') return `${category.categoryName} — Dự kiến vào S2c: Dịch vụ mua ngoài`
@@ -242,15 +248,24 @@ export default function Expense() {
     }
   }
 
+  const getDateRange = (year: number, quarter: number) => {
+    if (quarter === 1) return { fromDate: `${year}-01-01T00:00:00`, toDate: `${year}-03-31T23:59:59` }
+    if (quarter === 2) return { fromDate: `${year}-04-01T00:00:00`, toDate: `${year}-06-30T23:59:59` }
+    if (quarter === 3) return { fromDate: `${year}-07-01T00:00:00`, toDate: `${year}-09-30T23:59:59` }
+    if (quarter === 4) return { fromDate: `${year}-10-01T00:00:00`, toDate: `${year}-12-31T23:59:59` }
+    return { fromDate: `${year}-01-01T00:00:00`, toDate: `${year}-12-31T23:59:59` }
+  }
+
   const fetchData = async () => {
     if (!businessId) {
       console.warn('No businessId found in context, skipping fetch')
       return
     }
     try {
+      const { fromDate, toDate } = getDateRange(selectedYear, selectedQuarter)
       const [exps, incs, expCats, incCats, accounts] = await Promise.all([
-        getAllExpenses(businessId),
-        getAllIncomes(businessId),
+        getAllExpenses(businessId, 1, 5000, undefined, undefined, undefined, fromDate, toDate),
+        getAllIncomes(businessId, 1, 5000, undefined, undefined, undefined, fromDate, toDate),
         getExpenseCategories(businessId),
         getIncomeCategories(businessId),
         getMoneyAccounts(businessId)
@@ -312,14 +327,7 @@ export default function Expense() {
         }
       })
 
-      // Sort by date descending
-      const merged = [...mappedExps, ...mappedIncs].sort((a, b) => {
-        // Simple sort by assuming ID or Date. Since we have date string in vi-VN format, we might need a proper date parsing. 
-        // For now, we leave as is or sort by ID roughly if dates are equal.
-        // A robust sort would use the original date value, but since the previous code had static array, it's fine.
-        return 0;
-      })
-
+      const merged = [...mappedExps, ...mappedIncs]
       setApiRecords(merged)
     } catch (error) {
       console.error(error)
@@ -327,9 +335,31 @@ export default function Expense() {
     }
   }
 
+  const [searchParams] = useSearchParams()
+  const autoOpenedRef = useRef(false)
+
   useEffect(() => {
     fetchData()
-  }, [businessId])
+  }, [businessId, selectedYear, selectedQuarter])
+
+  useEffect(() => {
+    const autoOpen = searchParams.get('autoOpen') === 'true'
+    const targetId = (searchParams.get('expenseId') || searchParams.get('id') || searchParams.get('search') || '').toLowerCase().trim()
+    if (autoOpen && !autoOpenedRef.current && apiRecords.length > 0) {
+      const found = targetId
+        ? apiRecords.find(r => r.id.toLowerCase() === targetId || r.content.toLowerCase().includes(targetId))
+        : apiRecords[0]
+      if (found) {
+        autoOpenedRef.current = true
+        setEditingRecord(found)
+        setEditExpenseCategoryId(found.categoryId)
+        setEditPaymentMethod(found.rawPaymentMethod || 'Cash')
+        setIsEditModalOpen(true)
+        setEditImage(null)
+        setEditImagePreview(found.imageUrl || null)
+      }
+    }
+  }, [apiRecords, searchParams])
 
   const expenseCategoryNames = useMemo(() => {
     const names = new Set<string>()
@@ -659,7 +689,7 @@ export default function Expense() {
 
         <div className='grow p-6 overflow-y-auto flex flex-col gap-5'>
           <div className='grid grid-cols-2 gap-5'>
-            <div className='bg-white rounded-[14px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.03)] px-7 py-5'>
+            <div className='bg-yellow-50 rounded-[14px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.03)] px-7 py-5'>
               <div className='flex items-start justify-between'>
                 <div>
                   <div className='flex items-center gap-2 mb-1'>
@@ -675,7 +705,7 @@ export default function Expense() {
               </div>
             </div>
 
-            <div className='bg-white rounded-[14px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.03)] px-7 py-5'>
+            <div className='bg-[#e9fff5] rounded-[14px] border border-gray-100 shadow-[0_4px_16px_rgba(0,0,0,0.03)] px-7 py-5'>
               <div className='flex items-start justify-between'>
                 <div>
                   <div className='flex items-center gap-2 mb-1'>
@@ -1099,7 +1129,7 @@ export default function Expense() {
                   >
                     <option value='' disabled>-- Chọn loại --</option>
                     {(editingRecord.type === 'expense'
-                      ? expenseCategories.filter((category) => category.s2cGroupCode !== 'Labor' || category.expenseCategoryId === editingRecord.categoryId)
+                      ? expenseCategories.filter((category) => (category.s2cGroupCode !== 'Labor' && !isPurchaseCategory(category)) || category.expenseCategoryId === editingRecord.categoryId)
                       : incomeCategories).map(c => (
                       <option key={editingRecord.type === 'expense' ? (c as ExpenseCategory).expenseCategoryId : (c as IncomeCategory).incomeCategoryId} value={editingRecord.type === 'expense' ? (c as ExpenseCategory).expenseCategoryId : (c as IncomeCategory).incomeCategoryId}>
                         {editingRecord.type === 'expense' ? expenseCategoryOptionLabel(c as ExpenseCategory) : c.categoryName}

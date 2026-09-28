@@ -25,10 +25,12 @@ export const deleteIncomeCategory = async (categoryId: string) => {
 export const getAllIncomes = async (
   businessId: string,
   pageNumber = 1,
-  pageSize = 1000,
+  pageSize = 5000,
   search?: string,
   categoryId?: string,
-  paymentMethod?: string
+  paymentMethod?: string,
+  fromDate?: string,
+  toDate?: string
 ) => {
   const response = await http.get<ApiResponse<PagedResult<IncomeDTO>>>(`/Income/business/${businessId}`, {
     params: {
@@ -36,7 +38,9 @@ export const getAllIncomes = async (
       pageSize,
       search,
       categoryId,
-      paymentMethod
+      paymentMethod,
+      fromDate,
+      toDate
     }
   })
   return response.data

@@ -1,8 +1,13 @@
+import axios from 'axios'
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowRight,
   Calculator,
-  ReceiptText
+  Clock,
+  ReceiptText,
+  ShieldCheck,
+  Sparkles
 } from 'lucide-react'
 import {
   useEffect,
@@ -11,22 +16,29 @@ import {
 } from 'react'
 import {
   useNavigate,
-  useParams
+  useParams,
+  useSearchParams
 } from 'react-router-dom'
 import { toast } from 'react-toastify'
 
 import {
   calculateTaxPeriod,
-  getTaxPeriodById
+  getBusinessTaxPeriods,
+  getTaxPeriodById,
+  getTaxPeriodCalculationPreview
 } from '../../../apis/taxPeriod.api'
 
 import type {
-  TaxPeriodDetail
+  CalculateTaxPeriodResponse,
+  TaxPeriodDetail,
+  TaxPeriodSummary
 } from '../../../types/taxPeriod.type'
 
 import {
   taxPeriodDeclarationPath,
-  taxPeriodDetailPath
+  taxPeriodDetailPath,
+  taxPeriodPreviewPath,
+  taxPeriodCalculationPath
 } from '../../../utils/taxPeriodRoute'
 
 function formatMoney(value: number) {
@@ -51,12 +63,18 @@ function InfoRow({
   label,
   value,
   highlight,
-  danger
+  danger,
+  warning,
+  success,
+  isPending
 }: {
   label: string
   value: string
   highlight?: boolean
   danger?: boolean
+  warning?: boolean
+  success?: boolean
+  isPending?: boolean
 }) {
   return (
     <div className='flex items-center justify-between gap-6 border-b border-gray-100 py-4 last:border-b-0'>
@@ -64,17 +82,27 @@ function InfoRow({
         {label}
       </span>
 
-      <span
-        className={`text-right text-sm font-black ${
-          danger
-            ? 'text-red-600'
-            : highlight
-              ? 'text-blue-700'
-              : 'text-gray-800'
-        }`}
-      >
-        {value}
-      </span>
+      {isPending ? (
+        <span className='inline-flex items-center rounded-md bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-500'>
+          {value}
+        </span>
+      ) : (
+        <span
+          className={`text-right text-sm font-black ${
+            danger
+              ? 'text-red-600'
+              : warning
+                ? 'text-amber-600'
+                : success
+                  ? 'text-green-600'
+                  : highlight
+                    ? 'text-blue-700'
+                    : 'text-gray-800'
+          }`}
+        >
+          {value}
+        </span>
+      )}
     </div>
   )
 }
@@ -158,6 +186,8 @@ function ConfirmDialog({
 
 export default function TaxCalculationPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const isPreviewMode = searchParams.get('mode') === 'preview'
 
   const { taxPeriodId } = useParams<{
     taxPeriodId: string
@@ -170,6 +200,21 @@ export default function TaxCalculationPage() {
     useState<TaxPeriodDetail | null>(
       null
     )
+
+  const [
+    calcPreview,
+    setCalcPreview
+  ] = useState<CalculateTaxPeriodResponse | null>(null)
+
+  const [
+    siblingPeriods,
+    setSiblingPeriods
+  ] = useState<TaxPeriodSummary[]>([])
+
+  const [
+    calcError,
+    setCalcError
+  ] = useState<string | null>(null)
 
   const [
     isLoading,
@@ -204,14 +249,68 @@ export default function TaxCalculationPage() {
       }
 
       try {
-        const result =
-          await getTaxPeriodById(
-            taxPeriodId
-          )
+        if (isPreviewMode) {
+          const [periodResult, previewCalc] = await Promise.all([
+            getTaxPeriodById(taxPeriodId),
+            getTaxPeriodCalculationPreview(taxPeriodId).catch(() => null)
+          ])
 
-        if (!active) return
+          if (!active) return
 
-        setTaxPeriod(result)
+          setTaxPeriod(periodResult)
+          setCalcPreview(previewCalc)
+
+          if (periodResult.businessId && periodResult.year) {
+            getBusinessTaxPeriods({
+              businessId: periodResult.businessId,
+              year: periodResult.year
+            })
+              .then((periods) => {
+                if (active) setSiblingPeriods(periods)
+              })
+              .catch(() => {})
+          }
+        } else {
+          const result =
+            await getTaxPeriodById(
+              taxPeriodId
+            )
+
+          if (!active) return
+
+          setTaxPeriod(result)
+
+          if (result.businessId && result.year) {
+            getBusinessTaxPeriods({
+              businessId: result.businessId,
+              year: result.year
+            })
+              .then((periods) => {
+                if (active) setSiblingPeriods(periods)
+              })
+              .catch(() => {})
+          }
+
+          // Pre-check preview if not calculated yet to detect crossing / exemption early
+          if (result.status === 'Closed' || result.status === 'Open') {
+            try {
+              const previewCalc = await getTaxPeriodCalculationPreview(taxPeriodId)
+              if (active) {
+                setCalcPreview(previewCalc)
+                setCalcError(null)
+              }
+            } catch (previewErr) {
+              if (active) {
+                const msg = axios.isAxiosError(previewErr)
+                  ? (previewErr.response?.data as { message?: string } | undefined)?.message ?? null
+                  : null
+                if (msg) {
+                  setCalcError(msg)
+                }
+              }
+            }
+          }
+        }
       } catch (error) {
         console.error(
           '[TaxCalculation] Load failed:',
@@ -235,32 +334,75 @@ export default function TaxCalculationPage() {
     return () => {
       active = false
     }
-  }, [taxPeriodId])
+  }, [taxPeriodId, isPreviewMode])
+
+  const crossingQuarterMatch = useMemo(() => {
+    if (!calcError) return null
+    const match = calcError.match(/bắt đầu từ quý\s*(\d+)/i)
+    return match ? parseInt(match[1], 10) : null
+  }, [calcError])
+
+  const targetPeriod = useMemo(() => {
+    if (!crossingQuarterMatch || !siblingPeriods.length) return null
+    return siblingPeriods.find((p) => p.quarter === crossingQuarterMatch)
+  }, [crossingQuarterMatch, siblingPeriods])
+
+  const isCalculated = isPreviewMode
+    ? Boolean(calcPreview)
+    : ['Calculated', 'Submitted', 'Paid'].includes(taxPeriod?.status ?? '')
+
+  const effectiveTaxableRevenue = isPreviewMode && calcPreview
+    ? calcPreview.totalTaxableRevenue || (taxPeriod?.taxableRevenue ?? 0)
+    : (taxPeriod?.taxableRevenue ?? 0)
+
+  const effectiveVatTax = isPreviewMode && calcPreview
+    ? calcPreview.totalVatTaxAmount
+    : (taxPeriod?.vatTaxAmount ?? 0)
+
+  const effectivePitTax = isPreviewMode && calcPreview
+    ? calcPreview.totalPersonalIncomeTaxAmount
+    : (taxPeriod?.personalIncomeTaxAmount ?? 0)
+
+  const effectiveTotalTax = isPreviewMode && calcPreview
+    ? calcPreview.totalTaxPayableAmount
+    : (effectiveVatTax + effectivePitTax)
+
+  const effectiveDebt = isPreviewMode && calcPreview
+    ? calcPreview.totalTaxPayableAmount
+    : (taxPeriod?.taxAmountDebt ?? 0)
 
   const appliedTaxRate =
     useMemo(() => {
       if (
-        !taxPeriod ||
-        taxPeriod.taxableRevenue <= 0 ||
-        taxPeriod.estimatedTax <= 0
+        effectiveTaxableRevenue <= 0 ||
+        effectiveTotalTax <= 0
       ) {
         return 0
       }
 
       return Number(
         (
-          (taxPeriod.estimatedTax /
-            taxPeriod.taxableRevenue) *
+          (effectiveTotalTax /
+            effectiveTaxableRevenue) *
           100
         ).toFixed(2)
       )
-    }, [taxPeriod])
+    }, [effectiveTaxableRevenue, effectiveTotalTax])
 
   function handleCalculate() {
     if (
       !taxPeriod ||
       !taxPeriodId
     ) {
+      return
+    }
+
+    if (isPreviewMode) {
+      navigate(
+        `${taxPeriodDeclarationPath(
+          taxPeriodId
+        )}?mode=preview`
+      )
       return
     }
 
@@ -324,9 +466,14 @@ export default function TaxCalculationPage() {
         error
       )
 
-      toast.error(
-        'Không thể tính thuế cho kỳ này.'
-      )
+      const errorMsg = axios.isAxiosError(error)
+        ? (error.response?.data as { message?: string } | undefined)?.message ??
+          'Không thể tính thuế cho kỳ này.'
+        : 'Không thể tính thuế cho kỳ này.'
+
+      toast.error(errorMsg)
+      setCalcError(errorMsg)
+      setIsCalculateConfirmOpen(false)
     } finally {
       setIsCalculating(false)
     }
@@ -362,43 +509,139 @@ export default function TaxCalculationPage() {
     )
   }
 
-  const totalTax =
-    taxPeriod.vatTaxAmount +
-    taxPeriod.personalIncomeTaxAmount
-
   return (
     <div className='min-h-[calc(100vh-56px)] bg-[#f5f6f8] px-6 py-7'>
       <div className='mx-auto max-w-6xl'>
         <button
           type='button'
           onClick={() =>
-            navigate(-1)
+            isPreviewMode
+              ? navigate(taxPeriodPreviewPath(taxPeriodId!))
+              : navigate(-1)
           }
           className='mb-5 flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-red-600'
         >
           <ArrowLeft size={18} />
-          Quay lại
+          {isPreviewMode ? 'Quay lại xem doanh thu' : 'Quay lại'}
         </button>
 
         <div className='rounded-2xl bg-white p-6 shadow-sm'>
           <div className='flex items-center gap-4'>
-            <div className='flex size-14 items-center justify-center rounded-2xl bg-red-50 text-red-600'>
+            <div className={`flex size-14 items-center justify-center rounded-2xl ${isPreviewMode ? 'bg-violet-50 text-violet-600' : 'bg-red-50 text-red-600'}`}>
               <Calculator size={28} />
             </div>
 
             <div>
-              <h1 className='text-2xl font-black'>
-                Tính thuế
-              </h1>
+              <div className='flex items-center gap-2.5'>
+                <h1 className='text-2xl font-black'>
+                  {isPreviewMode ? 'Bảng tính thuế dự kiến' : 'Tính thuế'}
+                </h1>
+                {isPreviewMode && (
+                  <span className='rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-800'>
+                    Bản xem trước
+                  </span>
+                )}
+              </div>
 
               <p className='mt-1 text-sm text-gray-500'>
-                Kiểm tra số thuế GTGT
-                và TNCN trước khi tạo
-                tờ khai.
+                {isPreviewMode
+                  ? 'Số liệu thuế GTGT và TNCN tạm tính dựa trên giao dịch thực tế hiện tại.'
+                  : 'Kiểm tra số thuế GTGT và TNCN trước khi tạo tờ khai.'}
               </p>
             </div>
           </div>
         </div>
+
+        {isPreviewMode && (
+          <div className='mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-violet-400 bg-gradient-to-r from-violet-100/90 via-purple-50 to-indigo-50 p-4.5 shadow-sm'>
+            <div className='flex items-start gap-3.5'>
+              <div className='flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm mt-0.5'>
+                <Sparkles className='size-5' />
+              </div>
+              <div>
+                <div className='flex items-center gap-2'>
+                  <span className='rounded-md bg-violet-700 px-2 py-0.5 text-[11px] font-black uppercase tracking-wider text-white'>
+                    Chế độ xem thử nghiệm
+                  </span>
+                  <span className='text-xs font-bold text-violet-900'>Mô phỏng quy trình</span>
+                </div>
+                <p className='mt-1 text-xs sm:text-sm font-medium text-violet-800 leading-relaxed'>
+                  Bảng tính hiển thị số thuế ước tính theo các giao dịch đến thời điểm hiện tại. Kỳ thuế vẫn đang mở, mọi hoạt động bán hàng và thu chi vẫn tiếp tục bình thường.
+                </p>
+              </div>
+            </div>
+            <div className='shrink-0'>
+              <span className='inline-flex items-center gap-1.5 rounded-full bg-white/80 border border-violet-200 px-3 py-1 text-xs font-bold text-violet-800 shadow-2xs'>
+                <span className='size-2 rounded-full bg-violet-500 animate-pulse' />
+                Môi trường an toàn
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Apple & Stripe Craft Exemption Callout */}
+        {crossingQuarterMatch && taxPeriod && (
+          <div className='mt-4 overflow-hidden rounded-2xl border border-emerald-200/90 bg-gradient-to-r from-emerald-50/90 via-teal-50/50 to-emerald-50/70 p-5 shadow-xs backdrop-blur-md'>
+            <div className='flex flex-wrap items-start justify-between gap-4'>
+              <div className='flex items-start gap-3.5'>
+                <div className='flex size-10 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-xs mt-0.5'>
+                  <ShieldCheck className='size-5' />
+                </div>
+                <div>
+                  <div className='flex items-center gap-2'>
+                    <span className='rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 uppercase tracking-wider'>
+                      Miễn 100% Thuế GTGT & TNCN
+                    </span>
+                    <span className='text-xs font-semibold text-slate-500'>
+                      Hạn mức miễn trừ 1 tỷ đồng
+                    </span>
+                  </div>
+                  <h3 className='mt-1 text-base font-bold text-slate-900'>
+                    Quý {taxPeriod.quarter} không phát sinh nghĩa vụ nộp tờ khai 01/CNKD
+                  </h3>
+                  <p className='mt-1 text-xs text-slate-600 leading-relaxed max-w-2xl'>
+                    Doanh thu tích lũy của hộ kinh doanh chưa vượt ngưỡng 1 tỷ đồng ở các quý đầu năm nên được miễn toàn bộ thuế. 
+                    Tờ khai <strong className='text-slate-800'>01/CNKD</strong> chỉ bắt đầu tính và nộp từ <strong className='text-emerald-700 font-bold'>Quý {crossingQuarterMatch}</strong> (kỳ lũy kế doanh thu vượt ngưỡng 1 tỷ).
+                  </p>
+                </div>
+              </div>
+
+              {targetPeriod && (
+                <button
+                  type='button'
+                  onClick={() => navigate(taxPeriodCalculationPath(targetPeriod.id))}
+                  className='inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-xs hover:bg-emerald-800 hover:shadow-md active:scale-98 transition-all shrink-0'
+                >
+                  <span>Chuyển sang Quý {crossingQuarterMatch} tính thuế</span>
+                  <ArrowRight className='size-3.5' />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {calcError && !crossingQuarterMatch && (
+          <div className='mt-4 overflow-hidden rounded-2xl border border-amber-200/90 bg-amber-50/70 p-5 shadow-xs'>
+            <div className='flex items-start gap-3.5'>
+              <div className='flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-600 text-white shadow-xs mt-0.5'>
+                <AlertTriangle className='size-5' />
+              </div>
+              <div>
+                <div className='flex items-center gap-2'>
+                  <span className='rounded-full bg-amber-100 px-2.5 py-0.5 text-[11px] font-bold text-amber-900 uppercase tracking-wider'>
+                    Chưa đủ điều kiện tính thuế
+                  </span>
+                </div>
+                <h3 className='mt-1 text-base font-bold text-slate-900'>
+                  Thông báo nghĩa vụ thuế
+                </h3>
+                <p className='mt-1 text-xs text-slate-700 leading-relaxed'>
+                  {calcError}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className='mt-6 grid gap-6 lg:grid-cols-2'>
           <div className='rounded-2xl bg-white p-6 shadow-sm'>
@@ -429,15 +672,18 @@ export default function TaxCalculationPage() {
 
             <InfoRow
               label='Doanh thu chịu thuế'
-              value={formatMoney(
-                taxPeriod.taxableRevenue
+              value={crossingQuarterMatch ? '0đ (Miễn trong hạn mức)' : formatMoney(
+                effectiveTaxableRevenue
               )}
-              highlight
+              highlight={!crossingQuarterMatch}
+              success={Boolean(crossingQuarterMatch)}
             />
 
             <InfoRow
               label='Tỷ lệ thuế tạm tính'
-              value={`${appliedTaxRate}%`}
+              value={crossingQuarterMatch ? '0% (Miễn thuế)' : isCalculated ? `${appliedTaxRate}%` : 'Chờ tính toán'}
+              isPending={!isCalculated && !crossingQuarterMatch}
+              success={Boolean(crossingQuarterMatch)}
             />
           </div>
 
@@ -448,40 +694,117 @@ export default function TaxCalculationPage() {
 
             <InfoRow
               label='Thuế GTGT'
-              value={formatMoney(
-                taxPeriod.vatTaxAmount
-              )}
+              value={crossingQuarterMatch ? '0đ' : isCalculated ? formatMoney(effectiveVatTax) : 'Chưa tính'}
+              isPending={!isCalculated && !crossingQuarterMatch}
+              success={Boolean(crossingQuarterMatch)}
             />
 
             <InfoRow
               label='Thuế TNCN'
-              value={formatMoney(
-                taxPeriod.personalIncomeTaxAmount
-              )}
+              value={crossingQuarterMatch ? '0đ' : isCalculated ? formatMoney(effectivePitTax) : 'Chưa tính'}
+              isPending={!isCalculated && !crossingQuarterMatch}
+              success={Boolean(crossingQuarterMatch)}
             />
 
             <InfoRow
-              label='Nợ thuế hiện tại'
-              value={formatMoney(
-                taxPeriod.taxAmountDebt
-              )}
+              label='Số thuế chưa nộp'
+              value={crossingQuarterMatch ? '0đ' : isCalculated ? formatMoney(effectiveDebt) : 'Chưa tính'}
+              isPending={!isCalculated && !crossingQuarterMatch}
               danger={
-                taxPeriod.taxAmountDebt >
-                0
+                !crossingQuarterMatch &&
+                isCalculated &&
+                effectiveDebt > 0 &&
+                Boolean(
+                  taxPeriod.dueDate &&
+                    new Date() > new Date(taxPeriod.dueDate)
+                )
+              }
+              warning={
+                !crossingQuarterMatch &&
+                isCalculated &&
+                effectiveDebt > 0 &&
+                (!taxPeriod.dueDate ||
+                  new Date() <= new Date(taxPeriod.dueDate))
+              }
+              success={
+                Boolean(crossingQuarterMatch) || (isCalculated && effectiveDebt === 0)
               }
             />
 
-            <div className='mt-5 rounded-2xl bg-red-50 p-5'>
-              <p className='text-sm font-bold text-red-700'>
-                Tổng thuế phải nộp
-              </p>
+            {crossingQuarterMatch ? (
+              <div className='mt-5 rounded-2xl border border-emerald-200/80 bg-emerald-50/70 p-5'>
+                <p className='text-sm font-bold text-emerald-800'>
+                  Tổng thuế phải nộp
+                </p>
+                <p className='mt-2 text-3xl font-black text-emerald-900'>
+                  0đ
+                </p>
+                <p className='mt-1 text-xs font-medium text-emerald-700'>
+                  Miễn 100% thuế GTGT & TNCN theo hạn mức dưới 1 tỷ đồng của năm.
+                </p>
+              </div>
+            ) : isCalculated ? (
+              <div className={`mt-5 rounded-2xl p-5 ${isPreviewMode ? 'bg-violet-50' : 'bg-red-50'}`}>
+                <p className={`text-sm font-bold ${isPreviewMode ? 'text-violet-700' : 'text-red-700'}`}>
+                  {isPreviewMode ? 'Tổng thuế tạm tính phải nộp' : 'Tổng thuế phải nộp'}
+                </p>
 
-              <p className='mt-2 text-3xl font-black text-red-700'>
-                {formatMoney(totalTax)}
-              </p>
-            </div>
+                <p className={`mt-2 text-3xl font-black ${isPreviewMode ? 'text-violet-900' : 'text-red-700'}`}>
+                  {formatMoney(effectiveTotalTax)}
+                </p>
+              </div>
+            ) : (
+              <div className='mt-5 rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 p-5'>
+                <div className='flex items-center justify-between'>
+                  <p className='text-sm font-bold text-gray-500'>
+                    Tổng thuế dự kiến
+                  </p>
+                  <span className='inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-bold text-slate-500'>
+                    <Clock size={11} /> Chờ tính
+                  </span>
+                </div>
+
+                <div className='mt-3 flex items-baseline'>
+                  <span className='inline-flex items-center rounded-xl bg-slate-100 px-3.5 py-1.5 text-sm font-bold text-slate-600 shadow-2xs'>
+                    Chưa tính toán
+                  </span>
+                </div>
+
+                <p className='mt-2.5 text-xs text-gray-400'>
+                  Nhấn nút &ldquo;Tính thuế&rdquo; bên dưới để hệ thống tính toán số thuế chính thức.
+                </p>
+              </div>
+            )}
           </div>
         </div>
+
+        {isPreviewMode && calcPreview && calcPreview.lines.length > 0 && (
+          <div className='mt-6 overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm'>
+            <div className='bg-slate-50 px-6 py-4 border-b border-slate-100 flex items-center justify-between'>
+              <div>
+                <h3 className='text-sm font-black text-slate-900'>Chi tiết thuế theo ngành nghề kinh doanh</h3>
+                <p className='text-xs text-slate-500'>Áp dụng thuế suất theo phụ lục I Thông tư 40/2021/TT-BTC</p>
+              </div>
+              <span className='rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-800'>
+                {calcPreview.lines.length} hoạt động
+              </span>
+            </div>
+            <div className='divide-y divide-slate-100'>
+              {calcPreview.lines.map((line) => (
+                <div key={line.id} className='flex flex-wrap items-center justify-between gap-3 px-6 py-4 text-sm'>
+                  <div>
+                    <p className='font-bold text-slate-900'>{line.businessActivityName}</p>
+                    <p className='text-xs text-slate-400'>Mã: {line.businessActivityCode} · Doanh thu tính thuế: {formatMoney(line.totalRevenue)}</p>
+                  </div>
+                  <div className='text-right'>
+                    <p className='font-bold text-slate-900'>Tổng thuế: {formatMoney(line.vatTaxAmount + line.personalIncomeTaxAmount)}</p>
+                    <p className='text-xs text-slate-500'>GTGT ({line.vatTaxRate}%): {formatMoney(line.vatTaxAmount)} · TNCN ({line.personalIncomeTaxRate}%): {formatMoney(line.personalIncomeTaxAmount)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className='mt-6 flex gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4'>
           <ReceiptText
@@ -490,10 +813,11 @@ export default function TaxCalculationPage() {
           />
 
           <p className='text-sm leading-6 text-blue-800'>
-            Số thuế chính thức sẽ
-            được backend tính từ dữ
-            liệu doanh thu và quy tắc
-            thuế áp dụng cho kỳ này.
+            {crossingQuarterMatch
+              ? `Doanh thu Quý ${taxPeriod.quarter} đã được ghi nhận vào hạn mức miễn thuế cả năm. Tờ khai thuế Mẫu 01/CNKD sẽ bắt đầu thực hiện từ Quý ${crossingQuarterMatch}.`
+              : isPreviewMode
+                ? 'Đây là số liệu tạm tính ước tính. Bạn có thể bấm tiếp tục để xem trước biểu mẫu tờ khai Mẫu 01/CNKD hoàn chỉnh.'
+                : 'Số thuế chính thức sẽ được hệ thống tính từ dữ liệu doanh thu và quy tắc thuế áp dụng cho kỳ này.'}
           </p>
         </div>
 
@@ -501,30 +825,54 @@ export default function TaxCalculationPage() {
           <button
             type='button'
             onClick={() =>
-              navigate(-1)
+              isPreviewMode
+                ? navigate(taxPeriodPreviewPath(taxPeriodId!))
+                : navigate(-1)
             }
-            className='h-12 rounded-xl border border-gray-300 bg-white px-6 font-bold'
+            className='h-12 rounded-xl border border-gray-300 bg-white px-6 font-bold text-gray-700 hover:bg-gray-50'
           >
             Quay lại
           </button>
 
-          <button
-            type='button'
-            disabled={
-              isCalculating
-            }
-            onClick={
-              handleCalculate
-            }
-            className='h-12 min-w-44 rounded-xl bg-red-600 px-6 text-sm font-bold text-white hover:bg-red-700 disabled:bg-gray-300'
-          >
-            {isCalculating
-              ? 'Đang tính...'
-              : taxPeriod.status ===
-                  'Calculated'
-                ? 'Xem tờ khai'
-                : 'Tính thuế'}
-          </button>
+          {crossingQuarterMatch ? (
+            targetPeriod ? (
+              <button
+                type='button'
+                onClick={() => navigate(taxPeriodCalculationPath(targetPeriod.id))}
+                className='inline-flex h-12 min-w-44 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 text-sm font-bold text-white shadow-xs hover:bg-emerald-800 transition active:scale-98'
+              >
+                <span>Chuyển sang Quý {crossingQuarterMatch} để tính thuế</span>
+                <ArrowRight className='size-4' />
+              </button>
+            ) : (
+              <button
+                type='button'
+                disabled
+                className='h-12 min-w-44 rounded-xl bg-slate-200 px-6 text-sm font-bold text-slate-500 cursor-not-allowed'
+              >
+                Quý {taxPeriod.quarter} được miễn thuế
+              </button>
+            )
+          ) : (
+            <button
+              type='button'
+              disabled={isCalculating || (Boolean(calcError) && !isPreviewMode)}
+              onClick={handleCalculate}
+              className={`h-12 min-w-44 rounded-xl px-6 text-sm font-bold text-white transition disabled:bg-gray-300 disabled:cursor-not-allowed ${
+                isPreviewMode
+                  ? 'bg-violet-600 hover:bg-violet-700'
+                  : 'bg-red-600 hover:bg-red-700'
+              }`}
+            >
+              {isCalculating
+                ? 'Đang tính...'
+                : isPreviewMode
+                  ? 'Xem tiếp tờ khai 01/CNKD →'
+                  : taxPeriod.status === 'Calculated'
+                    ? 'Xem tờ khai'
+                    : 'Tính thuế'}
+            </button>
+          )}
         </div>
       </div>
 

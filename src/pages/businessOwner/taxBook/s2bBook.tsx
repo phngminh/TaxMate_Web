@@ -4,6 +4,7 @@ import { toast } from 'react-toastify'
 import { exportS2b, getS2bPreview } from '../../../apis/taxBook.api'
 import { useBusiness } from '../../../contexts/BusinessContext'
 import type { S2bBook } from '../../../types/taxBook.type'
+import LegalBadge from '../../../components/owner/tax/LegalBadge'
 
 const money = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
 
@@ -59,7 +60,15 @@ export default function S2bBookPage() {
     <div className='mx-auto max-w-7xl p-6'>
       <div className='mb-5 flex flex-wrap items-end justify-between gap-4'>
         <div>
-          <h1 className='text-2xl font-bold text-gray-900'>Sổ doanh thu bán hàng hóa, dịch vụ (S2b)</h1>
+          <div className='flex flex-wrap items-center gap-2.5'>
+            <h1 className='text-2xl font-bold text-gray-900'>Sổ chi tiết doanh thu (S2b)</h1>
+            <LegalBadge
+              formCode='Mẫu S2b-HKD'
+              circular='TT 88/2021/TT-BTC'
+              title='Thông tư số 88/2021/TT-BTC ngày 11/10/2021 của Bộ Tài chính'
+              description={'Ghi chép toàn bộ doanh thu bán hàng/dịch vụ theo nhóm ngành nghề.\n\n➜ Đích đến: Tự động tổng hợp thành Chỉ tiêu [09] trên tờ khai quý và hồ sơ quyết toán năm.'}
+            />
+          </div>
           <p className='mt-1 text-sm text-gray-500'>{currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>
         </div>
         <div className='flex flex-wrap items-end gap-3'>

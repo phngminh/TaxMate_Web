@@ -20,6 +20,7 @@ import Subscription from '../pages/admin/user/subscription'
 import LegalDocuments from '../pages/admin/document/document'
 import TaxPolicyPage from '../pages/admin/taxPolicy/taxPolicy'
 import SubscriptionPage from '../pages/landingPage/subscription'
+import AboutUsPage from '../pages/landingPage/aboutUs'
 import BusinessList from '../pages/admin/user/business'
 import Expense from '../pages/businessOwner/expense/expense'
 import ExpenseCategoryPage from '../pages/businessOwner/expense/expenseCategory'
@@ -37,6 +38,7 @@ import S2cBookPage from '../pages/businessOwner/taxBook/s2cBook'
 import S2dBookPage from '../pages/businessOwner/taxBook/s2dBook'
 import S2eBookPage from '../pages/businessOwner/taxBook/s2eBook'
 import QttPage from '../pages/businessOwner/taxBook/qtt'
+import TaxBookRouteGuard from '../components/owner/tax/TaxBookRouteGuard'
 
 import TaxCalculationPage from '../pages/businessOwner/taxPeriod/taxCalculation'
 
@@ -49,6 +51,7 @@ export default function useRouteElements() {
   const routeElements = useRoutes([
     { path: path.home, element: <LandingPage /> },
     { path: path.subscription, element: <SubscriptionPage /> },
+    { path: path.aboutUs, element: <AboutUsPage /> },
     {
       path: path.BUSINESS_OWNER_LOGIN,
       element: isLoading
@@ -104,11 +107,46 @@ export default function useRouteElements() {
             { path: path.BUSINESS_OWNER_SUPPLIER, element: <Purchase /> },
             { path: path.BUSINESS_OWNER_REPORTS, element: <Report /> },
             { path: path.BUSINESS_OWNER_TAX, element: <TaxDashboard /> },
-            { path: path.BUSINESS_OWNER_S2B_BOOK, element: <S2bBookPage /> },
-            { path: path.BUSINESS_OWNER_S2C_BOOK, element: <S2cBookPage /> },
-            { path: path.BUSINESS_OWNER_S2D_BOOK, element: <S2dBookPage /> },
-            { path: path.BUSINESS_OWNER_S2E_BOOK, element: <S2eBookPage /> },
-            { path: path.BUSINESS_OWNER_QTT, element: <QttPage /> },
+            {
+              path: path.BUSINESS_OWNER_S2B_BOOK,
+              element: (
+                <TaxBookRouteGuard bookType='s2b'>
+                  <S2bBookPage />
+                </TaxBookRouteGuard>
+              )
+            },
+            {
+              path: path.BUSINESS_OWNER_S2C_BOOK,
+              element: (
+                <TaxBookRouteGuard bookType='s2c'>
+                  <S2cBookPage />
+                </TaxBookRouteGuard>
+              )
+            },
+            {
+              path: path.BUSINESS_OWNER_S2D_BOOK,
+              element: (
+                <TaxBookRouteGuard bookType='s2d'>
+                  <S2dBookPage />
+                </TaxBookRouteGuard>
+              )
+            },
+            {
+              path: path.BUSINESS_OWNER_S2E_BOOK,
+              element: (
+                <TaxBookRouteGuard bookType='s2e'>
+                  <S2eBookPage />
+                </TaxBookRouteGuard>
+              )
+            },
+            {
+              path: path.BUSINESS_OWNER_QTT,
+              element: (
+                <TaxBookRouteGuard bookType='qtt'>
+                  <QttPage />
+                </TaxBookRouteGuard>
+              )
+            },
             { path: path.BUSINESS_OWNER_TAX_PERIOD, element: <TaxPeriodDetailPage /> },
             {
               path:

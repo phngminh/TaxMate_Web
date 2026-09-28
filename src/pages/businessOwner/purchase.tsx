@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useLocation, useSearchParams } from 'react-router-dom'
 import { NumericFormat } from 'react-number-format'
 import {
@@ -37,7 +37,7 @@ import {
 import { getSuppliers, createSupplier, updateSupplier, deleteSupplier } from '../../apis/supplier.api'
 import { getAllIngredients } from '../../apis/ingredient.api'
 import { getAllProducts } from '../../apis/product.api'
-import { createInventoryPurchase, deleteInventoryPurchase, getInventoryPurchases } from '../../apis/inventoryPurchase.api'
+import { createInventoryPurchase, deleteInventoryPurchase, getInventoryPurchases, getInventoryPurchaseById } from '../../apis/inventoryPurchase.api'
 import { getMoneyAccounts } from '../../apis/paymentAccount.api'
 import { uploadImage } from '../../apis/image.api'
 import type { Supplier } from '../../types/supplier.type'
@@ -51,6 +51,7 @@ interface PurchaseLineItem {
   name: string
   quantity: number
   costPrice: number
+  itemType: 'Product' | 'Material'
 }
 
 interface MaterialPurchaseGroupDetail {
@@ -81,8 +82,11 @@ export default function PurchasePage() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
-  const page = Number(searchParams.get('page') ?? '1')
+  const requestedPage = Number(searchParams.get('page') ?? '1')
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
   const pageSize = 7
+  const [totalPages, setTotalPages] = useState(1)
+  const loadRevision = useRef(0)
 
   const changePage = (newPage: number) => {
     const params = new URLSearchParams(searchParams)
@@ -142,6 +146,7 @@ export default function PurchasePage() {
 
   // 1. Fetch data depending on active tab
   const loadData = async () => {
+    const revision = ++loadRevision.current
     if (!businessId) {
       setLoading(false)
       return
@@ -150,30 +155,39 @@ export default function PurchasePage() {
       setLoading(true)
       if (activeTab === 'purchases') {
         const [purchaseRes, supRes, ingRes, prodRes] = await Promise.all([
-          getInventoryPurchases(businessId),
+          getInventoryPurchases(businessId, page, pageSize),
           getSuppliers(businessId),
           getAllIngredients(businessId),
           getAllProducts(businessId, 1, 100)
         ])
-        if (purchaseRes.success) setInventoryPurchases(purchaseRes.data.items || [])
+        if (revision !== loadRevision.current) return
+        if (purchaseRes.success) {
+          const lastPage = Math.max(1, purchaseRes.data.totalPages)
+          setTotalPages(lastPage)
+          setInventoryPurchases(purchaseRes.data.items || [])
+          if (page > lastPage) changePage(lastPage)
+        }
         if (supRes.success) setSuppliers(supRes.data || [])
         if (ingRes.success) setDbIngredients(ingRes.data?.items || ingRes.data || [])
         if (prodRes.success) setDbProducts(prodRes.data.items || [])
       } else if (activeTab === 'suppliers') {
         const res = await getSuppliers(businessId)
+        if (revision !== loadRevision.current) return
         if (res.success) setSuppliers(res.data || [])
       }
     } catch (err) {
+      if (revision !== loadRevision.current) return
       console.error(err)
       toast.error('Không thể nạp dữ liệu chi phí.')
     } finally {
-      setLoading(false)
+      if (revision === loadRevision.current) setLoading(false)
     }
   }
 
   useEffect(() => {
     loadData()
-  }, [businessId, activeTab])
+    return () => { loadRevision.current++ }
+  }, [businessId, activeTab, page])
 
   // Automatically refresh product, ingredient, and supplier lookups when opening purchase modal
   useEffect(() => {
@@ -363,7 +377,7 @@ export default function PurchasePage() {
       await createInventoryPurchase(businessId, {
         expenseCategoryId: categoryId,
         voucherNumber: purchaseVoucherNumber.trim() || undefined,
-        expenseTitle: purchaseNote.trim() || `Nhập ${purchaseType === 'Product' ? 'sản phẩm' : 'nguyên liệu'}`,
+        expenseTitle: purchaseNote.trim() || `Nhập hàng hóa (${purchaseItems.filter(i => i.itemType === 'Product').length} SP, ${purchaseItems.filter(i => i.itemType === 'Material').length} NL)`,
         purchaseDate: purchaseDateIso,
         paidDate: purchaseDateIso,
         paymentMethod: 'Cash',
@@ -371,7 +385,7 @@ export default function PurchasePage() {
         supplierId: purchaseSupplierId,
         receiptImageUrl: uploadedImageUrl,
         lines: purchaseItems.map(item => ({
-          ...(purchaseType === 'Product'
+          ...(item.itemType === 'Product'
             ? { productId: item.itemId }
             : { ingredientId: item.itemId }),
           quantity: item.quantity,
@@ -426,31 +440,34 @@ export default function PurchasePage() {
     setInvoiceImagePreview(null)
   }
 
-  const addLineItem = (itemId: string) => {
-    if (purchaseType === 'Material') {
+  const addLineItem = (itemId: string, typeOverride?: 'Product' | 'Material') => {
+    const type = typeOverride || purchaseType
+    if (type === 'Material') {
       const itemObj = dbIngredients.find(x => x.id === itemId)
       if (!itemObj) return
-      if (purchaseItems.some(x => x.itemId === itemId)) return
+      if (purchaseItems.some(x => x.itemId === itemId && x.itemType === 'Material')) return
       setPurchaseItems(prev => [
         ...prev,
         {
           itemId: itemObj.id,
           name: itemObj.name,
           quantity: 1,
-          costPrice: itemObj.estimatedPrice || 0
+          costPrice: itemObj.estimatedPrice || 0,
+          itemType: 'Material'
         }
       ])
     } else {
       const itemObj = dbProducts.find(x => x.id === itemId)
       if (!itemObj) return
-      if (purchaseItems.some(x => x.itemId === itemId)) return
+      if (purchaseItems.some(x => x.itemId === itemId && x.itemType === 'Product')) return
       setPurchaseItems(prev => [
         ...prev,
         {
           itemId: itemObj.id,
           name: itemObj.name,
           quantity: 1,
-          costPrice: itemObj.currentPrice || 0
+          costPrice: itemObj.currentPrice || 0,
+          itemType: 'Product'
         }
       ])
     }
@@ -492,15 +509,82 @@ export default function PurchasePage() {
         receiptImageUrl: purchase.receiptImageUrl || undefined,
         materialItems
       }
-    }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    })
   }, [inventoryPurchases])
 
-  const paginatedPurchases = useMemo(() => {
-    const start = (page - 1) * pageSize
-    return combinedPurchases.slice(start, start + pageSize)
-  }, [combinedPurchases, page])
+  const paginatedPurchases = combinedPurchases
 
-  const totalPages = Math.ceil(combinedPurchases.length / pageSize)
+  const autoOpenedPurchaseRef = useRef(false)
+  useEffect(() => {
+    const autoOpen = searchParams.get('autoOpen') === 'true'
+    const targetId = (searchParams.get('id') || searchParams.get('voucherNumber') || searchParams.get('search') || '').trim()
+    if (!autoOpen || autoOpenedPurchaseRef.current) return
+
+    if (targetId) {
+      const lower = targetId.toLowerCase()
+      const found = combinedPurchases.find(
+        p => p.id.toLowerCase() === lower || p.invoiceNumber.toLowerCase() === lower
+      )
+      if (found) {
+        autoOpenedPurchaseRef.current = true
+        setSelectedPurchaseType(found.type)
+        setSelectedMaterialDetail({
+          invoiceNumber: found.invoiceNumber,
+          date: found.date,
+          supplierName: found.supplierName,
+          totalAmount: found.amount,
+          receiptImageUrl: found.receiptImageUrl,
+          items: found.materialItems || []
+        })
+        setSelectedExpenseDetail(null)
+        setShowPurchaseDetailModal(true)
+      } else {
+        // Fetch single purchase by ID if not in current paginated page
+        void getInventoryPurchaseById(targetId)
+          .then(res => {
+            if (res.success && res.data) {
+              autoOpenedPurchaseRef.current = true
+              const p = res.data
+              const isProduct = p.lines.some(l => !!l.productId)
+              const materialItems = p.lines.map((line, index) => ({
+                id: line.productId ?? line.ingredientId ?? `${p.expenseId}-${index}`,
+                name: line.itemName,
+                quantity: line.quantity,
+                unit: line.unit || 'đơn vị',
+                totalCost: line.totalValue
+              }))
+              setSelectedPurchaseType(isProduct ? 'Product' : 'Material')
+              setSelectedMaterialDetail({
+                invoiceNumber: p.voucherNumber,
+                date: p.purchaseDate,
+                supplierName: p.supplierName || 'Vãng lai',
+                totalAmount: p.amount,
+                receiptImageUrl: p.receiptImageUrl || undefined,
+                items: materialItems
+              })
+              setSelectedExpenseDetail(null)
+              setShowPurchaseDetailModal(true)
+            }
+          })
+          .catch(err => console.error('Failed to auto-open purchase by ID:', err))
+      }
+    } else if (combinedPurchases.length > 0) {
+      // If no ID is specified, open the first purchase
+      const first = combinedPurchases[0]
+      autoOpenedPurchaseRef.current = true
+      setSelectedPurchaseType(first.type)
+      setSelectedMaterialDetail({
+        invoiceNumber: first.invoiceNumber,
+        date: first.date,
+        supplierName: first.supplierName,
+        totalAmount: first.amount,
+        receiptImageUrl: first.receiptImageUrl,
+        items: first.materialItems || []
+      })
+      setSelectedExpenseDetail(null)
+      setShowPurchaseDetailModal(true)
+    }
+  }, [combinedPurchases, searchParams])
 
   return (
     <div className='flex flex-col bg-[#f8f9fa] min-h-[calc(100vh-51px)] w-full'>
@@ -881,12 +965,11 @@ export default function PurchasePage() {
               {/* Form Metadata */}
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4 border-b border-gray-100 pb-5'>
                 <div className='flex flex-col gap-1.5'>
-                  <label className='text-[12.5px] font-bold text-gray-600'>Loại hàng hóa nhập <span className='text-red-500'>*</span></label>
+                  <label className='text-[12.5px] font-bold text-gray-600'>Thêm mặt hàng theo nhóm</label>
                   <select
                     value={purchaseType}
                     onChange={e => {
                       setPurchaseType(e.target.value as any)
-                      setPurchaseItems([]) // clear on type change
                     }}
                     className='w-full border border-gray-200 rounded-[8px] px-3.5 py-2.5 text-[13.5px] outline-hidden focus:border-[#D32F2F] bg-white font-medium text-gray-800 cursor-pointer'
                   >
@@ -962,14 +1045,14 @@ export default function PurchasePage() {
                     <option value=''>-- Nhấp để chọn mặt hàng --</option>
                     {purchaseType === 'Product'
                       ? dbProducts
-                          .filter(x => !purchaseItems.some(item => item.itemId === x.id))
+                          .filter(x => !purchaseItems.some(item => item.itemId === x.id && item.itemType === 'Product'))
                           .map(p => (
                             <option key={p.id} value={p.id}>
                               {p.name} ({formatPrice(p.currentPrice || 0)}đ)
                             </option>
                           ))
                       : dbIngredients
-                          .filter(x => !purchaseItems.some(item => item.itemId === x.id))
+                          .filter(x => !purchaseItems.some(item => item.itemId === x.id && item.itemType === 'Material'))
                           .map(i => (
                             <option key={i.id} value={i.id}>
                               {i.name} (mặc định: {formatPrice(i.estimatedPrice || 0)}đ)
@@ -1002,8 +1085,17 @@ export default function PurchasePage() {
                           const itemTotal = item.quantity * item.costPrice
 
                           return (
-                            <tr key={item.itemId} className='hover:bg-slate-50/50 transition-colors'>
-                              <td className='p-3 font-bold text-slate-800'>{item.name}</td>
+                            <tr key={`${item.itemType}-${item.itemId}`} className='hover:bg-slate-50/50 transition-colors'>
+                              <td className='p-3 font-bold text-slate-800'>
+                                <div className='flex items-center gap-2'>
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                    item.itemType === 'Product' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'
+                                  }`}>
+                                    {item.itemType === 'Product' ? 'Sản phẩm' : 'Nguyên liệu'}
+                                  </span>
+                                  <span>{item.name}</span>
+                                </div>
+                              </td>
                               <td className='p-3 text-center'>
                                 <input
                                   type='number'

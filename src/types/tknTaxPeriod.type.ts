@@ -23,6 +23,13 @@ export interface CloseTknTaxPeriodResponse {
   closedAt: string
 }
 
+export interface TknTaxCalculationLine {
+  businessCategoryId: string
+  businessCategoryCode: string
+  businessCategoryName: string
+  totalRevenue: number
+}
+
 export interface TknTaxCalculationResponse {
   taxPeriodId: string
   taxCalculationId: string
@@ -31,6 +38,7 @@ export interface TknTaxCalculationResponse {
   applicableRevenueThreshold: number
   recommendedFormCode: '01/TKN-CNKD'
   calculatedAt: string
+  lines?: TknTaxCalculationLine[]
 }
 
 export type TknQttBridgeChoice =

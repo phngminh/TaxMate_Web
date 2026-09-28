@@ -25,10 +25,12 @@ export const deleteExpenseCategory = async (categoryId: string) => {
 export const getAllExpenses = async (
   businessId: string,
   pageNumber = 1,
-  pageSize = 1000,
+  pageSize = 5000,
   search?: string,
   categoryId?: string,
-  paymentMethod?: string
+  paymentMethod?: string,
+  fromDate?: string,
+  toDate?: string
 ) => {
   const response = await http.get<ApiResponse<PagedResult<ExpenseDTO>>>(`/Expense/business/${businessId}`, {
     params: {
@@ -36,7 +38,9 @@ export const getAllExpenses = async (
       pageSize,
       search,
       categoryId,
-      paymentMethod
+      paymentMethod,
+      fromDate,
+      toDate
     }
   })
   return response.data
@@ -49,6 +53,11 @@ export const createExpense = async (businessId: string, body: CreateExpenseReque
 
 export const updateExpense = async (expenseId: string, body: UpdateExpenseRequest) => {
   const response = await http.put<ApiResponse<ExpenseDTO>>(`/Expense/${expenseId}`, body)
+  return response.data
+}
+
+export const getExpenseById = async (expenseId: string) => {
+  const response = await http.get<ApiResponse<ExpenseDTO>>(`/Expense/${expenseId}`)
   return response.data
 }
 

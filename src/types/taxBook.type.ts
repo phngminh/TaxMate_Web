@@ -221,11 +221,31 @@ export interface QttInventoryTotals {
 }
 
 export interface QttPreview {
+  taxpayerName: string
+  taxCode: string | null
+  taxpayerAddress: string | null
+  businesses: { businessId: string; businessName: string }[]
+  quarters: { quarter: number; taxPeriodId: string | null; businessId: string | null; closed: boolean }[]
+  expenseReviewRows: QttExpenseReviewRow[]
+  evidenceReviewPeriods: { businessId: string; quarter: number; required: boolean; reviewed: boolean }[]
   taxYear: number
   eligibility: string
   warnings: QttIssue[]
   hardBlockers: QttIssue[]
   canClose: boolean
+}
+
+export interface QttExpenseReviewRow {
+  businessId: string
+  quarter: number
+  sourceType: 'expense' | 'inventoryPurchase'
+  sourceId: string
+  documentDate: string
+  documentNumber: string
+  description: string
+  amount: number
+  includedAmount: number | null
+  issueCodes: string[]
 }
 
 export interface QttCalculationPreview {
@@ -279,6 +299,7 @@ export interface QttDeclaration {
   status: 'Draft' | 'Generated' | 'Submitted'
   taxpayerName: string
   taxCode: string
+  taxpayerAddress: string | null
   indicators: QttIndicators
   inventoryTotals: QttInventoryTotals
   refundAccount: QttRefundAccount | null
