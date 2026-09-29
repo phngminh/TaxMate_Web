@@ -19,6 +19,7 @@ import { useBusiness } from '../../../contexts/BusinessContext'
 import type { PaymentAccount } from '../../../types/paymentAccount.type'
 import type { S2eAccountSection, S2eBook, S2eBookEntry } from '../../../types/taxBook.type'
 import LegalBadge from '../../../components/owner/tax/LegalBadge'
+import TaxPagination from '../../../components/owner/tax/TaxPagination'
 
 const money = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
 
@@ -72,6 +73,14 @@ export default function S2eBookPage() {
     entry: S2eBookEntry
     account: S2eAccountSection
   } | null>(null)
+
+  // Pagination per Account
+  const [accountPageMap, setAccountPageMap] = useState<Record<string, number>>({})
+  const accountPageSize = 10
+
+  useEffect(() => {
+    setAccountPageMap({})
+  }, [currentBusiness?.id, book, year, quarter, sortKey, sortOrder])
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -248,9 +257,10 @@ export default function S2eBookPage() {
             <h1 className='text-2xl font-bold text-gray-900'>Sổ chi tiết tiền (S2e)</h1>
             <LegalBadge
               formCode='Mẫu S2e-HKD'
-              circular='TT 88/2021/TT-BTC'
-              title='Thông tư số 88/2021/TT-BTC ngày 11/10/2021 của Bộ Tài chính'
-              description={'Theo dõi tiền mặt trong két và tiền gửi từng ngân hàng theo thực tế thu/chi.\n\n➜ Đích đến: Không tính thuế, dùng làm căn cứ đối chiếu nguồn gốc dòng tiền với doanh thu khi cơ quan thuế kiểm tra.'}
+              circular='TT 152/2025/TT-BTC'
+              title='Thông tư số 152/2025/TT-BTC ngày 31/12/2025 của Bộ Tài chính'
+              article='Khoản 2 Điều 6, mục 2.2.4 — Mẫu S2e-HKD'
+              description={'Theo dõi các khoản thu, chi tiền mặt và tiền gửi không kỳ hạn.\n\n➜ Đích đến: Đối chiếu số thu, chi và số dư cuối kỳ.'}
             />
           </div>
           <p className='mt-1 text-sm text-gray-500'>{currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>
@@ -520,6 +530,17 @@ export default function S2eBookPage() {
 
           {sortedAccounts.map((account) => {
             const isCollapsed = collapsedAccountIds.has(account.paymentAccountId)
+            const requestedPage = accountPageMap[account.paymentAccountId] ?? 1
+            const totalEntries = account.entries.length
+            const totalPages = Math.max(1, Math.ceil(totalEntries / accountPageSize))
+            const currentPage = Math.min(requestedPage, totalPages)
+            const paginatedEntries = account.entries.slice(
+              (currentPage - 1) * accountPageSize,
+              currentPage * accountPageSize
+            )
+            const setAccountPage = (p: number) => {
+              setAccountPageMap((prev) => ({ ...prev, [account.paymentAccountId]: p }))
+            }
             return (
             <section key={account.paymentAccountId} className='overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-xs'>
               {/* Account Header: Tóm tắt số dư đầu kỳ & cuối kỳ tinh gọn — click để thu gọn / mở rộng */}
@@ -565,7 +586,8 @@ export default function S2eBookPage() {
 
               {/* Table Data */}
               {!isCollapsed && (
-              <div className='overflow-x-auto'>
+                <>
+                  <div className='overflow-x-auto'>
                 <table className='min-w-full text-sm'>
                   <thead className='bg-gray-50 text-gray-600 text-xs font-semibold uppercase tracking-wider border-b border-gray-100'>
                     <tr>
@@ -637,7 +659,7 @@ export default function S2eBookPage() {
                     </tr>
                   </thead>
                   <tbody className='divide-y divide-gray-100'>
-                    {account.entries.map((entry) => (
+                    {paginatedEntries.map((entry) => (
                       <tr
                         key={entry.moneyMovementId}
                         onClick={() => setSelectedDetailEntry({ entry, account })}
@@ -666,10 +688,19 @@ export default function S2eBookPage() {
                   </tbody>
                 </table>
               </div>
-              )}
-            </section>
-            )
-          })}
+
+              <TaxPagination
+                page={currentPage}
+                pageSize={accountPageSize}
+                totalCount={totalEntries}
+                itemLabel='dòng biến động'
+                onPageChange={setAccountPage}
+              />
+            </>
+          )}
+        </section>
+          )
+        })}
         </div>
       )}
 
