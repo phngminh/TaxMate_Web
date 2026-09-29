@@ -35,6 +35,7 @@ import type { OrderDetail } from '../../../types/order.type'
 import type { InventoryPurchaseResponse } from '../../../types/inventoryPurchase.type'
 import LegalBadge from '../../../components/owner/tax/LegalBadge'
 import Tip from '../../../components/owner/tax/Tip'
+import TaxPagination from '../../../components/owner/tax/TaxPagination'
 
 const number = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 3 })
 const money = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
@@ -141,10 +142,11 @@ export default function S2dBookPage() {
   const [exporting, setExporting] = useState(false)
   const [expandedCodes, setExpandedCodes] = useState<Set<string>>(new Set())
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+  const [visibleItemLineCounts, setVisibleItemLineCounts] = useState<Record<string, number>>({})
   const [collapsedItemIds, setCollapsedItemIds] = useState<Set<string>>(new Set())
   const [collapsedDocIds, setCollapsedDocIds] = useState<Set<string>>(new Set())
 
-  // View Mode: 'byItem' (Mặt hàng TT 88) or 'byOrder' (Gom cụm theo Đơn hàng/Nghiệp vụ)
+  // View Mode: 'byItem' (Mặt hàng TT 152) or 'byOrder' (Gom cụm theo Đơn hàng/Nghiệp vụ)
   const [viewMode, setViewMode] = useState<ViewMode>('byItem')
 
   // Filters & Sorting States
@@ -178,6 +180,7 @@ export default function S2dBookPage() {
     setBook(null)
     setExpandedCodes(new Set())
     setExpandedItems(new Set())
+    setVisibleItemLineCounts({})
     setCollapsedItemIds(new Set())
     setCollapsedDocIds(new Set())
     setSelectedTrace(null)
@@ -451,6 +454,43 @@ export default function S2dBookPage() {
     })
   }, [book, searchQuery, movementFilter])
 
+  // Pagination States for By-Item and By-Document
+  const [itemPage, setItemPage] = useState(1)
+  const itemPageSize = 10
+  const [docPage, setDocPage] = useState(1)
+  const docPageSize = 10
+
+  useEffect(() => {
+    setItemPage(1)
+    setVisibleItemLineCounts({})
+  }, [currentBusiness?.id, book, searchQuery, movementFilter, year, quarter])
+
+  useEffect(() => {
+    setDocPage(1)
+  }, [currentBusiness?.id, book, searchQuery, movementFilter, sortKey, sortOrder, year, quarter])
+
+  const totalFilteredItems = filteredItems.length
+  const totalItemPages = Math.max(1, Math.ceil(totalFilteredItems / itemPageSize))
+  useEffect(() => {
+    if (itemPage > totalItemPages) setItemPage(1)
+  }, [itemPage, totalItemPages])
+
+  const paginatedItems = useMemo(() => {
+    const start = (itemPage - 1) * itemPageSize
+    return filteredItems.slice(start, start + itemPageSize)
+  }, [filteredItems, itemPage, itemPageSize])
+
+  const totalGroupedDocs = groupedDocuments.length
+  const totalDocPages = Math.max(1, Math.ceil(totalGroupedDocs / docPageSize))
+  useEffect(() => {
+    if (docPage > totalDocPages) setDocPage(1)
+  }, [docPage, totalDocPages])
+
+  const paginatedDocs = useMemo(() => {
+    const start = (docPage - 1) * docPageSize
+    return groupedDocuments.slice(start, start + docPageSize)
+  }, [groupedDocuments, docPage, docPageSize])
+
   const processItemLines = (lines: S2dBookLine[]) => {
     let result = [...lines]
 
@@ -494,13 +534,14 @@ export default function S2dBookPage() {
       <div className='mb-5 flex flex-wrap items-end justify-between gap-4'>
         <div>
           <div className='flex flex-wrap items-center gap-2.5'>
-            <h1 className='text-2xl font-bold text-gray-900'>Sổ chi tiết tồn kho (S2d)</h1>
+            <h1 className='text-2xl font-bold text-gray-900'>Sổ chi tiết vật liệu, dụng cụ, sản phẩm, hàng hóa (S2d)</h1>
             <LegalBadge
               formCode='Mẫu S2d-HKD'
-              circular='TT 88/2021/TT-BTC'
-              title='Thông tư số 88/2021/TT-BTC ngày 11/10/2021 của Bộ Tài chính'
+              circular='TT 152/2025/TT-BTC'
+              title='Thông tư số 152/2025/TT-BTC ngày 31/12/2025 của Bộ Tài chính'
+              article='Khoản 2 Điều 6, mục 2.2.3 — Mẫu S2d-HKD'
               description={
-                'Theo dõi nhập - xuất - tồn kho theo giá bình quân cả kỳ (TT 88).\n\n➜ Đích đến: Giá trị xuất dùng cả năm chuyển thành Chi phí nguyên vật liệu [10a] khi quyết toán. (Phiếu chi tiền mặt ≥ 5 triệu không được tính là chi phí hợp lý).'
+                'Theo dõi nhập - xuất - tồn vật liệu, dụng cụ, sản phẩm, hàng hóa; đơn giá xuất kho tính theo giá bình quân gia quyền.\n\n➜ Đích đến: Số liệu xuất kho được đối chiếu khi tổng hợp chi phí trên S2c; việc được trừ thuế còn phụ thuộc điều kiện của khoản chi.\n\n(Lưu ý: Thanh toán từng lần từ 5 triệu đồng trở lên cần chứng từ thanh toán không dùng tiền mặt để được trừ theo NĐ 68/2026/NĐ-CP).'
               }
             />
           </div>
@@ -735,7 +776,7 @@ export default function S2dBookPage() {
                 }`}
               >
                 <Package size={14} className={viewMode === 'byItem' ? 'text-[#9b0000]' : ''} />
-                <span>Theo mặt hàng (Sổ S2d TT 88)</span>
+                <span>Theo mặt hàng (Sổ S2d TT 152)</span>
               </button>
 
               <button
@@ -885,7 +926,7 @@ export default function S2dBookPage() {
           </div>
 
           {/* ========================================================= */}
-          {/* VIEW MODE 1: BY ITEM (SỔ KHO THEO MẶT HÀNG - CHUẨN TT 88) */}
+          {/* VIEW MODE 1: BY ITEM (SỔ KHO THEO MẶT HÀNG - CHUẨN TT 152) */}
           {/* ========================================================= */}
           {viewMode === 'byItem' && (
             <div className='space-y-4'>
@@ -894,10 +935,17 @@ export default function S2dBookPage() {
                   Không tìm thấy mặt hàng nào phù hợp với bộ lọc hiện tại.
                 </div>
               ) : (
-                filteredItems.map((item) => {
+                paginatedItems.map((item) => {
                   const key = itemKey(item)
                   const isCollapsed = collapsedItemIds.has(key)
                   const processed = processItemLines(item.lines)
+                  const visibleLineCount = visibleItemLineCounts[key] ?? 10
+                  const visibleProcessedLines = sortKey === 'documentDate' && sortOrder === 'desc'
+                    ? processed.slice(0, visibleLineCount)
+                    : sortKey === 'value'
+                      ? processed.slice(0, visibleLineCount)
+                      : processed.slice(-visibleLineCount)
+                  const remainingLineCount = processed.length - visibleProcessedLines.length
 
                   return (
                     <div key={key} className='overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-xs'>
@@ -981,7 +1029,7 @@ export default function S2dBookPage() {
                                   </td>
                                 </tr>
                               ) : (
-                                processed.map((line) => {
+                                visibleProcessedLines.map((line) => {
                                   const isOrder = line.movementType === 'OrderOut'
                                   const isPurchase = line.movementType === 'PurchaseIn'
                                   const shortDoc = line.documentNumber.startsWith('KHO-')
@@ -1050,12 +1098,47 @@ export default function S2dBookPage() {
                               )}
                             </tbody>
                           </table>
+                          {processed.length > 10 && (
+                            <div className='flex items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/70 px-4 py-3 text-xs text-gray-500'>
+                              <span>
+                                Đang hiển thị {visibleProcessedLines.length} / {processed.length} dòng
+                              </span>
+                              {remainingLineCount > 0 ? (
+                                <button
+                                  type='button'
+                                  onClick={() => setVisibleItemLineCounts((counts) => ({
+                                    ...counts,
+                                    [key]: Math.min(processed.length, (counts[key] ?? 10) + 10)
+                                  }))}
+                                  className='font-semibold text-blue-700 hover:text-blue-900 hover:underline'
+                                >
+                                  Xem thêm {Math.min(10, remainingLineCount)} dòng
+                                </button>
+                              ) : (
+                                <button
+                                  type='button'
+                                  onClick={() => setVisibleItemLineCounts((counts) => ({ ...counts, [key]: 10 }))}
+                                  className='font-semibold text-blue-700 hover:text-blue-900 hover:underline'
+                                >
+                                  Thu gọn
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
                   )
                 })
               )}
+
+              <TaxPagination
+                page={itemPage}
+                pageSize={itemPageSize}
+                totalCount={totalFilteredItems}
+                itemLabel='mặt hàng'
+                onPageChange={setItemPage}
+              />
             </div>
           )}
 
@@ -1069,7 +1152,7 @@ export default function S2dBookPage() {
                   Không có đơn hàng hoặc chứng từ nào phù hợp với bộ lọc.
                 </div>
               ) : (
-                groupedDocuments.map((doc) => {
+                paginatedDocs.map((doc) => {
                   const isCollapsed = collapsedDocIds.has(doc.id)
                   const isOrder = doc.movementType === 'OrderOut'
                   const isPurchase = doc.movementType === 'PurchaseIn'
@@ -1198,6 +1281,14 @@ export default function S2dBookPage() {
                   )
                 })
               )}
+
+              <TaxPagination
+                page={docPage}
+                pageSize={docPageSize}
+                totalCount={totalGroupedDocs}
+                itemLabel='chứng từ'
+                onPageChange={setDocPage}
+              />
             </div>
           )}
         </div>

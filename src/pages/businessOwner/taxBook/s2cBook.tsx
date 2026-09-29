@@ -21,6 +21,7 @@ import { uploadImage } from '../../../apis/image.api'
 import { useBusiness } from '../../../contexts/BusinessContext'
 import type { S2cBook, S2cExpenseGroupCode, S2cExpenseLine, S2cBookWarning } from '../../../types/taxBook.type'
 import LegalBadge from '../../../components/owner/tax/LegalBadge'
+import TaxPagination from '../../../components/owner/tax/TaxPagination'
 
 const money = new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 0 })
 const groupLabels: Record<S2cExpenseGroupCode, string> = {
@@ -331,6 +332,9 @@ export default function S2cBookPage() {
   const missingExpensesCount = totalExpenses - verifiedExpenses
   const progressPct = totalExpenses > 0 ? Math.round((verifiedExpenses / totalExpenses) * 100) : 100
 
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 10
+
   const displayedLines = useMemo(() => {
     if (!book) return []
     if (evidenceFilter === 'missing') {
@@ -338,6 +342,21 @@ export default function S2cBookPage() {
     }
     return book.lines
   }, [book, evidenceFilter])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [currentBusiness?.id, book, evidenceFilter, year, quarter])
+
+  const totalLinesCount = displayedLines.length
+  const totalPages = Math.max(1, Math.ceil(totalLinesCount / pageSize))
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(1)
+  }, [currentPage, totalPages])
+
+  const paginatedLines = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return displayedLines.slice(start, start + pageSize)
+  }, [displayedLines, currentPage, pageSize])
 
   const expenseLineById = useMemo(() => {
     const map = new Map<string, S2cExpenseLine>()
@@ -627,12 +646,13 @@ export default function S2cBookPage() {
       <div className='mb-5 flex flex-wrap items-end justify-between gap-4'>
         <div>
           <div className='flex flex-wrap items-center gap-2.5'>
-            <h1 className='text-2xl font-bold text-gray-900'>Sổ chi phí sản xuất, kinh doanh (S2c)</h1>
+            <h1 className='text-2xl font-bold text-gray-900'>Sổ chi tiết doanh thu, chi phí (S2c)</h1>
             <LegalBadge
               formCode='Mẫu S2c-HKD'
-              circular='TT 88/2021/TT-BTC'
-              title='Thông tư số 88/2021/TT-BTC ngày 11/10/2021 của Bộ Tài chính'
-              description={'Ghi nhận các khoản chi phí kinh doanh thực tế (mặt bằng, điện nước, mua ngoài...). \n\n➜ Đích đến: Tổng hợp thành Chỉ tiêu [10] khi quyết toán để giảm trừ thu nhập chịu thuế.'}
+              circular='TT 152/2025/TT-BTC'
+              title='Thông tư số 152/2025/TT-BTC ngày 31/12/2025 của Bộ Tài chính'
+              article='Khoản 2 Điều 6, mục 2.2.2 — Mẫu S2c-HKD'
+              description={'Ghi nhận doanh thu và chi phí thực tế phát sinh của hoạt động kinh doanh.\n\n➜ Đích đến: Chênh lệch doanh thu - chi phí là căn cứ xác định thuế TNCN.'}
             />
           </div>
           <p className='mt-1 text-sm text-gray-500'>{currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>
@@ -1166,7 +1186,7 @@ export default function S2cBookPage() {
                         : 'Không có khoản chi được đưa vào S2c trong kỳ.'}
                     </td>
                   </tr>
-                ) : displayedLines.map((line) => (
+                ) : paginatedLines.map((line) => (
                   <tr key={line.expenseId} className='border-t hover:bg-gray-50/70 transition-colors'>
                     <td className='whitespace-nowrap px-4 py-3'>{new Date(line.expenseDate).toLocaleDateString('vi-VN')}</td>
                     <td className='whitespace-nowrap px-4 py-3'>
@@ -1226,6 +1246,14 @@ export default function S2cBookPage() {
               </tfoot>
             </table>
           </div>
+
+          <TaxPagination
+            page={currentPage}
+            pageSize={pageSize}
+            totalCount={totalLinesCount}
+            itemLabel='khoản chi'
+            onPageChange={setCurrentPage}
+          />
         </div>
       )}
 

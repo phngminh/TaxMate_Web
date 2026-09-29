@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   AlertTriangle,
+  Building2,
   Calendar,
   Check,
   CheckCircle2,
@@ -20,6 +21,7 @@ import {
   Send,
   ShieldCheck,
   Sparkles,
+  Store,
   Trash2
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -45,7 +47,9 @@ import {
   getTknQttNextStep
 } from '../../../apis/tknTaxPeriod.api'
 import { getPaymentAccounts } from '../../../apis/paymentAccount.api'
+import { useAuth } from '../../../contexts/AuthContext'
 import { useBusiness } from '../../../contexts/BusinessContext'
+import TaxPagination from '../../../components/owner/tax/TaxPagination'
 import type { PaymentAccount } from '../../../types/paymentAccount.type'
 import type {
   QttCalculationPreview,
@@ -114,7 +118,8 @@ const indicatorRows: Array<[keyof QttIndicators, string]> = [
 ]
 
 export default function QttPage() {
-  const { currentBusiness } = useBusiness()
+  const { user } = useAuth()
+  const { businesses, currentBusiness } = useBusiness()
   const [searchParams] = useSearchParams()
   const requestedYear = Number(
     searchParams.get('year')
@@ -142,6 +147,20 @@ export default function QttPage() {
   const [exporting, setExporting] = useState(false)
   const [showSubmitModal, setShowSubmitModal] = useState(false)
   const [isPreviewMode, setIsPreviewMode] = useState(false)
+
+  const taxpayerName =
+    preview?.taxpayerName ||
+    declaration?.taxpayerName ||
+    user?.fullName ||
+    'Chủ hộ kinh doanh'
+  const taxpayerTaxCode =
+    preview?.taxCode ||
+    declaration?.taxCode ||
+    user?.taxCode
+  const businessList =
+    preview?.businesses && preview.businesses.length > 0
+      ? preview.businesses
+      : businesses
 
   const hydrateDeclaration = useCallback((next: QttDeclaration) => {
     setDeclaration(next)
@@ -223,8 +242,8 @@ export default function QttPage() {
       version: 1,
       draftRevision: 1,
       status: 'Draft',
-      taxpayerName: preview?.taxpayerName || currentBusiness?.businessName || 'Hộ kinh doanh mẫu',
-      taxCode: preview?.taxCode || '0123456789',
+      taxpayerName: taxpayerName,
+      taxCode: taxpayerTaxCode || '0123456789',
       taxpayerAddress: preview?.taxpayerAddress || currentBusiness?.address || 'Địa chỉ kinh doanh',
       indicators: calculation.indicators,
       inventoryTotals: calculation.inventoryTotals,
@@ -526,7 +545,40 @@ export default function QttPage() {
               description={'Hồ sơ quyết toán thuế TNCN năm cho cá nhân kinh doanh nộp thuế theo phương pháp Thu nhập tính thuế.\n\n• Thời hạn nộp hồ sơ: Chậm nhất là ngày 31/03 năm tiếp theo.\n• Miễn thuế nhỏ: Số thuế còn phải nộp từ 50.000đ trở xuống được miễn nộp toàn bộ (Điều 79 Luật QLT).\n• Xử lý nộp thừa: Được hoàn về ngân hàng, bù trừ nghĩa vụ thuế khác hoặc chuyển tiếp sang kỳ sau (Điều 60 Luật QLT).'}
             />
           </div>
-          <p className='mt-1 text-sm text-gray-500'>Hồ sơ quyết toán năm {year} · {currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>
+          <div className='mt-1.5 space-y-2'>
+            <div className='flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-gray-600'>
+              <span>
+                Hồ sơ quyết toán năm{' '}
+                <strong className='font-semibold text-gray-900'>{year}</strong>
+              </span>
+              <span className='text-gray-300'>•</span>
+              <span className='inline-flex items-center gap-1.5'>
+                <span>Người nộp thuế:</span>
+                <strong className='font-semibold text-gray-900'>{taxpayerName}</strong>
+                {taxpayerTaxCode && (
+                  <span className='rounded bg-gray-100 px-1.5 py-0.5 font-mono text-xs font-medium text-gray-600'>
+                    MST: {taxpayerTaxCode}
+                  </span>
+                )}
+              </span>
+            </div>
+
+            <div className='flex flex-wrap items-center gap-1.5 text-xs'>
+              <span className='inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-0.5 font-medium text-slate-700'>
+                <Building2 size={13} className='text-slate-500' />
+                Tổng hợp toàn bộ cơ sở ({businessList.length})
+              </span>
+              {businessList.map((b) => (
+                <span
+                  key={'businessId' in b ? b.businessId : b.id}
+                  className='inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-0.5 font-medium text-gray-700 shadow-2xs'
+                >
+                  <Store size={12} className='text-gray-400' />
+                  {b.businessName}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
         <div className='flex items-end gap-3'>
           <label className='text-sm text-gray-600'>Năm
@@ -1438,6 +1490,25 @@ function QttReadinessPanel({
     )
   }, [activeTab, expenseIssues, inventoryIssues, otherWarnings, searchFilter, year])
 
+  // Drawer Pagination (10 issues per page)
+  const [drawerPage, setDrawerPage] = useState(1)
+  const drawerPageSize = 10
+
+  useEffect(() => {
+    setDrawerPage(1)
+  }, [activeTab, searchFilter, year])
+
+  const totalDrawerIssues = drawerIssues.length
+  const totalDrawerPages = Math.max(1, Math.ceil(totalDrawerIssues / drawerPageSize))
+  useEffect(() => {
+    if (drawerPage > totalDrawerPages) setDrawerPage(1)
+  }, [drawerPage, totalDrawerPages])
+
+  const paginatedDrawerIssues = useMemo(() => {
+    const start = (drawerPage - 1) * drawerPageSize
+    return drawerIssues.slice(start, start + drawerPageSize)
+  }, [drawerIssues, drawerPage, drawerPageSize])
+
   return (
     <div className='space-y-4'>
       {/* ── BENTO 1: HERO STATUS BANNER ── */}
@@ -1852,7 +1923,7 @@ function QttReadinessPanel({
                       Không tìm thấy mục nào phù hợp với từ khóa.
                     </div>
                   ) : (
-                    drawerIssues.map((item, index) => (
+                    paginatedDrawerIssues.map((item, index) => (
                       <div
                         key={`${item.issue.code}-${item.issue.sourceId ?? index}`}
                         className='flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 text-xs hover:bg-slate-100/70 transition-colors'
@@ -1878,6 +1949,14 @@ function QttReadinessPanel({
                     ))
                   )}
                 </div>
+
+                <TaxPagination
+                  page={drawerPage}
+                  pageSize={drawerPageSize}
+                  totalCount={totalDrawerIssues}
+                  itemLabel='mục cảnh báo'
+                  onPageChange={setDrawerPage}
+                />
 
                 {/* Drawer Footer Tip */}
                 <div className='mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500'>
