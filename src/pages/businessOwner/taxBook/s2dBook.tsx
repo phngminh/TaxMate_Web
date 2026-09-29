@@ -142,9 +142,12 @@ export default function S2dBookPage() {
   const [exporting, setExporting] = useState(false)
   const [expandedCodes, setExpandedCodes] = useState<Set<string>>(new Set())
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
-  const [visibleItemLineCounts, setVisibleItemLineCounts] = useState<Record<string, number>>({})
   const [collapsedItemIds, setCollapsedItemIds] = useState<Set<string>>(new Set())
   const [collapsedDocIds, setCollapsedDocIds] = useState<Set<string>>(new Set())
+
+  // Pagination per Item Frame
+  const [itemLinePageMap, setItemLinePageMap] = useState<Record<string, number>>({})
+  const itemLinePageSize = 10
 
   // View Mode: 'byItem' (Mặt hàng TT 152) or 'byOrder' (Gom cụm theo Đơn hàng/Nghiệp vụ)
   const [viewMode, setViewMode] = useState<ViewMode>('byItem')
@@ -180,7 +183,7 @@ export default function S2dBookPage() {
     setBook(null)
     setExpandedCodes(new Set())
     setExpandedItems(new Set())
-    setVisibleItemLineCounts({})
+    setItemLinePageMap({})
     setCollapsedItemIds(new Set())
     setCollapsedDocIds(new Set())
     setSelectedTrace(null)
@@ -462,8 +465,8 @@ export default function S2dBookPage() {
 
   useEffect(() => {
     setItemPage(1)
-    setVisibleItemLineCounts({})
-  }, [currentBusiness?.id, book, searchQuery, movementFilter, year, quarter])
+    setItemLinePageMap({})
+  }, [currentBusiness?.id, book, searchQuery, movementFilter, sortKey, sortOrder, year, quarter])
 
   useEffect(() => {
     setDocPage(1)
@@ -939,13 +942,17 @@ export default function S2dBookPage() {
                   const key = itemKey(item)
                   const isCollapsed = collapsedItemIds.has(key)
                   const processed = processItemLines(item.lines)
-                  const visibleLineCount = visibleItemLineCounts[key] ?? 10
-                  const visibleProcessedLines = sortKey === 'documentDate' && sortOrder === 'desc'
-                    ? processed.slice(0, visibleLineCount)
-                    : sortKey === 'value'
-                      ? processed.slice(0, visibleLineCount)
-                      : processed.slice(-visibleLineCount)
-                  const remainingLineCount = processed.length - visibleProcessedLines.length
+                  const requestedPage = itemLinePageMap[key] ?? 1
+                  const totalLines = processed.length
+                  const totalPages = Math.max(1, Math.ceil(totalLines / itemLinePageSize))
+                  const currentPage = Math.min(requestedPage, totalPages)
+                  const paginatedLines = processed.slice(
+                    (currentPage - 1) * itemLinePageSize,
+                    currentPage * itemLinePageSize
+                  )
+                  const setItemLinePage = (p: number) => {
+                    setItemLinePageMap((prev) => ({ ...prev, [key]: p }))
+                  }
 
                   return (
                     <div key={key} className='overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-xs'>
@@ -996,6 +1003,7 @@ export default function S2dBookPage() {
 
                       {/* Table Data */}
                       {!isCollapsed && (
+                        <>
                         <div className='overflow-x-auto'>
                           <table className='min-w-full text-sm'>
                             <thead className='bg-gray-50 text-gray-600 text-xs font-semibold uppercase tracking-wider border-b border-gray-100'>
@@ -1012,7 +1020,7 @@ export default function S2dBookPage() {
                               </tr>
                             </thead>
                             <tbody className='divide-y divide-gray-100'>
-                              {!sortKey && movementFilter !== 'outbound' && !searchQuery.trim() && (
+                              {!sortKey && movementFilter !== 'outbound' && !searchQuery.trim() && currentPage === 1 && (
                                 <tr className='bg-blue-50/50 font-medium text-gray-900'>
                                   <td className='px-3 py-2.5' colSpan={7}>
                                     Số dư đầu kỳ
@@ -1029,7 +1037,7 @@ export default function S2dBookPage() {
                                   </td>
                                 </tr>
                               ) : (
-                                visibleProcessedLines.map((line) => {
+                                paginatedLines.map((line) => {
                                   const isOrder = line.movementType === 'OrderOut'
                                   const isPurchase = line.movementType === 'PurchaseIn'
                                   const shortDoc = line.documentNumber.startsWith('KHO-')
@@ -1098,35 +1106,17 @@ export default function S2dBookPage() {
                               )}
                             </tbody>
                           </table>
-                          {processed.length > 10 && (
-                            <div className='flex items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/70 px-4 py-3 text-xs text-gray-500'>
-                              <span>
-                                Đang hiển thị {visibleProcessedLines.length} / {processed.length} dòng
-                              </span>
-                              {remainingLineCount > 0 ? (
-                                <button
-                                  type='button'
-                                  onClick={() => setVisibleItemLineCounts((counts) => ({
-                                    ...counts,
-                                    [key]: Math.min(processed.length, (counts[key] ?? 10) + 10)
-                                  }))}
-                                  className='font-semibold text-blue-700 hover:text-blue-900 hover:underline'
-                                >
-                                  Xem thêm {Math.min(10, remainingLineCount)} dòng
-                                </button>
-                              ) : (
-                                <button
-                                  type='button'
-                                  onClick={() => setVisibleItemLineCounts((counts) => ({ ...counts, [key]: 10 }))}
-                                  className='font-semibold text-blue-700 hover:text-blue-900 hover:underline'
-                                >
-                                  Thu gọn
-                                </button>
-                              )}
-                            </div>
-                          )}
                         </div>
-                      )}
+
+                        <TaxPagination
+                          page={currentPage}
+                          pageSize={itemLinePageSize}
+                          totalCount={totalLines}
+                          itemLabel='dòng phát sinh'
+                          onPageChange={setItemLinePage}
+                        />
+                      </>
+                    )}
                     </div>
                   )
                 })
