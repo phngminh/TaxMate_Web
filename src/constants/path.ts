@@ -2,6 +2,7 @@ const path = {
   //============= Public ==============
   home: '/',
   subscription: '/subscription',
+  aboutUs: '/about',
   callback: '/callback',
 
   //============ Business Owner ============

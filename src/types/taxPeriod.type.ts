@@ -216,3 +216,4 @@ export interface TaxPeriodPaymentSummary {
   totalPaidAmount: number
   payments: TaxPaymentDetail[]
 }
+
