@@ -2,7 +2,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import imgLogo from '../../assets/logo3.png'
 import path from '../../constants/path'
-import { Bell, User, HeadphonesIcon, Heart, Store, LogOut, Plus, FileDown, ChevronDown, CreditCard, FileText } from 'lucide-react'
+import { Bell, User, HeadphonesIcon, Heart, Store, LogOut, Plus, FileDown, ChevronDown, CreditCard, FileText, FastForward, RotateCcw } from 'lucide-react'
 import { useBusiness } from '../../contexts/BusinessContext'
 import { useAuth } from '../../contexts/AuthContext'
 import { toast } from 'react-toastify'
@@ -22,6 +22,8 @@ import { useTaxProfileRevision } from '../../hooks/useTaxProfileRevision'
 import type { OwnerTaxProfile } from '../../types/taxProfile.type'
 import { getTaxDashboard } from '../../apis/taxDashboard.api'
 import { mapTaxDashboardApiToUi } from '../../utils/taxDashboardMapper'
+import { getMockTimeInputValue, isMockTimeActive, resetMockTime, setMockTime } from '../../utils/mockTime'
+import { useMockTimeRevision } from '../../hooks/useMockTimeRevision'
 
 function NavItem({ label, isActive }: {
   label: ReactNode
@@ -89,7 +91,14 @@ export default function OwnerHeader() {
   const { user, logout } = useAuth()
 
   const profileRevision = useTaxProfileRevision()
+  const mockTimeRevision = useMockTimeRevision()
+  const [mockTimeInput, setMockTimeInput] = useState(getMockTimeInputValue)
+  const mockTimeActive = isMockTimeActive()
   const [taxProfile, setTaxProfile] = useState<OwnerTaxProfile | null>(null)
+
+  useEffect(() => {
+    setMockTimeInput(getMockTimeInputValue())
+  }, [mockTimeRevision])
 
   useEffect(() => {
     if (!currentBusiness?.id) {
@@ -229,7 +238,7 @@ export default function OwnerHeader() {
     }
 
     void fetchRevenue()
-  }, [currentBusiness?.id])
+  }, [currentBusiness?.id, mockTimeRevision])
 
   useEffect(() => {
     const fetchCurrentSubscription = async () => {
@@ -673,6 +682,33 @@ export default function OwnerHeader() {
       </div>
 
       <div className='flex items-center gap-3'>
+        <div className={`flex items-center gap-1 rounded-full px-2 h-7.25 ${mockTimeActive ? 'bg-[#ffe8e8] ring-1 ring-[#e00000]/40' : 'bg-white'}`}>
+          <FastForward size={14} color='#e00000' />
+          <input
+            type='datetime-local'
+            title={mockTimeActive ? 'Đang dùng thời gian demo' : 'Fast forward thời gian (demo)'}
+            className='bg-transparent text-[#e00000] text-[12px] font-bold outline-none cursor-pointer max-w-42'
+            value={mockTimeInput}
+            onChange={(e) => {
+              const value = e.target.value
+              setMockTimeInput(value)
+              setMockTime(value || null)
+            }}
+          />
+          {mockTimeActive && (
+            <button
+              type='button'
+              title='Trở về thời gian thật'
+              className='flex size-5 items-center justify-center rounded-full text-[#e00000] hover:bg-[#ffd6d6] cursor-pointer'
+              onClick={() => {
+                setMockTimeInput('')
+                resetMockTime()
+              }}
+            >
+              <RotateCcw size={12} />
+            </button>
+          )}
+        </div>
         <NavLink to={path.BUSINESS_OWNER_POS} className='bg-white rounded-full px-4 h-7.25 flex items-center text-[#e00000] text-[14px] font-bold whitespace-nowrap'>
           + &nbsp;Bán hàng
         </NavLink>

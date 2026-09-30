@@ -29,6 +29,7 @@ import type {
   HomeDashboardGroupBy,
   HomeDashboardResponse
 } from '../../types/homeDashboard.type'
+import { getMockLocalDateString } from '../../utils/mockTime'
 
 const RANGE_DAYS = 30
 
@@ -391,10 +392,15 @@ export default function App() {
         setIsLoading(true)
         setErrorMessage(null)
 
+        const mockDate = getMockLocalDateString()
         const data =
           await getHomeDashboard({
             businessId:
               currentBusinessId,
+
+            ...(mockDate
+              ? { date: mockDate }
+              : {}),
 
             rangeDays:
               RANGE_DAYS,

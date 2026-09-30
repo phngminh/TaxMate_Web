@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance, type InternalAxiosRequestConfig } from 'axios'
+import { getMockTimeIso, getMockTimeString } from './mockTime'
 
 class Http {
   instance: AxiosInstance
@@ -32,6 +33,16 @@ class Http {
     const token = localStorage.getItem('token')
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
+    }
+    const mockTimeIso = getMockTimeIso()
+    const mockTimeLocal = getMockTimeString()
+    if (mockTimeIso && config.headers) {
+      config.headers['X-Mock-Time'] = mockTimeIso
+      config.headers['X-Custom-Time'] = mockTimeIso
+      config.headers['X-Current-Time'] = mockTimeIso
+      if (mockTimeLocal) {
+        config.headers['X-Mock-Local-Time'] = mockTimeLocal
+      }
     }
     return config
   }
