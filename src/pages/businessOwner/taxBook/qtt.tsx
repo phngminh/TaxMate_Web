@@ -1701,7 +1701,7 @@ function QttReadinessPanel({
               className='inline-flex items-center gap-1.5 rounded-xl bg-amber-600 px-4 py-2 text-xs font-bold text-white hover:bg-amber-700 shadow-sm active:scale-95 disabled:opacity-50 transition-all cursor-pointer'
             >
               <Sparkles className={`h-3.5 w-3.5 ${reviewingAll ? 'animate-spin' : ''}`} />
-              <span>{reviewingAll ? 'Đang xác nhận...' : '✨ Xác nhận S2c cả năm'}</span>
+              <span>{reviewingAll ? 'Đang xác nhận...' : 'Xác nhận S2c cả năm'}</span>
             </button>
           </div>
         </div>
