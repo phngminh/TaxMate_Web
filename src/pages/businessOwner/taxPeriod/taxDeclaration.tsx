@@ -56,6 +56,7 @@ import type { PaymentAccount } from '../../../types/paymentAccount.type'
 import type { TknQttNextStep } from '../../../types/tknTaxPeriod.type'
 import LegalBadge from '../../../components/owner/tax/LegalBadge'
 import Tip from '../../../components/owner/tax/Tip'
+import RecordTaxPaymentModal from '../../../components/owner/tax/RecordTaxPaymentModal'
 
 function formatMoney(value: number) {
   return `${value.toLocaleString('vi-VN')}đ`
@@ -266,6 +267,8 @@ export default function TaxDeclarationPage() {
     useState(false)
   const [nextStepError, setNextStepError] =
     useState<string | null>(null)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] =
+    useState(false)
 
   async function loadTknNextStep(
     period: TaxPeriodDetail
@@ -1195,10 +1198,24 @@ export default function TaxDeclarationPage() {
                 <>
                   <div className='flex h-12 items-center gap-2 rounded-xl bg-green-100 px-7 text-sm font-bold text-green-700'>
                     <CheckCircle2 size={18} />
-                    {isTkn
-                      ? 'Thông báo doanh thu đã được gửi'
-                      : 'Tờ khai đã được gửi'}
+                    {taxPeriod.status === 'Paid'
+                      ? 'Đã hoàn tất nộp thuế'
+                      : isTkn
+                        ? 'Thông báo doanh thu đã được gửi'
+                        : 'Tờ khai đã được gửi'}
                   </div>
+                  {!isTkn && (taxPeriod.vatTaxAmount > 0 || taxPeriod.personalIncomeTaxAmount > 0) && (
+                    <button
+                      type='button'
+                      onClick={() => setIsPaymentModalOpen(true)}
+                      className='flex h-12 items-center gap-2 rounded-xl bg-emerald-700 px-6 text-sm font-bold text-white transition hover:bg-emerald-800 shadow-xs'
+                    >
+                      <CheckCircle2 size={18} />
+                      {taxPeriod.status === 'Paid'
+                        ? 'Cập nhật nộp thuế'
+                        : 'Xác nhận đã nộp thuế'}
+                    </button>
+                  )}
                   {isPreviewMode && (
                     <button
                       type='button'
@@ -1478,6 +1495,49 @@ export default function TaxDeclarationPage() {
           void confirmSubmit()
         }}
       />
+
+      {taxPeriod && (
+        <RecordTaxPaymentModal
+          open={isPaymentModalOpen}
+          onClose={() => setIsPaymentModalOpen(false)}
+          taxPeriod={taxPeriod}
+          obligations={[
+            ...(declaration && declaration.vatPayableAmount > 0
+              ? [
+                  {
+                    taxType: 'VAT',
+                    amount: declaration.vatPayableAmount,
+                    chapterCode: '857',
+                    subsectionCode: '1701',
+                    budgetContent: 'Thuế GTGT hàng SXKD trong nước'
+                  }
+                ]
+              : []),
+            ...(declaration && declaration.personalIncomeTaxPayableAmount > 0
+              ? [
+                  {
+                    taxType: 'PIT',
+                    amount: declaration.personalIncomeTaxPayableAmount,
+                    chapterCode: '857',
+                    subsectionCode: '1003',
+                    budgetContent: 'Thuế TNCN từ hoạt động SXKD'
+                  }
+                ]
+              : [])
+          ]}
+          onSuccess={(summary) => {
+            setTaxPeriod((prev) =>
+              prev
+                ? {
+                    ...prev,
+                    status: summary.periodStatus,
+                    paidDate: summary.paidDate
+                  }
+                : null
+            )
+          }}
+        />
+      )}
     </div>
   )
 }

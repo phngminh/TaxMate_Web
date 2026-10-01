@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 interface TipProps {
   /** Nội dung tooltip — có thể là string hoặc JSX */
@@ -50,38 +51,65 @@ export default function Tip({
 }: TipProps) {
   const { box, arrow } = sideStyles[side]
   const alignCls = side === 'top' || side === 'bottom' ? alignStyles[align] : ''
+  const triggerRef = useRef<HTMLSpanElement>(null)
+  const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null)
+  const isOpen = anchor !== null
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const updateAnchor = () => {
+      const rect = triggerRef.current?.getBoundingClientRect()
+      if (rect) setAnchor({ top: rect.top, left: rect.left })
+    }
+
+    window.addEventListener('scroll', updateAnchor, true)
+    window.addEventListener('resize', updateAnchor)
+    return () => {
+      window.removeEventListener('scroll', updateAnchor, true)
+      window.removeEventListener('resize', updateAnchor)
+    }
+  }, [isOpen])
+
+  const showTooltip = () => {
+    const rect = triggerRef.current?.getBoundingClientRect()
+    if (rect) setAnchor({ top: rect.top, left: rect.left })
+  }
 
   return (
-    <span className={`group/tip relative inline-flex items-center ${className}`}>
-      {children}
-
-      {/* Tooltip box */}
+    <>
       <span
-        role='tooltip'
-        className={[
-          'pointer-events-none absolute z-[9999] w-max',
-          maxWidth,
-          box,
-          alignCls,
-          // Hiện/ẩn
-          'opacity-0 scale-95 group-hover/tip:opacity-100 group-hover/tip:scale-100',
-          // Animation nhanh, mượt
-          'transition-all duration-150 ease-out',
-          // Style
-          'rounded-lg bg-gray-800 px-3 py-2 text-xs leading-relaxed text-white shadow-xl',
-          'whitespace-pre-line',
-        ].join(' ')}
+        ref={triggerRef}
+        onMouseEnter={showTooltip}
+        onMouseLeave={() => setAnchor(null)}
+        className={`relative inline-flex items-center ${className}`}
       >
-        {content}
-
-        {/* Mũi tên */}
-        <span
-          className={[
-            'pointer-events-none absolute h-0 w-0 border-4',
-            arrow,
-          ].join(' ')}
-        />
+        {children}
       </span>
-    </span>
+
+      {anchor && createPortal(
+        <span
+          className='pointer-events-none fixed z-[9999]'
+          style={{ top: anchor.top, left: anchor.left }}
+        >
+          <span
+            role='tooltip'
+            className={[
+              'pointer-events-none absolute w-max',
+              maxWidth,
+              box,
+              alignCls,
+              'scale-100 opacity-100 transition-all duration-150 ease-out',
+              'rounded-lg bg-gray-800 px-3 py-2 text-xs leading-relaxed text-white shadow-xl',
+              'whitespace-pre-line',
+            ].join(' ')}
+          >
+            {content}
+            <span className={['pointer-events-none absolute h-0 w-0 border-4', arrow].join(' ')} />
+          </span>
+        </span>,
+        document.body
+      )}
+    </>
   )
 }

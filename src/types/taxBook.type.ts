@@ -17,8 +17,8 @@ export interface S2bRevenueGroup {
 }
 
 export interface S2bRevenueLine {
-  businessCategoryId: string
-  businessCategoryCode: string
+  businessCategoryId: string | null
+  businessCategoryCode: string | null
   sourceId: string
   sourceType: 'Transaction' | 'ManualIncome'
   documentNumber: string

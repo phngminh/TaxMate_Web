@@ -511,12 +511,14 @@ export default function OwnerHeader() {
               >
                 Danh mục sản phẩm
               </DropdownMenuItem>
-              <DropdownMenuItem
-                className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
-                onClick={() => navigate(path.BUSINESS_OWNER_INVENTORY)}
-              >
-                Khởi tạo / kiểm kê tồn kho
-              </DropdownMenuItem>
+              {!isServiceStore && (
+                <DropdownMenuItem
+                  className='cursor-pointer rounded px-4 py-2.5 text-[15px] hover:bg-[#f3f0ff] focus:bg-[#f3f0ff]'
+                  onClick={() => navigate(path.BUSINESS_OWNER_INVENTORY)}
+                >
+                  Khởi tạo / kiểm kê tồn kho
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 
