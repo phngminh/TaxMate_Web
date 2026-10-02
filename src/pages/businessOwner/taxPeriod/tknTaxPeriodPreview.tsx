@@ -25,24 +25,13 @@ import type {
 } from '../../../types/tknTaxPeriod.type'
 import LegalBadge from '../../../components/owner/tax/LegalBadge'
 import { taxPeriodDeclarationPath } from '../../../utils/taxPeriodRoute'
+import {
+  formatTaxPeriodDate,
+  formatTaxPeriodEndExclusive
+} from '../../../utils/taxPeriodDate'
 
 function formatMoney(value: number) {
   return `${value.toLocaleString('vi-VN')}đ`
-}
-
-function formatDate(value?: string | null) {
-  if (!value) return 'Chưa xác định'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime())
-    ? value
-    : date.toLocaleDateString('vi-VN')
-}
-
-function formatEndExclusive(value: string) {
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  date.setDate(date.getDate() - 1)
-  return date.toLocaleDateString('vi-VN')
 }
 
 function errorMessage(error: unknown, fallback: string) {
@@ -181,7 +170,7 @@ export default function TknTaxPeriodPreviewPage() {
           </div>
           <div className='rounded-2xl bg-white p-5 shadow-sm'>
             <p className='text-sm font-semibold text-gray-500'>Hạn nộp</p>
-            <p className='mt-2 text-lg font-black text-gray-900'>{formatDate(preview.dueDate)}</p>
+            <p className='mt-2 text-lg font-black text-gray-900'>{formatTaxPeriodDate(preview.dueDate)}</p>
           </div>
         </div>
 
@@ -238,11 +227,11 @@ export default function TknTaxPeriodPreviewPage() {
           <div className='mt-4 grid gap-4 md:grid-cols-2'>
             <div className='rounded-xl bg-gray-50 p-4'>
               <p className='text-xs font-bold uppercase text-gray-400'>Từ ngày</p>
-              <p className='mt-1 font-bold text-gray-800'>{formatDate(preview.windowStart)}</p>
+              <p className='mt-1 font-bold text-gray-800'>{formatTaxPeriodDate(preview.windowStart)}</p>
             </div>
             <div className='rounded-xl bg-gray-50 p-4'>
               <p className='text-xs font-bold uppercase text-gray-400'>Đến hết kỳ</p>
-              <p className='mt-1 font-bold text-gray-800'>{formatEndExclusive(preview.windowEnd)}</p>
+              <p className='mt-1 font-bold text-gray-800'>{formatTaxPeriodEndExclusive(preview.windowEnd)}</p>
             </div>
           </div>
         </section>

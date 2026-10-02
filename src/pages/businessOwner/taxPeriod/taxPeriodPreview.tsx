@@ -26,6 +26,7 @@ import {
   getTaxPeriodCalculationPreview,
   getTaxPeriodPreview
 } from '../../../apis/taxPeriod.api'
+import { getOwnerTaxProfile } from '../../../apis/taxProfile.api'
 
 import path from '../../../constants/path'
 
@@ -34,6 +35,7 @@ import type {
   TaxPeriodDetail,
   TaxPeriodPreview
 } from '../../../types/taxPeriod.type'
+import type { OwnerTaxProfile } from '../../../types/taxProfile.type'
 
 import {
   taxPeriodCalculationPath,
@@ -180,6 +182,8 @@ export default function TaxPeriodPreviewPage() {
       null
     )
 
+  const [taxProfile, setTaxProfile] = useState<OwnerTaxProfile | null>(null)
+
   const [
     preview,
     setPreview
@@ -225,6 +229,7 @@ export default function TaxPeriodPreviewPage() {
 
   useEffect(() => {
     let active = true
+    setTaxProfile(null)
 
     async function loadData() {
       if (!taxPeriodId) {
@@ -260,6 +265,14 @@ export default function TaxPeriodPreviewPage() {
         setTaxPeriod(periodResult)
         setPreview(previewResult)
         setCalcPreview(calcResult)
+
+        if (periodResult.businessId) {
+          getOwnerTaxProfile(periodResult.businessId)
+            .then((profile) => {
+              if (active) setTaxProfile(profile)
+            })
+            .catch(() => {})
+        }
       } catch (error) {
         console.error(
           '[TaxPeriodPreview] Failed:',
@@ -433,6 +446,10 @@ export default function TaxPeriodPreviewPage() {
       'Good' ||
     preview.warnings.length > 0
 
+  const isIncomeBased =
+    taxProfile?.declaredRevenueBracket !== 'AtOrBelow1B' &&
+    taxProfile?.personalIncomeTaxMethod === 'IncomeBased'
+
   return (
     <div className='min-h-[calc(100vh-56px)] bg-[#f5f6f8] px-6 py-7'>
       <div className='mx-auto w-full max-w-7xl'>
@@ -541,12 +558,14 @@ export default function TaxPeriodPreviewPage() {
               )}
             />
 
-            <InfoRow
-              label='Tổng chi phí'
-              value={formatMoney(
-                preview.totalExpense
-              )}
-            />
+            {isIncomeBased && (
+              <InfoRow
+                label='Tổng chi phí'
+                value={formatMoney(
+                  preview.totalExpense
+                )}
+              />
+            )}
           </div>
         </div>
 
@@ -688,7 +707,7 @@ export default function TaxPeriodPreviewPage() {
             />
 
             <CountCard
-              label='Chưa thanh toán'
+              label='Đơn nháp'
               value={preview.unpaidTransactionCount}
               warning={preview.unpaidTransactionCount > 0}
               actionText={preview.unpaidTransactionCount > 0 ? 'Xử lý ngay' : undefined}
@@ -889,7 +908,7 @@ export default function TaxPeriodPreviewPage() {
       <ConfirmDialog
         open={isCancelDraftsConfirmOpen}
         title='Hủy toàn bộ đơn nháp trong kỳ?'
-        description={`Bạn có chắc chắn muốn hủy tất cả ${preview?.unpaidTransactionCount || 0} đơn hàng nháp dở dang của tất cả các cơ sở trong kỳ thuế này không? Thao tác này sẽ chuyển các đơn nháp sang trạng thái "Đã hủy" để đưa số chưa thanh toán về 0.`}
+        description={`Bạn có chắc chắn muốn hủy tất cả ${preview?.unpaidTransactionCount || 0} đơn hàng nháp dở dang của tất cả các cơ sở trong kỳ thuế này không? Thao tác này sẽ chuyển các đơn nháp sang trạng thái "Đã hủy" để đưa số đơn nháp về 0.`}
         confirmLabel='Xác nhận hủy đơn nháp'
         confirmVariant='warning'
         isProcessing={isCancellingDrafts}

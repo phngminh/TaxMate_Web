@@ -35,7 +35,7 @@ function getFilingStatus(
 ) {
   if (isExempt) {
     return {
-      label: 'Miễn 100% thuế (Dưới 1 tỷ)',
+      label: 'Chưa phải khai 01/CNKD',
       className:
         'bg-emerald-100 text-emerald-800 border border-emerald-300/80',
       completed: true

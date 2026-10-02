@@ -490,7 +490,8 @@ export default function PurchasePage() {
   // Combined purchase records to display in history list
   const combinedPurchases = useMemo(() => {
     return inventoryPurchases.map(purchase => {
-      const isProduct = purchase.lines.some(line => !!line.productId)
+      const hasProduct = purchase.lines.some(line => !!line.productId)
+      const hasMaterial = purchase.lines.some(line => !!line.ingredientId)
       const materialItems = purchase.lines.map((line, index) => ({
         id: line.productId ?? line.ingredientId ?? `${purchase.expenseId}-${index}`,
         name: line.itemName,
@@ -504,7 +505,9 @@ export default function PurchasePage() {
         date: purchase.purchaseDate,
         supplierName: purchase.supplierName || 'Vãng lai',
         amount: purchase.amount,
-        type: (isProduct ? 'Product' : 'Material') as 'Product' | 'Material',
+        type: (hasProduct ? 'Product' : 'Material') as 'Product' | 'Material',
+        hasProduct,
+        hasMaterial,
         summary: materialItems.map(item => `${item.name} (${item.quantity} ${item.unit})`).join(', '),
         receiptImageUrl: purchase.receiptImageUrl || undefined,
         materialItems
@@ -652,7 +655,7 @@ export default function PurchasePage() {
                       <thead>
                         <tr className='bg-[#e3effc] text-[#1e3a8a] text-[13px] font-black border-b border-[#cbd5e1]/40 select-none'>
                           <th className='py-3.5 px-5 font-bold'>Số hóa đơn</th>
-                          <th className='py-3.5 px-5 font-bold'>Loại hàng nhập</th>
+                          <th className='w-40 py-3.5 px-3 font-bold text-center whitespace-nowrap'>Loại hàng nhập</th>
                           <th className='py-3.5 px-5 font-bold'>Đối tác nhà cung cấp</th>
                           <th className='py-3.5 px-5 font-bold'>Chi tiết nhập hàng</th>
                           <th className='py-3.5 px-5 font-bold'>Ngày nhập</th>
@@ -676,14 +679,22 @@ export default function PurchasePage() {
                                 )}
                               </div>
                             </td>
-                            <td className='py-4 px-5'>
-                              <span className={`px-2 py-0.5 rounded-full border font-bold text-[10px] ${
-                                p.type === 'Product'
-                                  ? 'bg-purple-50 text-purple-600 border-purple-100'
-                                  : 'bg-teal-50 text-teal-600 border-teal-100'
-                              }`}>
-                                {p.type === 'Product' ? 'Sản phẩm' : 'Nguyên liệu'}
-                              </span>
+                            <td className='py-4 px-3 text-center'>
+                              {p.hasProduct && p.hasMaterial ? (
+                                <span className='inline-flex items-center overflow-hidden rounded-full border border-slate-200 align-middle text-[10px] font-semibold leading-4 whitespace-nowrap'>
+                                  <span className='bg-purple-50 pl-1.5 pr-0.5 text-purple-600'>Sản phẩm</span>
+                                  <span className='bg-[linear-gradient(90deg,#faf5ff_50%,#ecfdf5_50%)] px-0.5 text-slate-400'>/</span>
+                                  <span className='bg-emerald-50 pl-0.5 pr-1.5 text-emerald-600'>Nguyên liệu</span>
+                                </span>
+                              ) : (p.hasProduct || p.hasMaterial) && (
+                                <span className={`inline-flex items-center rounded-full border px-1.5 align-middle text-[10px] font-semibold leading-4 whitespace-nowrap ${
+                                  p.hasProduct
+                                    ? 'bg-purple-50 text-purple-600 border-purple-100'
+                                    : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                                }`}>
+                                  {p.hasProduct ? 'Sản phẩm' : 'Nguyên liệu'}
+                                </span>
+                              )}
                             </td>
                             <td className='py-4 px-5 font-bold text-slate-700'>{p.supplierName}</td>
                             <td className='py-4 px-5 max-w-xs truncate font-medium'>{p.summary}</td>
