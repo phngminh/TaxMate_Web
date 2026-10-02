@@ -544,9 +544,14 @@ export default function TaxPeriodDetailPage() {
   }, [taxProfile, taxPeriod?.year])
 
   const isExemptQuarter = useMemo(() => {
-    if (!taxPeriod?.quarter || firstCrossingQuarter === null) return false
+    if (
+      !taxPeriod?.quarter ||
+      !taxProfile?.personalIncomeTaxMethod ||
+      taxProfile.taxMethodEffectiveYear !== taxPeriod.year ||
+      firstCrossingQuarter === null
+    ) return false
     return taxPeriod.quarter < firstCrossingQuarter
-  }, [taxPeriod, firstCrossingQuarter])
+  }, [taxPeriod, taxProfile, firstCrossingQuarter])
 
   const targetPeriod = useMemo(() => {
     if (!firstCrossingQuarter || !siblingPeriods.length) return null
@@ -678,10 +683,10 @@ export default function TaxPeriodDetailPage() {
                 <>
                   <span className='inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-4 py-2 text-sm font-bold text-emerald-800 border border-emerald-300/80'>
                     <ShieldCheck size={16} className='text-emerald-600' />
-                    Miễn thuế GTGT & TNCN
+                    Chưa phải khai 01/CNKD
                   </span>
                   <p className='mt-2 max-w-sm text-sm leading-6 text-slate-500'>
-                    Doanh thu Quý {taxPeriod.quarter} chưa vượt ngưỡng 1 tỷ đồng. Được miễn 100% thuế theo quy định.
+                    Doanh thu lũy kế từ đầu năm {taxPeriod.year} đến hết Quý {taxPeriod.quarter} chưa vượt ngưỡng 1 tỷ đồng/năm. Quý này chưa phải khai 01/CNKD.
                   </p>
                 </>
               ) : (
@@ -698,7 +703,7 @@ export default function TaxPeriodDetailPage() {
           </div>
         </div>
 
-        {/* Apple & Stripe Craft Exemption Callout */}
+        {/* Quarters before the first required quarterly filing */}
         {isExemptQuarter && (
           <div className='mt-6 overflow-hidden rounded-2xl border border-emerald-200/90 bg-gradient-to-r from-emerald-50/90 via-teal-50/50 to-emerald-50/70 p-5 shadow-xs backdrop-blur-md'>
             <div className='flex flex-wrap items-start justify-between gap-4'>
@@ -709,18 +714,21 @@ export default function TaxPeriodDetailPage() {
                 <div>
                   <div className='flex items-center gap-2'>
                     <span className='rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-bold text-emerald-800 uppercase tracking-wider'>
-                      Bảo vệ quyền lợi miễn thuế
+                      Chưa phải kê khai quý này
                     </span>
                     <span className='text-xs font-semibold text-slate-500'>
                       Nghị định 141/2026/NĐ-CP
                     </span>
                   </div>
                   <h3 className='mt-1 text-base font-bold text-slate-900'>
-                    Quý {taxPeriod.quarter} không phát sinh nghĩa vụ thuế · Bắt đầu nộp từ Quý {firstCrossingQuarter}
+                    Quý {taxPeriod.quarter} chưa phải khai 01/CNKD · Bắt đầu kê khai từ Quý {firstCrossingQuarter}
                   </h3>
                   <p className='mt-1 text-xs text-slate-600 leading-relaxed max-w-2xl'>
-                    Doanh thu Quý {taxPeriod.quarter} ({formatMoney(taxPeriod.totalRevenue)}) đã được ghi nhận và tính vào hạn mức miễn thuế 1 tỷ đồng của năm {taxPeriod.year}. 
-                    Bạn không cần tính thuế và không phải nộp tờ khai 01/CNKD cho quý này.
+                    Doanh thu Quý {taxPeriod.quarter} ({formatMoney(taxPeriod.totalRevenue)}) được ghi nhận vào doanh thu lũy kế để xác định quý vượt ngưỡng.
+                    Bạn bắt đầu kê khai từ Quý {firstCrossingQuarter}.
+                    {taxProfile?.personalIncomeTaxMethod === 'RevenueBased' && (
+                      <> Doanh thu trước Quý {firstCrossingQuarter} không sử dụng khoản giảm trừ doanh thu tính thuế TNCN 1 tỷ đồng.</>
+                    )}
                   </p>
                 </div>
               </div>
@@ -747,12 +755,12 @@ export default function TaxPeriodDetailPage() {
 
           <MetricCard
             label='Doanh thu chịu thuế'
-            value={isExemptQuarter ? '0đ (Miễn trong hạn mức)' : formatMoney(taxPeriod.taxableRevenue)}
+            value={isExemptQuarter ? '0đ (Chưa phải kê khai)' : formatMoney(taxPeriod.taxableRevenue)}
           />
 
           <MetricCard
             label='Tổng thuế ước tính'
-            value={isExemptQuarter ? '0đ (Miễn 100%)' : isCalculated ? formatMoney(taxPeriod.estimatedTax) : 'Chưa tính toán'}
+            value={isExemptQuarter ? '0đ (Chưa phải kê khai)' : isCalculated ? formatMoney(taxPeriod.estimatedTax) : 'Chưa tính toán'}
             isPending={!isCalculated && !isExemptQuarter}
             success={isExemptQuarter}
           />
@@ -1071,7 +1079,7 @@ export default function TaxPeriodDetailPage() {
                 disabled
                 className='h-12 min-w-56 rounded-xl bg-slate-200 px-6 text-sm font-bold text-slate-500 cursor-not-allowed'
               >
-                Quý {taxPeriod.quarter} được miễn thuế
+                Quý {taxPeriod.quarter} chưa phải khai 01/CNKD
               </button>
             )
           ) : (

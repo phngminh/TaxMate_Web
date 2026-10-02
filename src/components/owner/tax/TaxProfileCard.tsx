@@ -71,6 +71,15 @@ export default function TaxProfileCard({
   const [busy, setBusy] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
+  const visibleThresholdReviews = profile.thresholdReviews.filter(
+    (review) =>
+      !(
+        profile.personalIncomeTaxMethod !== null &&
+        profile.taxMethodEffectiveYear !== null &&
+        profile.taxMethodEffectiveYear < review.year &&
+        (review.thresholdCode === 'Crossed1B' || review.thresholdAmount === 1000000000)
+      )
+  )
 
   useEffect(() => {
     if (window.location.hash === '#threshold-review') {
@@ -715,12 +724,12 @@ export default function TaxProfileCard({
       </div>
 
       {/* Threshold Reviews / Cảnh báo chuyển mốc doanh thu */}
-      {profile.thresholdReviews.length > 0 && (
+      {visibleThresholdReviews.length > 0 && (
         <div className='mt-5 space-y-3'>
           <p className='text-xs font-bold uppercase tracking-wider text-amber-900'>
             Cần rà soát mốc doanh thu theo luật
           </p>
-          {profile.thresholdReviews.map((review) => {
+          {visibleThresholdReviews.map((review) => {
             const choices = review.allowedTaxMethods
             const selectedMethod = reviewMethods[review.alertId] ?? choices[0]
             return (
