@@ -97,7 +97,7 @@ function LiquidProgressCapsule({
 
   return (
     <div
-      className={`relative h-[38px] min-w-[130px] overflow-hidden rounded-xl border px-3 py-1.5 transition-all select-none shadow-2xs ${
+      className={`relative h-9.5 min-w-32.5 overflow-hidden rounded-xl border px-3 py-1.5 transition-all select-none shadow-2xs ${
         isReviewed
           ? 'border-emerald-300/80 bg-emerald-50/50 text-emerald-950'
           : isFull
@@ -153,17 +153,17 @@ function LiquidProgressCapsule({
           <div
             className={`h-full w-full ${
               isReviewed
-                ? 'bg-gradient-to-t from-emerald-500/35 via-emerald-400/25 to-emerald-300/15'
+                ? 'bg-linear-to-t from-emerald-500/35 via-emerald-400/25 to-emerald-300/15'
                 : isFull
-                ? 'bg-gradient-to-t from-emerald-500/30 via-emerald-400/20 to-emerald-300/10'
-                : 'bg-gradient-to-t from-amber-500/20 via-emerald-500/25 to-emerald-400/15'
+                ? 'bg-linear-to-t from-emerald-500/30 via-emerald-400/20 to-emerald-300/10'
+                : 'bg-linear-to-t from-amber-500/20 via-emerald-500/25 to-emerald-400/15'
             }`}
           />
         </div>
       )}
 
       {/* ── Glass Top Highlight ── */}
-      <div className='pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-xl bg-gradient-to-b from-white/40 to-transparent' />
+      <div className='pointer-events-none absolute inset-x-0 top-0 h-1/2 rounded-t-xl bg-linear-to-b from-white/40 to-transparent' />
 
       {/* ── Foreground Label (Z-index above liquid) ── */}
       <div className='relative z-10 flex h-full items-center justify-between gap-1.5 text-xs font-semibold'>
@@ -658,13 +658,25 @@ export default function S2cBookPage() {
           <p className='mt-1 text-sm text-gray-500'>{currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>
         </div>
         <div className='flex flex-wrap items-end gap-3'>
-          <label className='text-sm text-gray-600'>Năm
-            <input className='mt-1 block w-28 rounded-lg border px-3 py-2' type='number' value={year}
-              onChange={(event) => setYear(Number(event.target.value))} />
-          </label>
-          <div>
-            <span className='text-xs font-bold uppercase tracking-wider text-gray-500 mb-1 block'>Kỳ kê khai Quý</span>
-            <div className='flex items-center gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200/80'>
+          <div className='flex flex-wrap items-end gap-4'>
+            <div>
+              <label className='ml-3 text-xs font-bold uppercase tracking-wider text-blue-500 mb-1 block'>
+                Năm
+              </label>
+              <div className='relative'>
+                <input
+                  className='h-10 w-28 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm outline-none transition hover:border-slate-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/10'
+                  type='number'
+                  value={year}
+                  min={2024}
+                  max={2030}
+                  onChange={(event) => setYear(Number(event.target.value))}
+                />
+              </div>
+            </div>
+            <div>
+              <span className='ml-3 text-xs font-bold uppercase tracking-wider text-blue-500 mb-1 block'>Kỳ kê khai</span>
+              <div className='flex h-10 items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 shadow-sm'>
               {[1, 2, 3, 4].map((q) => {
                 const qSummary = quarterSummaries[q]
                 const isActive = quarter === q
@@ -714,7 +726,7 @@ export default function S2cBookPage() {
                     </div>
 
                     {/* Hairline 2px bottom progress bar */}
-                    <div className='absolute inset-x-1 bottom-0.5 h-[2px] rounded-full bg-slate-200/70 overflow-hidden'>
+                    <div className='absolute inset-x-1 bottom-0.5 h-0.5 rounded-full bg-slate-200/70 overflow-hidden'>
                       <div
                         className={`h-full transition-all duration-500 ${
                           qReviewed ? 'bg-emerald-600' : qPct === 100 ? 'bg-emerald-500' : 'bg-amber-500'
@@ -725,6 +737,7 @@ export default function S2cBookPage() {
                   </button>
                 )
               })}
+            </div>
             </div>
           </div>
 
@@ -749,7 +762,7 @@ export default function S2cBookPage() {
             disabled={!book || confirmingAll}
             className='flex items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:opacity-50 cursor-pointer transition-all shadow-xs'>
             <Sparkles size={16} className={confirmingAll ? 'animate-spin' : ''} />
-            {confirmingAll ? 'Đang duyệt cả năm...' : '✨ Xác nhận 4 Quý (Cơ sở này)'}
+            {confirmingAll ? 'Đang duyệt cả năm...' : 'Xác nhận 4 Quý (Cơ sở này)'}
           </button>
           <button onClick={download}
             disabled={!book || hasHardBlocker || (hasEvidenceWarnings && !book.evidenceReviewedAt) || exporting}
@@ -989,7 +1002,7 @@ export default function S2cBookPage() {
                     className='flex w-full items-center justify-between px-4 py-2.5 text-left hover:bg-amber-100/60 cursor-pointer'
                   >
                     <div className='flex items-center gap-2'>
-                      <span className={`mt-0.5 h-2 w-2 flex-shrink-0 rounded-full ${severityDot}`} />
+                      <span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${severityDot}`} />
                       <span className='text-sm font-medium text-amber-950'>{meta?.label ?? code}</span>
                       <span className='rounded-full bg-amber-200/80 px-1.5 py-0.5 text-xs font-semibold text-amber-900'>
                         {items.length}
@@ -1262,7 +1275,7 @@ export default function S2cBookPage() {
         <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-xs animate-in fade-in duration-200'>
           <div className='w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl animate-in zoom-in-95 duration-200 border border-gray-100'>
             {/* Header */}
-            <div className='flex items-center justify-between border-b border-orange-100 bg-gradient-to-r from-orange-50 to-white px-6 py-4'>
+            <div className='flex items-center justify-between border-b border-orange-100 bg-linear-to-r from-orange-50 to-white px-6 py-4'>
               <div className='flex items-center gap-2.5'>
                 <div className='flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 text-orange-600 shadow-xs'>
                   <ImagePlus size={18} />

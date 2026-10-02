@@ -388,38 +388,48 @@ export default function S2bBookPage() {
 
         {/* Action controls */}
         <div className='flex flex-wrap items-end gap-3'>
-          <label className='text-sm text-gray-600'>
-            Năm
-            <input
-              className='mt-1 block w-28 rounded-xl border border-gray-300 px-3 py-2 text-sm font-medium focus:border-red-600 focus:outline-hidden'
-              type='number'
-              value={year}
-              min={2024}
-              max={2030}
-              onChange={(event) => setYear(Number(event.target.value))}
-            />
-          </label>
+          <div className='flex flex-wrap items-end gap-4'>
+            <div>
+              <label className='ml-3 text-xs font-bold uppercase tracking-wider text-blue-500 mb-1 block'>
+                Năm
+              </label>
+              <div className='relative'>
+                <input
+                  className='h-10 w-28 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm outline-none transition
+                    hover:border-slate-300
+                    focus:border-red-500 focus:ring-2 focus:ring-red-500/10'
+                  type='number'
+                  value={year}
+                  min={2024}
+                  max={2030}
+                  onChange={(event) => setYear(Number(event.target.value))}
+                />
+              </div>
+            </div>
 
-          <div>
-            <span className='text-xs font-bold uppercase tracking-wider text-gray-500 mb-1 block'>Kỳ kê khai Quý</span>
-            <div className='flex items-center gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200/80'>
-              {[1, 2, 3, 4].map((q) => {
-                const isActive = quarter === q
-                return (
-                  <button
-                    key={q}
-                    type='button'
-                    onClick={() => setQuarter(q)}
-                    className={`relative rounded-lg px-3 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                      isActive
-                        ? 'bg-white text-slate-900 shadow-xs ring-1 ring-slate-900/10'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-                    }`}
-                  >
-                    Quý {q}
-                  </button>
-                )
-              })}
+            <div>
+              <span className='ml-3 text-xs font-bold uppercase tracking-wider text-blue-500 mb-1 block'>
+                Kỳ kê khai
+              </span>
+              <div className='flex h-10 items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 shadow-sm'>
+                {[1, 2, 3, 4].map((q) => {
+                  const isActive = quarter === q
+                  return (
+                    <button
+                      key={q}
+                      type='button'
+                      onClick={() => setQuarter(q)}
+                      className={`h-8 rounded-lg px-4 text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                        isActive
+                          ? 'bg-blue-500 text-white shadow-sm'
+                          : 'text-slate-500 hover:bg-white hover:text-slate-800'
+                      }`}
+                    >
+                      Quý {q}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
 
@@ -534,7 +544,7 @@ export default function S2bBookPage() {
               <p className='mt-1 text-xs text-slate-500'>Khoản thu kinh doanh thủ công</p>
             </div>
 
-            <div className='rounded-2xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/50 to-white p-4.5 shadow-2xs transition-all hover:shadow-xs'>
+            <div className='rounded-2xl border border-emerald-200/80 bg-linear-to-br from-emerald-50/50 to-white p-4.5 shadow-2xs transition-all hover:shadow-xs'>
               <div className='flex items-center justify-between'>
                 <span className='text-xs font-semibold uppercase tracking-wider text-emerald-800'>Tổng doanh thu</span>
                 <div className='flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700'>
@@ -547,7 +557,7 @@ export default function S2bBookPage() {
               <p className='mt-1 text-xs text-emerald-700 font-medium'>Nguồn tính thuế và quyết toán [09a]</p>
             </div>
 
-            <div className='rounded-2xl border border-rose-200/80 bg-gradient-to-br from-rose-50/40 to-white p-4.5 shadow-2xs transition-all hover:shadow-xs'>
+            <div className='rounded-2xl border border-rose-200/80 bg-linear-to-br from-rose-50/40 to-white p-4.5 shadow-2xs transition-all hover:shadow-xs'>
               <div className='flex items-center justify-between'>
                 <span className='text-xs font-semibold uppercase tracking-wider text-rose-800'>Tổng thuế GTGT</span>
                 <div className='flex h-8 w-8 items-center justify-center rounded-xl bg-rose-100 text-[#9b0000]'>

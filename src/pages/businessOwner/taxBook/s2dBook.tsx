@@ -552,33 +552,53 @@ export default function S2dBookPage() {
         </div>
 
         <div className='flex flex-wrap items-end gap-3'>
-          <label className='text-sm text-gray-600'>
-            Năm
-            <input
-              className='mt-1 block w-28 rounded-lg border px-3 py-2'
-              type='number'
-              value={year}
-              onChange={(event) => setYear(Number(event.target.value))}
-            />
-          </label>
-          <label className='text-sm text-gray-600'>
-            Quý
-            <select
-              className='mt-1 block w-24 rounded-lg border px-3 py-2'
-              value={quarter}
-              onChange={(event) => setQuarter(Number(event.target.value))}
-            >
-              {[1, 2, 3, 4].map((value) => (
-                <option key={value} value={value}>
-                  Quý {value}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className='flex flex-wrap items-end gap-4'>
+            <div>
+              <label className='ml-3 text-xs font-bold uppercase tracking-wider text-blue-500 mb-1 block'>
+                Năm
+              </label>
+              <div className='relative'>
+                <input
+                  className='h-10 w-28 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm outline-none transition hover:border-slate-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/10'
+                  type='number'
+                  value={year}
+                  min={2024}
+                  max={2030}
+                  onChange={(event) => setYear(Number(event.target.value))}
+                />
+              </div>
+            </div>
+
+            <div>
+              <span className='ml-3 text-xs font-bold uppercase tracking-wider text-blue-500 mb-1 block'>
+                Kỳ kê khai
+              </span>
+              <div className='flex h-10 items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 shadow-sm'>
+                {[1, 2, 3, 4].map((q) => {
+                  const isActive = quarter === q
+                  return (
+                    <button
+                      key={q}
+                      type='button'
+                      onClick={() => setQuarter(q)}
+                      className={`h-8 rounded-lg px-4 text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                        isActive
+                          ? 'bg-blue-500 text-white shadow-sm'
+                          : 'text-slate-500 hover:bg-white hover:text-slate-800'
+                      }`}
+                    >
+                      Quý {q}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
           <button
             onClick={load}
             disabled={!currentBusiness || loading}
-            className='flex items-center gap-2 rounded-lg bg-[#9b0000] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50 cursor-pointer'
+            className='flex items-center gap-2 rounded-xl bg-[#9b0000] px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-[#800000] disabled:opacity-50 cursor-pointer transition-all'
           >
             <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
             {loading ? 'Đang tải...' : 'Tải lại'}
@@ -586,7 +606,7 @@ export default function S2dBookPage() {
           <button
             onClick={download}
             disabled={!currentBusiness || exporting}
-            className='flex items-center gap-2 rounded-lg border border-[#9b0000] px-4 py-2.5 text-sm font-semibold text-[#9b0000] disabled:opacity-50 cursor-pointer'
+            className='flex items-center gap-2 rounded-xl border border-[#9b0000] px-4 py-2.5 text-sm font-semibold text-[#9b0000] hover:bg-red-50 disabled:opacity-50 cursor-pointer transition-all'
           >
             <Download size={16} />
             {exporting ? 'Đang xuất...' : 'Xuất Word'}
@@ -642,7 +662,7 @@ export default function S2dBookPage() {
                     className='flex w-full items-center justify-between px-4 py-2.5 text-left hover:bg-amber-100/60 cursor-pointer'
                   >
                     <div className='flex items-center gap-2'>
-                      <span className={`mt-0.5 h-2 w-2 flex-shrink-0 rounded-full ${severityDot}`} />
+                      <span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${severityDot}`} />
                       <span className='text-sm font-medium text-amber-950'>{meta?.label ?? code}</span>
                       <span className='rounded-full bg-amber-200/80 px-1.5 py-0.5 text-xs font-semibold text-amber-900'>
                         {items.length}
@@ -959,7 +979,7 @@ export default function S2dBookPage() {
                       {/* Item Header */}
                       <div
                         onClick={() => toggleItemCollapse(key)}
-                        className='flex flex-wrap items-center justify-between gap-3 px-5 py-4 bg-gradient-to-r from-gray-50/90 to-white border-b border-gray-100 cursor-pointer select-none hover:from-gray-100/90 hover:to-gray-50 transition-colors'
+                        className='flex flex-wrap items-center justify-between gap-3 px-5 py-4 bg-linear-to-r from-gray-50/90 to-white border-b border-gray-100 cursor-pointer select-none hover:from-gray-100/90 hover:to-gray-50 transition-colors'
                       >
                         <div>
                           <div className='flex items-center gap-2'>
@@ -1158,7 +1178,7 @@ export default function S2dBookPage() {
                       {/* Document Card Header */}
                       <div
                         onClick={() => toggleDocCollapse(doc.id)}
-                        className='flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 bg-gradient-to-r from-gray-50/90 to-white cursor-pointer select-none hover:from-gray-100/80 transition-colors'
+                        className='flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 bg-linear-to-r from-gray-50/90 to-white cursor-pointer select-none hover:from-gray-100/80 transition-colors'
                       >
                         <div className='flex items-center gap-3'>
                           <div
@@ -1312,7 +1332,7 @@ export default function S2dBookPage() {
                         ? 'Nguồn gốc: Phiếu nhập kho'
                         : 'Chi tiết phát sinh kho'}
                   </h3>
-                  <p className='text-[11px] text-gray-500 font-medium truncate max-w-[240px]'>
+                  <p className='text-[11px] text-gray-500 font-medium truncate max-w-60'>
                     {selectedTrace.item.itemName} ({selectedTrace.item.unit})
                   </p>
                 </div>
@@ -1368,7 +1388,7 @@ export default function S2dBookPage() {
                 <div className='space-y-3'>
                   <div className='flex items-center justify-between text-gray-600 bg-gray-50 px-3 py-2 rounded-lg'>
                     <span>Số phiếu: <strong className='text-gray-900 font-mono'>{tracePurchase?.voucherNumber || selectedTrace.line.documentNumber}</strong></span>
-                    <span className='truncate max-w-[150px] font-medium text-gray-700'>{tracePurchase?.supplierName || 'Vãng lai'}</span>
+                    <span className='truncate max-w-37.5 font-medium text-gray-700'>{tracePurchase?.supplierName || 'Vãng lai'}</span>
                   </div>
 
                   <div className='space-y-2 rounded-xl border border-emerald-100 bg-emerald-50/40 p-3.5'>

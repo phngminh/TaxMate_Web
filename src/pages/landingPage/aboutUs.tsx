@@ -22,7 +22,7 @@ export default function AboutUsPage() {
       <section className='py-16 sm:py-24 bg-white'>
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
           <div className='text-center mb-16' data-aos='fade-up'>
-            <span className='text-[#FF4E11] text-sm font-bold uppercase tracking-widest block mb-2'>
+            <span className='mb-2 block text-sm font-bold uppercase tracking-widest text-[#FF4E11] sm:text-base'>
               Giá trị cốt lõi
             </span>
             <h2 className='text-3xl font-extrabold text-slate-900'>
