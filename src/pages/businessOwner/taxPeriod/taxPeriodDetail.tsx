@@ -470,6 +470,7 @@ export default function TaxPeriodDetailPage() {
 
   useEffect(() => {
     let ignore = false
+    setTaxProfile(null)
 
     async function fetchData() {
       if (!taxPeriodId) {
@@ -632,6 +633,9 @@ export default function TaxPeriodDetailPage() {
 
   const hasWarning = taxPeriod.dataCheckStatus !== 'Good'
   const isCalculated = ['Calculated', 'Submitted', 'Paid'].includes(taxPeriod.status)
+  const canViewExpenses =
+    taxProfile?.declaredRevenueBracket !== 'AtOrBelow1B' &&
+    taxProfile?.personalIncomeTaxMethod === 'IncomeBased'
 
   return (
     <div className='min-h-[calc(100vh-56px)] bg-[#f5f6f8] px-6 py-7'>
@@ -892,7 +896,7 @@ export default function TaxPeriodDetailPage() {
             />
 
             <InfoRow
-              label='Chưa thanh toán'
+              label='Đơn nháp'
               value={taxPeriod.unpaidTransactionCount}
               warning={taxPeriod.unpaidTransactionCount > 0}
               actionText={taxPeriod.unpaidTransactionCount > 0 ? 'Xử lý ngay' : undefined}
@@ -951,17 +955,19 @@ export default function TaxPeriodDetailPage() {
               }))}
             />
 
-            <InfoRow
-              label='Số khoản chi phí'
-              value={taxPeriod.expenseCount}
-              actionText='Xem chi phí'
-              onClick={() => {
-                const params = new URLSearchParams()
-                params.set('year', taxPeriod.year.toString())
-                if (taxPeriod.quarter) params.set('quarter', taxPeriod.quarter.toString())
-                navigate(`${path.BUSINESS_OWNER_S2C_BOOK}?${params.toString()}`)
-              }}
-            />
+            {canViewExpenses && (
+              <InfoRow
+                label='Số khoản chi phí'
+                value={taxPeriod.expenseCount}
+                actionText='Xem chi phí'
+                onClick={() => {
+                  const params = new URLSearchParams()
+                  params.set('year', taxPeriod.year.toString())
+                  if (taxPeriod.quarter) params.set('quarter', taxPeriod.quarter.toString())
+                  navigate(`${path.BUSINESS_OWNER_S2C_BOOK}?${params.toString()}`)
+                }}
+              />
+            )}
 
             {hasWarning && (
               <div className='mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4'>
@@ -1122,7 +1128,7 @@ export default function TaxPeriodDetailPage() {
       <ConfirmDialog
         open={isCancelDraftsConfirmOpen}
         title='Hủy toàn bộ đơn nháp trong kỳ?'
-        description={`Bạn có chắc chắn muốn hủy tất cả ${taxPeriod.unpaidTransactionCount} đơn hàng nháp dở dang của tất cả các cơ sở trong kỳ thuế này không? Thao tác này sẽ chuyển các đơn nháp sang trạng thái "Đã hủy" để đưa số chưa thanh toán về 0.`}
+        description={`Bạn có chắc chắn muốn hủy tất cả ${taxPeriod.unpaidTransactionCount} đơn hàng nháp dở dang của tất cả các cơ sở trong kỳ thuế này không? Thao tác này sẽ chuyển các đơn nháp sang trạng thái "Đã hủy" để đưa số đơn nháp về 0.`}
         confirmLabel='Xác nhận hủy đơn nháp'
         confirmVariant='warning'
         isProcessing={isCancellingDrafts}

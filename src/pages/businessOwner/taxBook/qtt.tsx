@@ -813,11 +813,11 @@ export default function QttPage() {
                   <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
                     <span className='text-gray-500 flex items-center justify-between'>
                       <span>2. Thuế phát sinh [13]</span>
-                      <Tip content='Lấy Thu nhập tính thuế × Thuế suất. Nếu kinh doanh bị lỗ (thu nhập âm), số thuế tự động = 0đ.' side='top' align='end' maxWidth='max-w-xs'>
+                      <Tip content='Thuế phát sinh bằng thu nhập tính thuế nhân với thuế suất. Nếu thu nhập tính thuế bằng 0 hoặc âm, thuế phát sinh bằng 0 đ.' side='top' align='end' maxWidth='max-w-xs'>
                         <span className='text-[10px] text-blue-400 cursor-help'>ⓘ</span>
                       </Tip>
                     </span>
-                    <p className='font-bold text-gray-900 mt-1'>max([11], 0) × {calculation.indicators.indicator12Rate}% = {money.format(calculation.indicators.indicator13)} đ</p>
+                    <p className='font-bold text-gray-900 mt-1'>[11] × {calculation.indicators.indicator12Rate}% = {money.format(calculation.indicators.indicator13)} đ</p>
                   </div>
                   <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
                     <span className='text-gray-500 flex items-center justify-between'>
