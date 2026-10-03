@@ -95,26 +95,43 @@ export default function OwnerHeader() {
   const [mockTimeInput, setMockTimeInput] = useState(getMockTimeInputValue)
   const mockTimeActive = isMockTimeActive()
   const [taxProfile, setTaxProfile] = useState<OwnerTaxProfile | null>(null)
+  const [taxProfileLoading, setTaxProfileLoading] = useState(false)
 
   useEffect(() => {
     setMockTimeInput(getMockTimeInputValue())
   }, [mockTimeRevision])
 
   useEffect(() => {
-    if (!currentBusiness?.id) {
-      setTaxProfile(null)
+    const businessId = currentBusiness?.id
+
+    setTaxProfile(null)
+
+    if (!businessId) {
+      setTaxProfileLoading(false)
       return
     }
-    let isMounted = true
-    getOwnerTaxProfile(currentBusiness.id)
+
+    let isActive = true
+    setTaxProfileLoading(true)
+
+    getOwnerTaxProfile(businessId)
       .then((profile) => {
-        if (isMounted) setTaxProfile(profile)
+        if (!isActive) return
+        setTaxProfile(profile)
       })
       .catch((err) => {
+        if (!isActive) return
         console.error('[OwnerHeader] Failed to load tax profile:', err)
+        setTaxProfile(null)
       })
+      .finally(() => {
+        if (isActive) {
+          setTaxProfileLoading(false)
+        }
+      })
+
     return () => {
-      isMounted = false
+      isActive = false
     }
   }, [currentBusiness?.id, profileRevision])
 
@@ -608,7 +625,7 @@ export default function OwnerHeader() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {isIncomeBased && (
+          {!taxProfileLoading && isIncomeBased && (
             <DropdownMenu open={bookOpen} onOpenChange={setBookOpen}>
             <DropdownMenuTrigger>
               <div className='cursor-pointer'>
@@ -640,7 +657,7 @@ export default function OwnerHeader() {
           </DropdownMenu>
           )}
 
-          {isS1aEligible && (
+          {!taxProfileLoading && isS1aEligible && (
             <button
               type='button'
               onClick={openExportS1aModal}
@@ -650,7 +667,7 @@ export default function OwnerHeader() {
             </button>
           )}
 
-          {isRevenueBased && (
+          {!taxProfileLoading && isRevenueBased && (
             <button
               type='button'
               onClick={openExportS2aModal}
@@ -682,7 +699,7 @@ export default function OwnerHeader() {
       </div>
 
       <div className='flex items-center gap-3'>
-        <div className={`flex items-center gap-1 rounded-full px-2 h-7.25 ${mockTimeActive ? 'bg-[#ffe8e8] ring-1 ring-[#e00000]/40' : 'bg-white'}`}>
+        {/* <div className={`flex items-center gap-1 rounded-full px-2 h-7.25 ${mockTimeActive ? 'bg-[#ffe8e8] ring-1 ring-[#e00000]/40' : 'bg-white'}`}>
           <FastForward size={14} color='#e00000' />
           <input
             type='datetime-local'
@@ -708,7 +725,7 @@ export default function OwnerHeader() {
               <RotateCcw size={12} />
             </button>
           )}
-        </div>
+        </div> */}
         <NavLink to={path.BUSINESS_OWNER_POS} className='bg-white rounded-full px-4 h-7.25 flex items-center text-[#e00000] text-[14px] font-bold whitespace-nowrap'>
           + &nbsp;Bán hàng
         </NavLink>
