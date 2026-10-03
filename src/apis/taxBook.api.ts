@@ -92,11 +92,16 @@ export const exportQttDeclaration = async (businessId: string, declarationId: st
   return response.data
 }
 
-export const exportQttPreview = async (businessId: string, year: number) => {
-  const response = await http.get<Blob>(
-    `/businesses/${businessId}/tax-books/qtt/export-preview`,
-    { params: { year }, responseType: 'blob' }
-  )
+export const exportQttPreview = async (
+  businessId: string,
+  year: number,
+  allocation?: Omit<UpdateQttAllocationRequest, 'expectedRevision'>
+) => {
+  const url = `/businesses/${businessId}/tax-books/qtt/export-preview`
+  const config = { params: { year }, responseType: 'blob' as const }
+  const response = allocation
+    ? await http.post<Blob>(url, allocation, config)
+    : await http.get<Blob>(url, config)
   return response.data
 }
 

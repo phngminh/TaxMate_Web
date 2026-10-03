@@ -57,7 +57,8 @@ import type {
   QttIndicators,
   QttOffsetAllocationItemRequest,
   QttOffsetObligationOption,
-  QttPreview
+  QttPreview,
+  UpdateQttAllocationRequest
 } from '../../../types/taxBook.type'
 import LegalBadge from '../../../components/owner/tax/LegalBadge'
 import Tip from '../../../components/owner/tax/Tip'
@@ -147,6 +148,7 @@ export default function QttPage() {
   const [exporting, setExporting] = useState(false)
   const [showSubmitModal, setShowSubmitModal] = useState(false)
   const [isPreviewMode, setIsPreviewMode] = useState(false)
+  const [previewAllocation, setPreviewAllocation] = useState<Omit<UpdateQttAllocationRequest, 'expectedRevision'>>({ refundAmount: 0, offsetAmount: 0, offsetItems: [] })
 
   const taxpayerName =
     preview?.taxpayerName ||
@@ -204,6 +206,7 @@ export default function QttPage() {
         return
       }
       setDeclaration(null)
+      setPreviewAllocation({ refundAmount: 0, offsetAmount: 0, offsetItems: [] })
       if (saved) hydrateDeclaration(saved)
       setPreview(nextPreview)
       setTknBridge(nextTknBridge)
@@ -391,6 +394,8 @@ export default function QttPage() {
         })
 
     if (isPreviewMode) {
+      setPreviewAllocation({ refundAmount: parsedRefund, offsetAmount, refundPaymentAccountId: refundAccountId || undefined, offsetItems: items })
+      setDeclaration({ ...declaration, indicators: { ...declaration.indicators, indicator21: parsedRefund + offsetAmount, indicator22: parsedRefund, indicator23: offsetAmount, indicator24: overpaid - parsedRefund - offsetAmount } })
       toast.success(fromTkn
         ? 'Đã lưu bù trừ toàn bộ số thuế TNCN nộp thừa'
         : 'Đã lưu cách xử lý tiền nộp thừa')
@@ -481,7 +486,7 @@ export default function QttPage() {
     try {
       setExporting(true)
       const blob = usePreviewExport
-        ? await exportQttPreview(currentBusiness.id, year)
+        ? await exportQttPreview(currentBusiness.id, year, isPreviewMode ? previewAllocation : undefined)
         : await exportQttDeclaration(currentBusiness.id, declaration.declarationId)
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
