@@ -586,10 +586,23 @@ export default function QttPage() {
           </div>
         </div>
         <div className='flex items-end gap-3'>
-          <label className='text-sm text-gray-600'>Năm
-            <input disabled={loading} className='mt-1 block w-28 rounded-lg border px-3 py-2 disabled:opacity-50' type='number' value={year}
-              onChange={(event) => setYear(Number(event.target.value))} />
-          </label>
+          <div>
+            <label className='ml-3 text-xs font-bold uppercase tracking-wider text-blue-500 mb-1 block'>
+              Năm
+            </label>
+            <div className='relative'>
+              <input
+                className='h-10 w-28 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm outline-none transition
+                  hover:border-slate-300
+                  focus:border-red-500 focus:ring-2 focus:ring-red-500/10'
+                type='number'
+                value={year}
+                min={2024}
+                max={2030}
+                onChange={(event) => setYear(Number(event.target.value))}
+              />
+            </div>
+          </div>
           <button
             type='button'
             onClick={() => load(true)}
@@ -939,7 +952,7 @@ export default function QttPage() {
           {declaration && (
             <div className='space-y-5'>
               {isPreviewMode && (
-                <div className='flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-violet-400 bg-gradient-to-r from-violet-100/90 via-purple-50 to-indigo-50 p-4.5 shadow-sm'>
+                <div className='flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-violet-400 bg-linear-to-r from-violet-100/90 via-purple-50 to-indigo-50 p-4.5 shadow-sm'>
                   <div className='flex items-start gap-3.5'>
                     <div className='flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm mt-0.5'>
                       <Sparkles className='size-5' />
@@ -1518,7 +1531,7 @@ function QttReadinessPanel({
     <div className='space-y-4'>
       {/* ── BENTO 1: HERO STATUS BANNER ── */}
       {allClear ? (
-        <div className='flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/90 via-white to-emerald-50/50 p-5 shadow-xs backdrop-blur-md'>
+        <div className='flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-emerald-200/90 bg-linear-to-br from-emerald-50/90 via-white to-emerald-50/50 p-5 shadow-xs backdrop-blur-md'>
           <div className='flex items-center gap-3.5'>
             <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm ring-4 ring-emerald-100'>
               <CheckCircle2 className='h-5 w-5' />
@@ -1544,7 +1557,7 @@ function QttReadinessPanel({
           </Link>
         </div>
       ) : canClose ? (
-        <div className='flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-emerald-200/80 bg-gradient-to-br from-emerald-50/80 via-white to-emerald-50/40 p-5 shadow-xs backdrop-blur-md'>
+        <div className='flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-emerald-200/80 bg-linear-to-br from-emerald-50/80 via-white to-emerald-50/40 p-5 shadow-xs backdrop-blur-md'>
           <div className='flex items-center gap-3.5'>
             <div className='flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm ring-4 ring-emerald-100'>
               <CheckCircle2 className='h-5 w-5' />
@@ -1553,7 +1566,7 @@ function QttReadinessPanel({
               <div className='flex items-center gap-2'>
                 <h2 className='text-sm font-bold text-emerald-950'>Đã đủ điều kiện tính quyết toán năm {year}</h2>
                 <span className='inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800'>
-                  <Check className='h-3 w-3 stroke-[3]' /> 4/4 Quý đã đóng
+                  <Check className='h-3 w-3 stroke-3' /> 4/4 Quý đã đóng
                 </span>
               </div>
               <p className='text-xs text-emerald-800/80 mt-0.5'>
@@ -1582,7 +1595,7 @@ function QttReadinessPanel({
         </div>
       ) : (
         /* BLOCK HARD BLOCKERS: Quý chưa đóng kỳ */
-        <div className='rounded-3xl border border-red-200/90 bg-gradient-to-br from-red-50/80 via-white to-red-50/40 p-5 shadow-xs backdrop-blur-md'>
+        <div className='rounded-3xl border border-red-200/90 bg-linear-to-br from-red-50/80 via-white to-red-50/40 p-5 shadow-xs backdrop-blur-md'>
           <div className='flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-red-100'>
             <div className='flex items-center gap-3'>
               <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-red-600 text-white shadow-xs ring-4 ring-red-100'>
@@ -1668,7 +1681,7 @@ function QttReadinessPanel({
 
       {/* ── BENTO 2: S2C EVIDENCE REVIEW (Inline 1-click action) ── */}
       {evidenceIssues.length > 0 && (
-        <div className='flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-amber-200 bg-gradient-to-r from-amber-50/90 via-white to-amber-50/40 p-5 shadow-xs'>
+        <div className='flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-amber-200 bg-linear-to-r from-amber-50/90 via-white to-amber-50/40 p-5 shadow-xs'>
           <div className='flex items-center gap-3'>
             <div className='flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-amber-500 text-white shadow-xs'>
               <Sparkles className='h-5 w-5' />
@@ -1737,7 +1750,7 @@ function QttReadinessPanel({
 
       {/* ── BENTO 4: RÀ SOÁT CHỨNG TỪ & RỦI RO THANH KIỂM TRA (APPLE BENTO CARDS + DRAWER) ── */}
       {totalRiskIssues > 0 && (
-        <div className='rounded-3xl border border-slate-200/90 bg-gradient-to-br from-slate-50/70 via-white to-slate-50/30 p-5 shadow-xs'>
+        <div className='rounded-3xl border border-slate-200/90 bg-linear-to-br from-slate-50/70 via-white to-slate-50/30 p-5 shadow-xs'>
           {/* Header */}
           <div className='flex flex-wrap items-center justify-between gap-3 pb-3.5 border-b border-slate-100'>
             <div>
@@ -1764,7 +1777,7 @@ function QttReadinessPanel({
           {/* 2 Bento Cards */}
           <div className='mt-4 grid grid-cols-1 gap-3.5 sm:grid-cols-2'>
             {/* Card 1: Chi phí hoạt động S2c */}
-            <div className='flex flex-col justify-between rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/40 via-white to-white p-4 shadow-2xs hover:border-blue-200 transition-all'>
+            <div className='flex flex-col justify-between rounded-2xl border border-blue-100 bg-linear-to-br from-blue-50/40 via-white to-white p-4 shadow-2xs hover:border-blue-200 transition-all'>
               <div>
                 <div className='flex items-center justify-between'>
                   <div className='flex items-center gap-2.5'>
@@ -1807,7 +1820,7 @@ function QttReadinessPanel({
             </div>
 
             {/* Card 2: Mua nguyên vật liệu S2d */}
-            <div className='flex flex-col justify-between rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50/40 via-white to-white p-4 shadow-2xs hover:border-orange-200 transition-all'>
+            <div className='flex flex-col justify-between rounded-2xl border border-orange-100 bg-linear-to-br from-orange-50/40 via-white to-white p-4 shadow-2xs hover:border-orange-200 transition-all'>
               <div>
                 <div className='flex items-center justify-between'>
                   <div className='flex items-center gap-2.5'>

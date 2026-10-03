@@ -251,7 +251,7 @@ export default function S2eBookPage() {
 
   return (
     <div className='mx-auto max-w-7xl p-6'>
-      <div className='mb-5 flex flex-wrap items-end justify-between gap-4'>
+      <div className='mb-5 flex flex-col gap-3'>
         <div>
           <div className='flex flex-wrap items-center gap-2.5'>
             <h1 className='text-2xl font-bold text-gray-900'>Sổ chi tiết tiền (S2e)</h1>
@@ -265,24 +265,66 @@ export default function S2eBookPage() {
           </div>
           <p className='mt-1 text-sm text-gray-500'>{currentBusiness?.businessName ?? 'Chưa chọn cửa hàng'}</p>
         </div>
+
         <div className='flex flex-wrap items-end gap-3'>
-          <label className='text-sm text-gray-600'>Năm
-            <input className='mt-1 block w-28 rounded-lg border px-3 py-2' type='number' value={year}
-              onChange={(event) => setYear(Number(event.target.value))} />
-          </label>
-          <label className='text-sm text-gray-600'>Quý
-            <select className='mt-1 block w-24 rounded-lg border px-3 py-2' value={quarter}
-              onChange={(event) => setQuarter(Number(event.target.value))}>
-              {[1, 2, 3, 4].map((value) => <option key={value} value={value}>Quý {value}</option>)}
-            </select>
-          </label>
-          <button onClick={load} disabled={!currentBusiness || loading}
-            className='flex items-center gap-2 rounded-lg bg-[#9b0000] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50'>
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> {loading ? 'Đang tải...' : 'Tải lại'}
+          <div className='flex flex-wrap items-end gap-4'>
+            <div>
+              <label className='ml-3 text-xs font-bold uppercase tracking-wider text-blue-500 mb-1 block'>
+                Năm
+              </label>
+              <div className='relative'>
+                <input
+                  className='h-10 w-28 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-800 shadow-sm outline-none transition hover:border-slate-300 focus:border-red-500 focus:ring-2 focus:ring-red-500/10'
+                  type='number'
+                  value={year}
+                  min={2024}
+                  max={2030}
+                  onChange={(event) => setYear(Number(event.target.value))}
+                />
+              </div>
+            </div>
+
+            <div>
+              <span className='ml-3 text-xs font-bold uppercase tracking-wider text-blue-500 mb-1 block'>
+                Kỳ kê khai
+              </span>
+              <div className='flex h-10 items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1 shadow-sm'>
+                {[1, 2, 3, 4].map((q) => {
+                  const isActive = quarter === q
+                  return (
+                    <button
+                      key={q}
+                      type='button'
+                      onClick={() => setQuarter(q)}
+                      className={`h-8 rounded-lg px-4 text-xs font-semibold transition-all duration-200 cursor-pointer ${
+                        isActive
+                          ? 'bg-blue-500 text-white shadow-sm'
+                          : 'text-slate-500 hover:bg-white hover:text-slate-800'
+                      }`}
+                    >
+                      Quý {q}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={load}
+            disabled={!currentBusiness || loading}
+            className='flex items-center gap-2 rounded-xl bg-[#9b0000] px-4 py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-[#800000] disabled:opacity-50 cursor-pointer transition-all'
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            {loading ? 'Đang tải...' : 'Tải lại'}
           </button>
-          <button onClick={download} disabled={!book?.isReady || exporting}
-            className='flex items-center gap-2 rounded-lg border border-[#9b0000] px-4 py-2.5 text-sm font-semibold text-[#9b0000] disabled:opacity-50'>
-            <Download size={16} /> {exporting ? 'Đang xuất...' : 'Xuất Word'}
+          <button
+            onClick={download}
+            disabled={!book?.isReady || exporting}
+            className='flex items-center gap-2 rounded-xl border border-[#9b0000] px-4 py-2.5 text-sm font-semibold text-[#9b0000] hover:bg-red-50 disabled:opacity-50 cursor-pointer transition-all'
+          >
+            <Download size={16} />
+            {exporting ? 'Đang xuất...' : 'Xuất Word'}
           </button>
         </div>
       </div>
@@ -409,7 +451,7 @@ export default function S2eBookPage() {
                     className='flex w-full items-center justify-between px-4 py-2.5 text-left hover:bg-red-100/60'
                   >
                     <div className='flex items-center gap-2'>
-                      <span className={`mt-0.5 h-2 w-2 flex-shrink-0 rounded-full ${severityDot}`} />
+                      <span className={`mt-0.5 h-2 w-2 shrink-0 rounded-full ${severityDot}`} />
                       <span className='text-sm font-medium text-red-900'>
                         {meta?.label ?? code}
                       </span>
@@ -546,7 +588,7 @@ export default function S2eBookPage() {
               {/* Account Header: Tóm tắt số dư đầu kỳ & cuối kỳ tinh gọn — click để thu gọn / mở rộng */}
               <div
                 onClick={() => toggleAccountCollapse(account.paymentAccountId)}
-                className='flex flex-wrap items-center justify-between gap-3 px-5 py-4 bg-gradient-to-r from-gray-50/90 to-white border-b border-gray-100 cursor-pointer select-none hover:from-gray-100/90 hover:to-gray-50'
+                className='flex flex-wrap items-center justify-between gap-3 px-5 py-4 bg-linear-to-r from-gray-50/90 to-white border-b border-gray-100 cursor-pointer select-none hover:from-gray-100/90 hover:to-gray-50'
                 title='Nhấp để thu gọn / mở rộng'
               >
                 <div>
