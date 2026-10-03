@@ -30,8 +30,15 @@ export default function ThresholdAlertBanner({ businessId }: ThresholdAlertBanne
         const profile = await getOwnerTaxProfile(businessId)
         if (isMounted && profile?.thresholdReviews) {
           const pending = profile.thresholdReviews.filter(
-            (review) => review.status === 'PendingReview' ||
-              (review.status === 'Acknowledged' && review.canConfirm)
+            (review) =>
+              (review.status === 'PendingReview' ||
+                (review.status === 'Acknowledged' && review.canConfirm)) &&
+              !(
+                profile.personalIncomeTaxMethod !== null &&
+                profile.taxMethodEffectiveYear !== null &&
+                profile.taxMethodEffectiveYear < review.year &&
+                (review.thresholdCode === 'Crossed1B' || review.thresholdAmount === 1000000000)
+              )
           )
           setReviews(pending)
         }

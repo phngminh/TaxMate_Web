@@ -57,7 +57,8 @@ import type {
   QttIndicators,
   QttOffsetAllocationItemRequest,
   QttOffsetObligationOption,
-  QttPreview
+  QttPreview,
+  UpdateQttAllocationRequest
 } from '../../../types/taxBook.type'
 import LegalBadge from '../../../components/owner/tax/LegalBadge'
 import Tip from '../../../components/owner/tax/Tip'
@@ -147,6 +148,7 @@ export default function QttPage() {
   const [exporting, setExporting] = useState(false)
   const [showSubmitModal, setShowSubmitModal] = useState(false)
   const [isPreviewMode, setIsPreviewMode] = useState(false)
+  const [previewAllocation, setPreviewAllocation] = useState<Omit<UpdateQttAllocationRequest, 'expectedRevision'>>({ refundAmount: 0, offsetAmount: 0, offsetItems: [] })
 
   const taxpayerName =
     preview?.taxpayerName ||
@@ -204,6 +206,7 @@ export default function QttPage() {
         return
       }
       setDeclaration(null)
+      setPreviewAllocation({ refundAmount: 0, offsetAmount: 0, offsetItems: [] })
       if (saved) hydrateDeclaration(saved)
       setPreview(nextPreview)
       setTknBridge(nextTknBridge)
@@ -391,6 +394,8 @@ export default function QttPage() {
         })
 
     if (isPreviewMode) {
+      setPreviewAllocation({ refundAmount: parsedRefund, offsetAmount, refundPaymentAccountId: refundAccountId || undefined, offsetItems: items })
+      setDeclaration({ ...declaration, indicators: { ...declaration.indicators, indicator21: parsedRefund + offsetAmount, indicator22: parsedRefund, indicator23: offsetAmount, indicator24: overpaid - parsedRefund - offsetAmount } })
       toast.success(fromTkn
         ? 'Đã lưu bù trừ toàn bộ số thuế TNCN nộp thừa'
         : 'Đã lưu cách xử lý tiền nộp thừa')
@@ -481,7 +486,7 @@ export default function QttPage() {
     try {
       setExporting(true)
       const blob = usePreviewExport
-        ? await exportQttPreview(currentBusiness.id, year)
+        ? await exportQttPreview(currentBusiness.id, year, isPreviewMode ? previewAllocation : undefined)
         : await exportQttDeclaration(currentBusiness.id, declaration.declarationId)
       const url = URL.createObjectURL(blob)
       const anchor = document.createElement('a')
@@ -826,11 +831,11 @@ export default function QttPage() {
                   <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
                     <span className='text-gray-500 flex items-center justify-between'>
                       <span>2. Thuế phát sinh [13]</span>
-                      <Tip content='Lấy Thu nhập tính thuế × Thuế suất. Nếu kinh doanh bị lỗ (thu nhập âm), số thuế tự động = 0đ.' side='top' align='end' maxWidth='max-w-xs'>
+                      <Tip content='Thuế phát sinh bằng thu nhập tính thuế nhân với thuế suất. Nếu thu nhập tính thuế bằng 0 hoặc âm, thuế phát sinh bằng 0 đ.' side='top' align='end' maxWidth='max-w-xs'>
                         <span className='text-[10px] text-blue-400 cursor-help'>ⓘ</span>
                       </Tip>
                     </span>
-                    <p className='font-bold text-gray-900 mt-1'>max([11], 0) × {calculation.indicators.indicator12Rate}% = {money.format(calculation.indicators.indicator13)} đ</p>
+                    <p className='font-bold text-gray-900 mt-1'>[11] × {calculation.indicators.indicator12Rate}% = {money.format(calculation.indicators.indicator13)} đ</p>
                   </div>
                   <div className='rounded-lg bg-white p-2.5 border border-blue-100 shadow-2xs'>
                     <span className='text-gray-500 flex items-center justify-between'>
